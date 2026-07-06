@@ -41,3 +41,7 @@ _Avoid_: lap、session、计次、分段
 - 客户端：React 18 + Vite 6 + Tailwind CSS
 - 服务端：Express 4 + better-sqlite3
 - 数据库：SQLite，单文件 focus.db（位于 `server/data/`）
+
+**计时器状态持久化**：
+计时器的运行状态（phase、elapsed、selectedSubject、notes）由 App 组件持有，而非 TimerPage。切换「计时/历史」标签时 TimerPage 卸载重挂，但状态因托管在父级而不丢失。
+_Avoid_: 计时状态放在 TimerPage 内

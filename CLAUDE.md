@@ -40,8 +40,8 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 
 | 文件 | 说明 |
 |------|------|
-| `App.jsx` | 主布局 + 底部导航（计时/历史两标签） |
-| `components/TimerPage.jsx` | 计时器主页面，4 状态机 (idle→studying→rest_prompt→resting) |
+| `App.jsx` | 主布局 + 底部导航 + useTimer 调用（计时状态托管于此，跨标签切换不丢失） |
+| `components/TimerPage.jsx` | 计时器页面，4 状态机 (idle→studying→rest_prompt→resting)，从 props 接收 timer |
 | `components/SubjectSelector.jsx` | 科目选择（固定列表 + 自定义新增/删除） |
 | `components/HistoryPage.jsx` | 历史记录（按日查看 + 日期导航） |
 | `components/TodayOverview.jsx` | 今日概览（总时长 + 按科目分组条形图） |

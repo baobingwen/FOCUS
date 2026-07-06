@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import TimerPage from './components/TimerPage';
 import HistoryPage from './components/HistoryPage';
+import useTimer from './hooks/useTimer';
 
 const TABS = [
   { key: 'timer', label: '计时', icon: '⏱️' },
@@ -10,6 +11,7 @@ const TABS = [
 export default function App() {
   const [activeTab, setActiveTab] = useState('timer');
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+  const timer = useTimer();
 
   const handleRecordSaved = useCallback(() => {
     setHistoryRefreshKey(k => k + 1);
@@ -23,7 +25,7 @@ export default function App() {
       <div className="flex-1 overflow-y-auto scrollbar-hide pb-20">
         <div className="px-4 pt-6">
           {activeTab === 'timer' && (
-            <TimerPage onRecordSaved={handleRecordSaved} />
+            <TimerPage timer={timer} onRecordSaved={handleRecordSaved} />
           )}
           {activeTab === 'history' && (
             <HistoryPage refreshKey={historyRefreshKey} />

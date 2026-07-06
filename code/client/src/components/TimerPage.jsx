@@ -1,5 +1,4 @@
 import React, { useState, useCallback } from 'react';
-import useTimer from '../hooks/useTimer';
 import SubjectSelector from './SubjectSelector';
 import { recordsApi } from '../utils/api';
 
@@ -15,8 +14,7 @@ function fmtTime(ms) {
     : `${pad(minutes)}:${pad(seconds)}`;
 }
 
-export default function TimerPage({ onRecordSaved }) {
-  const timer = useTimer();
+export default function TimerPage({ timer, onRecordSaved }) {
   const [saving, setSaving] = useState(false);
   const [toast, setToast] = useState(null);
 
