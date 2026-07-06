@@ -1,0 +1,67 @@
+import { Router } from 'express';
+import { getDb } from '../database.js';
+
+export const subjectsRouter = Router();
+
+// 获取所有科目
+subjectsRouter.get('/', (req, res) => {
+  try {
+    const db = getDb();
+    const subjects = db.prepare('SELECT * FROM subjects ORDER BY sort_order, id').all();
+    res.json(subjects);
+  } catch (err) {
+    console.error('获取科目失败:', err);
+    res.status(500).json({ error: '获取科目失败' });
+  }
+});
+
+// 创建新科目
+subjectsRouter.post('/', (req, res) => {
+  try {
+    const db = getDb();
+    const { name } = req.body;
+
+    if (!name || !name.trim()) {
+      return res.status(400).json({ error: '科目名不能为空' });
+    }
+
+    const trimmed = name.trim();
+    const existing = db.prepare('SELECT id FROM subjects WHERE name = ?').get(trimmed);
+    if (existing) {
+      return res.status(409).json({ error: '科目已存在', id: existing.id });
+    }
+
+    const maxOrder = db.prepare('SELECT MAX(sort_order) as max_order FROM subjects').get();
+    const sortOrder = (maxOrder?.max_order ?? -1) + 1;
+
+    const result = db.prepare('INSERT INTO subjects (name, sort_order) VALUES (?, ?)').run(trimmed, sortOrder);
+    const subject = db.prepare('SELECT * FROM subjects WHERE id = ?').get(result.lastInsertRowid);
+    res.json(subject);
+  } catch (err) {
+    console.error('创建科目失败:', err);
+    res.status(500).json({ error: '创建科目失败' });
+  }
+});
+
+// 删除科目
+subjectsRouter.delete('/:id', (req, res) => {
+  try {
+    const db = getDb();
+    const { id } = req.params;
+
+    // 不允许删除默认科目（数学、英语、专业课）
+    const subject = db.prepare('SELECT * FROM subjects WHERE id = ?').get(id);
+    if (!subject) {
+      return res.status(404).json({ error: '科目不存在' });
+    }
+    if (['数学', '英语', '专业课'].includes(subject.name)) {
+      return res.status(403).json({ error: '不能删除默认科目' });
+    }
+
+    const result = db.prepare('DELETE FROM subjects WHERE id = ?').run(id);
+    res.json({ success: true });
+  } catch (err) {
+    console.error('删除科目失败:', err);
+    res.status(500).json({ error: '删除科目失败' });
+  }
+});

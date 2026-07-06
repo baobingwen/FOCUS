@@ -1,0 +1,17 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.timer-font {
+  font-family: 'SF Mono', 'JetBrains Mono', 'Consolas', monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 隐藏滚动条但保持可滚动 */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}

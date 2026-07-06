@@ -2,67 +2,68 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
+## Projects
 
-学习计时器 (Study Timer) — a full-stack study timer app with Pomodoro-style tracking, tag management, statistics, daily summaries, and todo lists. The project lives under `111日常学习计时器-第三方项目/` (the root repo only tracks config files).
+This repo contains two projects:
+
+1. **FOCUS** (`code/`) — 极简学习计时器，个人考研备考工具
+2. **第三方项目** (`111日常学习计时器-第三方项目/`) — 保留的原有学习计时项目，不动
 
 ## Commands
 
-The app has two separate servers:
+### FOCUS (主项目)
 
 ```bash
 # Start backend (Express + SQLite, port 3001)
-cd 111日常学习计时器-第三方项目/server && npm run dev
+cd code/server && npm run dev
 
 # Start frontend (Vite + React, port 5173, proxies /api to backend)
-cd 111日常学习计时器-第三方项目/client && npm run dev
-
-# Or both at once via the batch file
-.\111日常学习计时器-第三方项目\启动.bat
+cd code/client && npm run dev
 ```
 
-Dependencies (install in each directory): `cd server && npm install`, `cd client && npm install`
+### 第三方项目
 
-## Architecture
+```bash
+cd 111日常学习计时器-第三方项目/server && npm run dev
+cd 111日常学习计时器-第三方项目/client && npm run dev
+# Or: .\111日常学习计时器-第三方项目\启动.bat
+```
 
-### Client (`client/`)
+## FOCUS 项目架构
 
-- **Framework**: React 18 with Vite 6, Tailwind CSS 3, Recharts, PostCSS + Autoprefixer
-- **Mobile-first layout**: Max width 430px, bottom nav with 5 tabs (Timer, History, Stats, Summary, Export)
-- **Entry**: `src/main.jsx` → `src/App.jsx`
-- **Key components**: `TimerDisplay`, `TimerControls`, `RecordList`, `BottomNav`, `StatsPanel`, `CalendarSummary`, `ExportPanel`, `TagSelector`, `TodoList`
-- **Custom hook**: `useTimer.js` — dual-track timing core using absolute `Date.now()` timestamps (not accumulators), with crash recovery via `localStorage` backup
-- **API layer**: `src/utils/api.js` — vanilla `fetch` wrapper, no framework client
+### 技术栈
+- **客户端**: React 18 + Vite 6 + Tailwind CSS 3
+- **服务端**: Express 4 (ESM) + better-sqlite3 (WAL 模式)
+- **数据库**: SQLite 单文件 `server/data/focus.db`
 
-### Server (`server/`)
+### 客户端结构 (`code/client/src/`)
 
-- **Framework**: Express 4 (ESM modules) + better-sqlite3 with WAL mode
-- **Port**: 3001 (configurable via `PORT` env)
-- **Database**: SQLite at `server/data/study_timer.db` with auto-migration on startup
-- **Routes** (all under `/api/`):
-  - `records` — CRUD for time records with `auto_type`/`manual_type` classification
-  - `tags` — CRUD for secondary sub-tags under a primary tag
-  - `primaryTags` — CRUD for user-customizable primary tags
-  - `stats` — Aggregated stats by day/week/month with learning/rest breakdowns by tag
-  - `todos` — Todo CRUD with auto-rollover of incomplete items to next day
-  - `summary` — Monthly summary: daily note aggregation + manual daily summaries
-  - `dailySummary` — Manual daily summary text CRUD
-  - `export` — Export records as .txt or .docx
-- Production: serves `client/dist/` as static files
+| 文件 | 说明 |
+|------|------|
+| `App.jsx` | 主布局 + 底部导航（计时/历史两标签） |
+| `components/TimerPage.jsx` | 计时器主页面，4 状态机 (idle→studying→rest_prompt→resting) |
+| `components/SubjectSelector.jsx` | 科目选择（固定列表 + 自定义新增/删除） |
+| `components/HistoryPage.jsx` | 历史记录（按日查看 + 日期导航） |
+| `components/TodayOverview.jsx` | 今日概览（总时长 + 按科目分组条形图） |
+| `hooks/useTimer.js` | 极简计时器，使用 Date.now() 绝对时间戳 |
+| `utils/api.js` | fetch 封装 |
 
-### Database Schema
+### 服务端结构 (`code/server/`)
 
-- **records** — time segments with mode, duration, auto_type/manual_type, tags, notes, session_id
-- **tags** — secondary sub-tags under primary tags (unique constraint on primary_tag + name)
-- **primary_tags** — user-managed top-level categories with sort_order
-- **daily_summaries** — hand-written daily notes (one per date)
-- **todos** — daily todo items with completed flag and rollover tracking
+| 文件 | 说明 |
+|------|------|
+| `index.js` | 入口，express + cors + 静态文件托管 |
+| `database.js` | SQLite 初始化 + 自动建表 |
+| `routes/records.js` | POST 保存记录，GET 按日期查询，GET /today 今日概览 |
+| `routes/subjects.js` | 科目 CRUD（默认科目不可删） |
 
-### Key Concepts
+### 数据库
 
-- **Three timer modes**: `study` (auto-classify ≥10min → learning, <10min → short_rest), `functional` (always learning), `rest` (always short_rest)
-- **Dual-track timing**: Uses absolute `Date.now()` timestamps in refs, never `time += N` accumulators, so timers survive page visibility/sleep events correctly
-- **Auto-save**: 3s debounce after records change; immediate save on pause; `sendBeacon` + `localStorage` double backup on page close
-- **10-minute threshold**: Segments ≥10min in study mode auto-classify as "learning"; shorter ones as "short_rest". Users can toggle per-record manually.
-- **Effective type**: `manual_type` overrides `auto_type` (handled server-side via `getEffectiveType()`)
-- **Todo rollover**: Daily auto-copy of incomplete previous-day todos into today's list with `rolled_over` flag
+**records** — `mode` (study/rest), `subject`, `duration_ms`, `notes`, `created_at`
+**subjects** — `name`, `sort_order`（默认：数学、英语、专业课）
+
+### 核心概念
+- **状态机**: idle → studying → rest_prompt → resting → idle
+- **极简**: 没有计次、没有分段、没有自动分类、没有二级标签
+- **双轨时间**: Date.now() 绝对时间戳，锁屏休眠恢复后精准咬合
+- **科目**: 一级分类，固定列表 + 用户自定义

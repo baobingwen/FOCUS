@@ -1,3 +1,6 @@
 /111日常学习计时器-第三方项目/
 /.agents/
 /.claude/
+
+/code/client/node_modules/
+/code/server/node_modules/
