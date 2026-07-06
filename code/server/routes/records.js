@@ -1,9 +1,22 @@
+// code/server/routes/records.js
 import { Router } from 'express';
 import { getDb } from '../database.js';
 
+/**
+ * @import { Record, InsertRecordParams, Subject } from '../types.js'
+ * @import { Request, Response } from 'express'
+ */
+
+/** @type {Router} */
 export const recordsRouter = Router();
 
-// 保存一条记录
+/**
+ * 保存一条记录
+ * @route POST /
+ * @param {Request<{}, {}, InsertRecordParams>} req - Express 请求对象
+ * @param {Response} res - Express 响应对象
+ * @returns {Promise<void>}
+ */
 recordsRouter.post('/', (req, res) => {
   try {
     const db = getDb();
@@ -24,6 +37,7 @@ recordsRouter.post('/', (req, res) => {
       VALUES (?, ?, ?, ?)
     `).run(mode, mode === 'study' ? subject : null, duration_ms, notes || '');
 
+    /** @type {Record} */
     const record = db.prepare('SELECT * FROM records WHERE id = ?').get(result.lastInsertRowid);
     res.json(record);
   } catch (err) {
@@ -32,12 +46,19 @@ recordsRouter.post('/', (req, res) => {
   }
 });
 
-// 获取指定日期的记录
+/**
+ * 获取指定日期的记录
+ * @route GET /
+ * @param {Request<{}, {}, {}, { date?: string }>} req - Express 请求对象
+ * @param {Response} res - Express 响应对象
+ * @returns {Promise<void>}
+ */
 recordsRouter.get('/', (req, res) => {
   try {
     const db = getDb();
     const { date } = req.query;
 
+    /** @type {Record[]} */
     let records;
     if (date) {
       records = db.prepare(`
@@ -60,20 +81,42 @@ recordsRouter.get('/', (req, res) => {
   }
 });
 
-// 获取今日概览
+/**
+ * 今日概览数据结构
+ * @typedef {Object} TodayOverview
+ * @property {string} date - 日期
+ * @property {number} total_study_ms - 总学习时长（毫秒）
+ * @property {number} total_rest_ms - 总休息时长（毫秒）
+ * @property {number} total_records - 总记录数
+ * @property {Array<{ subject: string | null, total_ms: number, count: number }>} by_subject - 按科目分组
+ */
+
+/**
+ * 获取今日概览
+ * @route GET /today
+ * @param {Request} req - Express 请求对象
+ * @param {Response} res - Express 响应对象
+ * @returns {Promise<void>}
+ */
 recordsRouter.get('/today', (req, res) => {
   try {
     const db = getDb();
     const today = new Date().toISOString().slice(0, 10);
 
-    // 总学习时长
+    /**
+     * 总学习时长
+     * @type {{ total_ms: number }}
+     */
     const totalStudy = db.prepare(`
       SELECT COALESCE(SUM(duration_ms), 0) as total_ms
       FROM records
       WHERE DATE(created_at) = ? AND mode = 'study'
     `).get(today);
 
-    // 按科目分组的学习时长
+    /**
+     * 按科目分组的学习时长
+     * @type {Array<{ subject: string | null, total_ms: number, count: number }>}
+     */
     const bySubject = db.prepare(`
       SELECT subject, SUM(duration_ms) as total_ms, COUNT(*) as count
       FROM records
@@ -82,14 +125,19 @@ recordsRouter.get('/today', (req, res) => {
       ORDER BY total_ms DESC
     `).all(today);
 
-    // 今日休息总时长
+    /**
+     * 今日休息总时长
+     * @type {{ total_ms: number }}
+     */
     const totalRest = db.prepare(`
       SELECT COALESCE(SUM(duration_ms), 0) as total_ms
       FROM records
       WHERE DATE(created_at) = ? AND mode = 'rest'
     `).get(today);
 
-    // 总记录数
+    /**
+     * @type {{ count: number }}
+     */
     const totalCount = db.prepare(`
       SELECT COUNT(*) as count
       FROM records

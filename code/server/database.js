@@ -1,3 +1,4 @@
+// code/server/database.js
 import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -5,8 +6,16 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DB_PATH = path.join(__dirname, 'data', 'focus.db');
 
+/**
+ * 数据库单例实例
+ * @type {import('better-sqlite3').Database | undefined}
+ */
 let db;
 
+/**
+ * 获取数据库单例实例
+ * @returns {import('better-sqlite3').Database}
+ */
 export function getDb() {
   if (!db) {
     db = new Database(DB_PATH);
@@ -17,7 +26,16 @@ export function getDb() {
   return db;
 }
 
+/**
+ * 初始化数据库表结构
+ * @returns {void}
+ * @throws {Error} 当表创建失败时抛出错误
+ */
 function initTables() {
+  if (db == undefined) {
+    console.error('初始化 table 时, db 未定义')
+    return;
+  }
   db.exec(`
     CREATE TABLE IF NOT EXISTS records (
       id INTEGER PRIMARY KEY AUTOINCREMENT,

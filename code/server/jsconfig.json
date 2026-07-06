@@ -1,0 +1,15 @@
+{
+    "compilerOptions": {
+        "target": "ES2020",
+        "module": "node16",
+        "moduleResolution": "node16",
+        "checkJs": true,
+        "strict": true,
+        "noImplicitAny": true,
+        "strictNullChecks": true,
+        "allowJs": true,
+        "esModuleInterop": true
+    },
+    "include": ["**/*.js", "**/*.d.ts"],
+    "exclude": ["node_modules", "dist"]
+}
