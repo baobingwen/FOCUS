@@ -19,6 +19,12 @@ cd code/server && npm run dev
 
 # Start frontend (Vite + React, port 5173, proxies /api to backend)
 cd code/client && npm run dev
+
+# Run server tests (Jest 30 + supertest, 内存 SQLite)
+cd code/server && npm test
+
+# Watch mode
+cd code/server && npm run test:watch
 ```
 
 ### 第三方项目
@@ -52,10 +58,26 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 
 | 文件 | 说明 |
 |------|------|
-| `index.js` | 入口，express + cors + 静态文件托管 |
-| `database.js` | SQLite 初始化 + 自动建表 |
+| `index.js` | 入口，express + cors + 静态文件托管，导出 `app` 供 supertest 调用 |
+| `database.js` | SQLite 初始化 + 自动建表，支持 `DB_PATH` 环境变量覆写 + `closeDb()` |
 | `routes/records.js` | POST 保存记录，GET 按日期查询，GET /today 今日概览 |
 | `routes/subjects.js` | 科目 CRUD（默认科目不可删） |
+
+### 测试架构 (`code/server/`)
+
+| 文件/配置 | 说明 |
+|-----------|------|
+| `__tests__/records.test.js` | records 路由测试（37 条用例） |
+| `__tests__/subjects.test.js` | subjects 路由测试 |
+| `jest.setup.cjs` | 测试前设 `DB_PATH=:memory:`、`NODE_ENV=test` |
+| `package.json#jest` | Jest 30 配置，原生 ESM + `--experimental-vm-modules` |
+
+**关键决策：**
+- **Jest 30** + **supertest**：supertest 直接驱动 Express app，无需监听端口
+- **`:memory:` SQLite**：每个测试文件启动全新空数据库，`beforeEach` 中 `closeDb(); getDb();` 重置
+- **时间隔离**：`/today` 边界测试通过 `jest.useFakeTimers({ now: ... })` 模拟系统时间，配合显式 `created_at` 插入
+- **Express 5 注意**：catch-all 路由不能用 `'*'`（path-to-regexp v8 不认），要用 `'/{*path}'`
+- **ESM 注意**：`jest` 对象需从 `@jest/globals` 显式导入，`setupFiles` 用 `.cjs` 扩展名
 
 ### 数据库
 

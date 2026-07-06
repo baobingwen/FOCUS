@@ -4,7 +4,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const DB_PATH = path.join(__dirname, 'data', 'focus.db');
+const DEFAULT_DB_PATH = path.join(__dirname, 'data', 'focus.db');
+/** 可通过环境变量 DB_PATH 覆盖，测试时设为 ':memory:' */
+const DB_PATH = process.env.DB_PATH || DEFAULT_DB_PATH;
 
 /**
  * 数据库单例实例
@@ -19,11 +21,26 @@ let db;
 export function getDb() {
   if (!db) {
     db = new Database(DB_PATH);
-    db.pragma('journal_mode = WAL');
+    try {
+      db.pragma('journal_mode = WAL');
+    } catch {
+      // :memory: 数据库不支持 WAL 模式，忽略
+    }
     db.pragma('foreign_keys = ON');
     initTables();
   }
   return db;
+}
+
+/**
+ * 关闭数据库连接并重置单例（主要用于测试清理）
+ * @returns {void}
+ */
+export function closeDb() {
+  if (db) {
+    db.close();
+    db = undefined;
+  }
 }
 
 /**
