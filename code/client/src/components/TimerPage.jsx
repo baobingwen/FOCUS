@@ -1,7 +1,13 @@
+// code/client/src/components/TimerPage.jsx
 import React, { useState, useCallback } from 'react';
 import SubjectSelector from './SubjectSelector';
 import { recordsApi } from '../utils/api';
 
+/**
+ * 将 ms 格式化为时间显示（HH:MM:SS或MM:SS格式）
+ * @param {number} ms
+ * @returns {string} 格式化后的时间字符串
+ */
 function fmtTime(ms) {
   if (typeof ms !== 'number' || !isFinite(ms) || ms < 0) return '00:00';
   const totalSeconds = ms / 1000;
@@ -14,41 +20,64 @@ function fmtTime(ms) {
     : `${pad(minutes)}:${pad(seconds)}`;
 }
 
+/**
+ * 计时器页面组件
+ * 管理学习/休息的计时、记录保存和UI状态切换
+ * 
+ * @param {Object} props - 组件属性
+ * @param {Object} props.timer - 计时器状态对象（来自useTimer钩子）
+ * @param {Function} props.onRecordSaved - 记录保存后的回调函数
+ */
 export default function TimerPage({ timer, onRecordSaved }) {
+  // 保存中状态（防止重复提交）
   const [saving, setSaving] = useState(false);
+  // Toast通知状态
   const [toast, setToast] = useState(null);
 
+  /**
+   * 显示Toast通知
+   * @param {string} msg - 通知消息
+   * @param {string} type - 通知类型（'success' 或 'error'）
+   */
   const showToast = useCallback((msg, type = 'success') => {
     setToast({ message: msg, type });
     setTimeout(() => setToast(null), 2500);
   }, []);
 
-  // 保存学习记录
+  /**
+   * 处理结束学习
+   * 停止计时器并保存学习记录到后端
+   */
   const handleEndStudy = async () => {
-    const duration = timer.endStudy();
-    if (!duration) return;
+    const duration = timer.endStudy(); // 停止计时并获取时长
+    if (!duration) return; // 如果没有有效时长则退出
 
     setSaving(true);
     try {
+      // 调用API保存学习记录
       await recordsApi.create({
         mode: 'study',
         subject: timer.selectedSubject.name,
         duration_ms: duration,
         notes: timer.notes.trim(),
       });
-      onRecordSaved?.();
+      onRecordSaved?.(); // 通知父组件刷新数据
     } catch (err) {
       showToast(`保存失败: ${err.message}`, 'error');
     }
     setSaving(false);
   };
 
-  // 保存休息记录
+  /**
+   * 处理结束休息
+   * 停止休息计时并保存休息记录
+   */
   const handleEndRest = async () => {
-    const duration = timer.endRest();
+    const duration = timer.endRest(); // 停止休息计时并获取时长
     if (!duration) return;
 
     try {
+      // 调用API保存休息记录
       await recordsApi.create({
         mode: 'rest',
         duration_ms: duration,
@@ -206,6 +235,10 @@ export default function TimerPage({ timer, onRecordSaved }) {
   return null;
 }
 
+/**
+ * Toast通知组件
+ * 显示短暂的消息提示（成功或错误）
+ */
 function Toast({ message, type }) {
   return (
     <div className={`fixed top-4 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg shadow-lg text-sm font-medium transition-all

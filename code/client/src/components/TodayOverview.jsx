@@ -1,19 +1,25 @@
+// code/client/src/components/TodayOverview.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { recordsApi } from '../utils/api';
+import { fmtTime } from '../utils/fmtTime';
 
-function fmtTime(ms) {
-  if (!ms || ms <= 0) return '0分';
-  const totalSeconds = ms / 1000;
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  if (hours > 0) return `${hours}小时${minutes}分`;
-  return `${minutes}分`;
-}
-
+/**
+ * 今日概览组件
+ * 显示当天的学习统计数据，包括总学习时长、休息时长以及各科目的学习时长分布
+ * 
+ * @param {Object} props - 组件属性
+ * @param {string|number} props.refreshKey - 刷新键，变化时重新加载数据
+ */
 export default function TodayOverview({ refreshKey }) {
+  // 今日概览数据
   const [data, setData] = useState(null);
+  // 加载状态
   const [loading, setLoading] = useState(true);
 
+  /**
+   * 加载今日概览数据
+   * 从API获取当天的学习统计数据
+   */
   const load = useCallback(async () => {
     setLoading(true);
     try {
@@ -25,14 +31,20 @@ export default function TodayOverview({ refreshKey }) {
     setLoading(false);
   }, []);
 
+  /**
+   * 当组件挂载或刷新键变化时重新加载数据
+   */
   useEffect(() => { load(); }, [load, refreshKey]);
 
+  // 加载中状态
   if (loading) {
     return <div className="text-center py-4 text-gray-400 text-sm">加载中...</div>;
   }
 
+  // 无数据时返回空
   if (!data) return null;
 
+  // 计算各科目中最大时长，用于进度条比例计算
   const maxSubjectMs = data.by_subject?.length > 0
     ? Math.max(...data.by_subject.map(s => s.total_ms))
     : 1;

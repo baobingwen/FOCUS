@@ -1,16 +1,14 @@
+// code/client/src/components/HistoryPage.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import { recordsApi } from '../utils/api';
 import TodayOverview from './TodayOverview';
+import { fmtTime } from '../utils/fmtTime';
 
-function fmtTime(ms) {
-  if (!ms || ms <= 0) return '0分';
-  const totalSeconds = ms / 1000;
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  if (hours > 0) return `${hours}小时${minutes}分`;
-  return `${minutes}分`;
-}
-
+/**
+ * 将 ms 格式化为短时间显示（MM:SS格式）
+ * @param {number} ms
+ * @returns {string} 格式化后的时间（如 "05:30"）
+ */
 function fmtShortTime(ms) {
   if (typeof ms !== 'number' || !isFinite(ms) || ms < 0) return '00:00';
   const totalSeconds = ms / 1000;
@@ -19,21 +17,45 @@ function fmtShortTime(ms) {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
+/**
+ * 获取今天的日期字符串（YYYY-MM-DD格式）
+ * @returns {string} 今天的日期字符串
+ */
 function getTodayStr() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+/**
+ * 判断给定的日期字符串是否为今天
+ * @param {string} dateStr - 日期字符串（YYYY-MM-DD格式）
+ * @returns {boolean} 是否为今天
+ */
 function isToday(dateStr) {
   return dateStr === getTodayStr();
 }
 
+/**
+ * 历史记录页面组件
+ * 显示指定日期的学习/休息记录，支持日期导航
+ * 
+ * @param {Object} props - 组件属性
+ * @param {string|number} props.refreshKey - 刷新键，变化时重新加载数据
+ */
 export default function HistoryPage({ refreshKey }) {
+  // 当前查看的日期（YYYY-MM-DD格式）
   const [currentDate, setCurrentDate] = useState(getTodayStr);
+  // 当前日期的记录列表
   const [records, setRecords] = useState([]);
+  // 加载状态
   const [loading, setLoading] = useState(true);
+  // 今日概览组件的刷新键
   const [overviewRefreshKey, setOverviewRefreshKey] = useState(0);
 
+  /**
+   * 加载指定日期的记录
+   * 从API获取当前日期的所有记录并更新状态
+   */
   const loadRecords = useCallback(async () => {
     setLoading(true);
     try {
@@ -45,24 +67,37 @@ export default function HistoryPage({ refreshKey }) {
     setLoading(false);
   }, [currentDate]);
 
+  /**
+   * 当日期变化、刷新键变化或概览刷新键变化时重新加载记录
+   */
   useEffect(() => { loadRecords(); }, [loadRecords, refreshKey, overviewRefreshKey]);
 
+  /**
+   * 切换到前一天
+   */
   const goToPrevDay = () => {
     const d = new Date(currentDate);
     d.setDate(d.getDate() - 1);
     setCurrentDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
   };
 
+  /**
+   * 切换到后一天
+   */
   const goToNextDay = () => {
     const d = new Date(currentDate);
     d.setDate(d.getDate() + 1);
     setCurrentDate(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
   };
 
+  /**
+   * 切换到今天
+   */
   const goToToday = () => {
     setCurrentDate(getTodayStr());
   };
 
+  // 判断是否显示"后一天"按钮（当前不是今天时才显示）
   const showPrev = currentDate !== getTodayStr() || !isToday(currentDate);
 
   return (

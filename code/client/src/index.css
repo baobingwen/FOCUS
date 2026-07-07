@@ -1,6 +1,4 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
 .timer-font {
   font-family: 'SF Mono', 'JetBrains Mono', 'Consolas', monospace;

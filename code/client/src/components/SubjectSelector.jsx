@@ -1,12 +1,29 @@
+// code/client/src/components/SubjectSelector.jsx
 import React, { useState, useEffect } from 'react';
 import { subjectsApi } from '../utils/api';
 
+/**
+ * 科目选择器组件
+ * 用于选择学习科目，支持查看已有科目、新增自定义科目和删除自定义科目
+ * 
+ * @param {Object} props - 组件属性
+ * @param {Object} props.selected - 当前选中的科目对象
+ * @param {Function} props.onSelect - 选中科目时的回调函数，接收科目对象作为参数
+ */
 export default function SubjectSelector({ selected, onSelect }) {
+  // 科目列表
   const [subjects, setSubjects] = useState([]);
+  // 是否显示新增科目输入框
   const [showAdd, setShowAdd] = useState(false);
+  // 新增科目的名称
   const [newName, setNewName] = useState('');
+  // 加载状态
   const [loading, setLoading] = useState(true);
 
+  /**
+   * 加载科目列表
+   * 从API获取所有科目并更新状态
+   */
   const loadSubjects = async () => {
     try {
       const data = await subjectsApi.list();
@@ -17,8 +34,13 @@ export default function SubjectSelector({ selected, onSelect }) {
     setLoading(false);
   };
 
+  // 组件挂载时加载科目列表
   useEffect(() => { loadSubjects(); }, []);
 
+  /**
+   * 处理新增科目
+   * 调用API创建新科目，成功后更新列表并重置输入状态
+   */
   const handleAdd = async () => {
     if (!newName.trim()) return;
     try {
@@ -31,6 +53,14 @@ export default function SubjectSelector({ selected, onSelect }) {
     }
   };
 
+  /**
+   * 处理删除科目
+   * 调用API删除指定科目，成功后更新列表
+   * 如果删除的是当前选中的科目，则清空选中状态
+   * 
+   * @param {Event} e - 点击事件，用于阻止冒泡
+   * @param {Object} subject - 要删除的科目对象
+   */
   const handleDelete = async (e, subject) => {
     e.stopPropagation();
     if (!confirm(`删除科目「${subject.name}」？`)) return;
@@ -45,6 +75,7 @@ export default function SubjectSelector({ selected, onSelect }) {
     }
   };
 
+  // 加载中状态
   if (loading) {
     return (
       <div className="text-center py-4 text-gray-400 text-sm">加载中...</div>

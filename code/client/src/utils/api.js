@@ -1,3 +1,4 @@
+// code/client/src/utils/api.js
 const API_BASE = '/api';
 
 async function request(url, options = {}) {
