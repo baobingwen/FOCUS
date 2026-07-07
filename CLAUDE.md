@@ -25,7 +25,15 @@ cd code/server && npm test
 
 # Watch mode
 cd code/server && npm run test:watch
+
+# Run client tests (Vitest + React Testing Library)
+cd code/client && npm test
+
+# Watch mode
+cd code/client && npm run test:watch
 ```
+
+> 测试详情：**[服务端测试](code/server/TESTING.md)** · **[客户端测试](code/client/TESTING.md)**
 
 ### 第三方项目
 
@@ -53,6 +61,7 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 | `components/TodayOverview.jsx` | 今日概览（总时长 + 按科目分组条形图） |
 | `hooks/useTimer.js` | 极简计时器，使用 Date.now() 绝对时间戳 |
 | `utils/api.js` | fetch 封装 |
+| `utils/fmtTime.js` | 时长格式化工具函数 |
 
 ### 服务端结构 (`code/server/`)
 
@@ -72,12 +81,19 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 | `jest.setup.cjs` | 测试前设 `DB_PATH=:memory:`、`NODE_ENV=test` |
 | `package.json#jest` | Jest 30 配置，原生 ESM + `--experimental-vm-modules` |
 
-**关键决策：**
+**关键决策（服务端）：**
 - **Jest 30** + **supertest**：supertest 直接驱动 Express app，无需监听端口
 - **`:memory:` SQLite**：每个测试文件启动全新空数据库，`beforeEach` 中 `closeDb(); getDb();` 重置
 - **时间隔离**：`/today` 边界测试通过 `jest.useFakeTimers({ now: ... })` 模拟系统时间，配合显式 `created_at` 插入
 - **Express 5 注意**：catch-all 路由不能用 `'*'`（path-to-regexp v8 不认），要用 `'/{*path}'`
 - **ESM 注意**：`jest` 对象需从 `@jest/globals` 显式导入，`setupFiles` 用 `.cjs` 扩展名
+
+**关键决策（客户端）：**
+- **Vitest** + **React Testing Library** + **jsdom**：Vitest 原生 Vite 集成，零额外配置
+- **模块级 mock**：`vi.mock('../utils/api')` 拦截所有 API 调用，组件测试隔离
+- **日期固定**：`vi.useFakeTimers({ toFake: ['Date'] })` 只 fake Date，保留异步定时器避免超时
+- **Loading 态**：`mockReturnValueOnce(new Promise(() => {}))` 保持 pending，避免 act 告警
+- **61 条测试用例**覆盖 7 个模块（api、useTimer、4 组件、App）
 
 ### 数据库
 
