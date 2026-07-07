@@ -1,0 +1,103 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, waitFor } from '@testing-library/react';
+import TodayOverview from './TodayOverview';
+import { recordsApi } from '../utils/api';
+
+vi.mock('../utils/api');
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+const mockOverview = {
+  total_study_ms: 7200000,
+  total_rest_ms: 600000,
+  total_records: 5,
+  by_subject: [
+    { subject: '数学', total_ms: 3600000 },
+    { subject: '英语', total_ms: 2400000 },
+    { subject: '专业课', total_ms: 1200000 },
+  ],
+};
+
+describe('TodayOverview', () => {
+  it('loading 态显示加载中', () => {
+    recordsApi.todayOverview.mockReturnValueOnce(new Promise(() => {}));
+    render(<TodayOverview refreshKey={0} />);
+    expect(screen.getByText('加载中...')).toBeInTheDocument();
+  });
+
+  it('total_records=0 时显示今天还没有记录', async () => {
+    recordsApi.todayOverview.mockResolvedValueOnce({
+      total_study_ms: 0,
+      total_rest_ms: 0,
+      total_records: 0,
+      by_subject: [],
+    });
+    render(<TodayOverview refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('今天还没有记录')).toBeInTheDocument();
+    });
+  });
+
+  it('正常数据：显示总时长和按科目分组', async () => {
+    recordsApi.todayOverview.mockResolvedValueOnce(mockOverview);
+    render(<TodayOverview refreshKey={0} />);
+
+    await waitFor(() => {
+      // 总时长 7200000ms = 2小时
+      expect(screen.getByText('2小时0分')).toBeInTheDocument();
+    });
+
+    // 各科目时长
+    expect(screen.getByText('数学')).toBeInTheDocument();
+    expect(screen.getByText('英语')).toBeInTheDocument();
+    expect(screen.getByText('专业课')).toBeInTheDocument();
+  });
+
+  it('条形图比例：最长科目占 100%', async () => {
+    recordsApi.todayOverview.mockResolvedValueOnce(mockOverview);
+    render(<TodayOverview refreshKey={0} />);
+
+    await waitFor(() => {
+      const mathRow = screen.getByText('数学').closest('.flex').parentElement;
+      const bars = mathRow.querySelectorAll('[style*="width"]');
+      expect(bars[0].style.width).toBe('100%');
+    });
+  });
+
+  it('by_subject 为空数组时不会除以 0', async () => {
+    recordsApi.todayOverview.mockResolvedValueOnce({
+      total_study_ms: 0,
+      total_rest_ms: 0,
+      total_records: 0,
+      by_subject: [],
+    });
+    const { container } = render(<TodayOverview refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('今天还没有记录')).toBeInTheDocument();
+    });
+
+    // 不报错即可
+    expect(container.querySelector('[style*="width"]')).toBeNull();
+  });
+
+  it('refreshKey 变化会重新加载', async () => {
+    recordsApi.todayOverview.mockResolvedValue(mockOverview);
+    const { rerender } = render(<TodayOverview refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('2小时0分')).toBeInTheDocument();
+    });
+
+    expect(recordsApi.todayOverview).toHaveBeenCalledTimes(1);
+
+    rerender(<TodayOverview refreshKey={1} />);
+
+    await waitFor(() => {
+      expect(recordsApi.todayOverview).toHaveBeenCalledTimes(2);
+    });
+  });
+});

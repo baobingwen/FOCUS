@@ -21,7 +21,7 @@ function fmtShortTime(ms) {
  * 获取今天的日期字符串（YYYY-MM-DD格式）
  * @returns {string} 今天的日期字符串
  */
-function getTodayStr() {
+export function getTodayStr() {
   const d = new Date();
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
