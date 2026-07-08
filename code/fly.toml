@@ -1,0 +1,32 @@
+# FOCUS 学习计时器 —— Fly.io 部署配置
+# 部署方式：
+#   1. cd code
+#   2. fly launch --region hkg （首次，或 fly apps create <名称>）
+#   3. fly volumes create focus_data --region hkg --size 1
+#   4. fly deploy
+
+app = "focus-timer"
+
+primary_region = "hkg"
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "8080"
+  DB_PATH = "/data/focus.db"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = true
+  auto_start_machines = true
+
+[[mounts]]
+  source = "focus_data"
+  destination = "/data"
+
+[[vm]]
+  memory = "256mb"
+  cpu_kind = "shared"
+  cpus = 1

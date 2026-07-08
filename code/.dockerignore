@@ -1,0 +1,16 @@
+# 依赖
+**/node_modules/
+
+# 本地数据库（Docker 内使用 Fly.io 持久卷）
+server/data/
+
+# 前端构建产物（Docker 内重新构建）
+client/dist/
+
+# Git
+.git/
+.gitignore
+
+# OS
+.DS_Store
+Thumbs.db

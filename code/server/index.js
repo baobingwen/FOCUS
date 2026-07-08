@@ -16,12 +16,17 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// 初始化数据库
+// 初始化数据库 + 执行迁移
 getDb();
 
 // 中间件
 app.use(cors());
 app.use(express.json());
+
+// 健康检查 —— Fly.io 会定期请求，防止 VM 因空闲被回收
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', timestamp: Date.now() });
+});
 
 // API 路由
 app.use('/api/records', recordsRouter);
@@ -52,7 +57,7 @@ if (!isTest) {
   /** @type { Server } */
   const server = app.listen(PORT, () => {
     console.log(`🎯 FOCUS 学习计时器后端已启动: http://localhost:${PORT}`);
-    console.log(`📁 数据库位置: ${path.join(__dirname, 'data', 'focus.db')}`);
+    console.log(`📁 数据库位置: ${process.env.DB_PATH || path.join(__dirname, 'data', 'focus.db')}`);
   });
 
   /**
