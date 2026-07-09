@@ -107,10 +107,10 @@ src/
 ├── test-setup.js              # 全局测试 setup
 ├── utils/
 │   ├── api.js
-│   └── api.test.js            # API 层 12 条
+│   └── api.test.js            # API 层 11 条
 ├── hooks/
 │   ├── useTimer.js
-│   └── useTimer.test.js       # 状态机 10 条
+│   └── useTimer.test.js       # 状态机 9 条
 └── components/
     ├── App.jsx
     ├── App.test.jsx           # Tab 切换 3 条

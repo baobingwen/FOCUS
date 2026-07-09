@@ -47,17 +47,17 @@ Windows 电脑
 
 ```
 ========================================
-  FOCUS 学习计时器 — 本地启动
+  FOCUS study-timer - local activate
 ========================================
 
-[1/2] 前端已构建，跳过
-[2/2] 启动服务端...
+[1/2] frontend has built, pass
+[2/2] starting server...
 
 ========================================
-  ✅ 正在启动...
-  本地访问:  http://localhost:3001
-  手机访问:  http://100.x.x.x:3001       ← 这是 Tailscale IP
-  按 Ctrl+C 停止服务
+  starting...
+  Local entry:   http://localhost:3001
+  Phone entry:   http://100.x.x.x:3001       ← Tailscale IP
+  Press Ctrl+C to stop the server.
 ========================================
 ```
 
