@@ -1,0 +1,8 @@
+# 迁移文件目录
+#
+# 将数据库迁移脚本命名为 <序号>_<描述>.sql 放入此目录，
+# 每次启动时自动执行未记录的迁移。仅允许增（ADD / CREATE），
+# 不删不改已有表结构。
+#
+# 示例： 001_add_notes_index.sql
+#   CREATE INDEX IF NOT EXISTS idx_records_notes ON records(notes);
