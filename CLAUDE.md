@@ -29,9 +29,14 @@ cd code/server && npm run dev
 cd code/client && npm run dev
 
 # Production-like local start (build + serve on :3001)
-双击 code/start-local.bat 或：
+双击 code/start-local.bat
+或：
 cd code/client && npm run build
 cd code/server && npm start
+
+# 改完前端代码后手动重新构建
+cd code && pwsh -File build-client.ps1
+# 或 Windows 资源管理器双击 code/build-client.ps1
 
 # Run server tests (Jest 30 + supertest, 内存 SQLite)
 cd code/server && npm test
@@ -46,6 +51,7 @@ cd code/client && npm test
 cd code/client && npm run test:watch
 ```
 
+> 全部文档索引见 **[docs/INDEX.md](docs/INDEX.md)**
 > 测试详情：**[服务端测试](code/server/TESTING.md)** · **[客户端测试](code/client/TESTING.md)**
 > 路线图：**[FOCUS ROADMAP](code/ROADMAP.md)**
 
@@ -70,6 +76,7 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 |------|------|
 | `App.jsx` | 主布局 + 底部导航 + useTimer 调用（计时状态托管于此，跨标签切换不丢失） |
 | `components/TimerPage.jsx` | 计时器页面，4 状态机 (idle→studying→rest_prompt→resting)，从 props 接收 timer |
+| `components/ExamCountdown.jsx` | 考研倒计时（右上角常驻，写死 2026-12-19，过期自动隐藏） |
 | `components/SubjectSelector.jsx` | 科目选择（固定列表 + 自定义新增/删除） |
 | `components/HistoryPage.jsx` | 历史记录（按日查看 + 日期导航） |
 | `components/TodayOverview.jsx` | 今日概览（总时长 + 按科目分组条形图） |
@@ -129,8 +136,9 @@ CREATE INDEX IF NOT EXISTS idx_records_notes ON records(notes);
 | `components/SubjectSelector.test.jsx` | 11 | CRUD + confirm 弹窗 |
 | `components/HistoryPage.test.jsx` | 8 | 日期导航 + 列表 |
 | `components/TodayOverview.test.jsx` | 6 | 概览 + 条形图 |
+| `components/ExamCountdown.test.jsx` | 3 | 考研倒计时 |
 | `App.test.jsx` | 3 | Tab 切换 |
-| **合计** | **61** | **7 个测试文件** |
+| **合计** | **64** | **8 个测试文件** |
 
 **关键决策（客户端）：**
 - **Vitest** + **React Testing Library** + **jsdom**：Vitest 原生 Vite 集成，零额外配置

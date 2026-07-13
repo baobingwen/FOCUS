@@ -23,9 +23,15 @@ getDb();
 app.use(cors());
 app.use(express.json());
 
-// 健康检查 —— Fly.io 会定期请求，防止 VM 因空闲被回收
+// 健康检查 + 版本信息
+import { getVersion } from './version.js';
+
 app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: Date.now() });
+  res.json({ status: 'ok', version: getVersion(), timestamp: Date.now() });
+});
+
+app.get('/api/version', (_req, res) => {
+  res.json({ version: getVersion() });
 });
 
 // API 路由
