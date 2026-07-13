@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import TimerPage from './components/TimerPage';
 import HistoryPage from './components/HistoryPage';
+import ExamCountdown from './components/ExamCountdown';
 import useTimer from './hooks/useTimer';
 
 const TABS = [
@@ -21,7 +22,10 @@ export default function App() {
     <div className="min-h-screen bg-gray-50 flex flex-col mx-auto relative overflow-hidden"
          style={{ maxWidth: '430px' }}>
 
-      {/* 主内容区 */}
+        {/* 考研倒计时（右上角） */}
+        <ExamCountdown />
+
+        {/* 主内容区 */}
       <div className="flex-1 overflow-y-auto scrollbar-hide pb-20">
         <div className="px-4 pt-6">
           {activeTab === 'timer' && (
