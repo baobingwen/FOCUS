@@ -39,7 +39,7 @@ npm run test:watch
 
 ```
 ├── __tests__/
-│   ├── records.test.js     # 记录路由（24 条用例）
+│   ├── records.test.js     # 记录路由（25 条用例）
 │   └── subjects.test.js    # 科目路由（13 条用例）
 ├── jest.setup.cjs          # 环境变量初始化（CJS，在 ESM 加载前执行）
 └── package.json            # Jest 配置内联于此
@@ -106,7 +106,7 @@ db.prepare(
 
 ### 时间边界测试
 
-`/api/records/today` 端点使用 `new Date().toISOString().slice(0, 10)` 计算"今天"。测试时不能依赖系统时间，采用：
+`/api/records/today` 端点使用**本地时间**计算"今天"（`Date` 的 `getFullYear / getMonth / getDate` 方法），与 SQLite 的 `created_at` 存储时区（`datetime('now','localtime')`）一致。测试时不能依赖系统时间，采用：
 
 1. 插入记录时指定精确的 `created_at`
 2. Mock 系统时间使端点日期与插入数据对齐
@@ -120,6 +120,8 @@ jest.useFakeTimers({ now: new Date('2026-07-06T23:00:00') });
 const res = await request(app).get('/api/records/today');
 jest.useRealTimers();
 ```
+
+> ⚠️ **历史教训**：原实现曾用 `new Date().toISOString().slice(0, 10)`（UTC 日期），与本地时间存储的 `created_at` 不一致，导致北京时间 0:00~8:00 间今日概览显示昨日数据。已在 `records.test.js` 中增加凌晨边界测试，防止回归。
 
 注意：`jest` 在 ESM 模式下不是全局变量，必须从 `@jest/globals` 导入。
 
@@ -169,7 +171,7 @@ app.get('/{*path}', handler);
 | `mode` | `study`（有效）、`rest`（有效）、`walk`（无效）、缺失 |
 | `subject` | 学习模式缺失（400）、休息模式可以没有、空白字符串（服务端 trim 后判空） |
 | `notes` | 不传（默认空字符串）、传空字符串、传普通字符串 |
-| `created_at` | 23:59:59（算当天）、00:00:00（算当天）、昨日（不算当天）、无效日期 |
+| `created_at` | 23:59:59（算当天）、00:00:00（算当天）、凌晨 0~8 点本地 vs UTC 日期分歧（算当天）、昨日（不算当天）、无效日期 |
 | `id` (DELETE) | 数字有效、非数字（abc）、超大数字（不存在） |
 
 ## 添加新测试
@@ -205,7 +207,7 @@ describe('GET /api/xxx', () => {
 
 | 文件 | 说明 |
 |------|------|
-| `__tests__/records.test.js` | 24 条用例，含时间边界 |
+| `__tests__/records.test.js` | 25 条用例，含时间边界 |
 | `__tests__/subjects.test.js` | 13 条用例，默认科目保护等 |
 | `jest.setup.cjs` | 环境变量初始化 |
 | `../database.js` | 支持 `DB_PATH` 环境变量和 `closeDb()` |

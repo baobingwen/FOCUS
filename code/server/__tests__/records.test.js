@@ -320,4 +320,29 @@ describe('GET /api/records/today', () => {
     expect(res.body.total_study_ms).toBe(0);
     expect(res.body.total_records).toBe(0);
   });
+
+  it('凌晨 0~8 点用本地时间而非 UTC 算今天', async () => {
+    const db = getDb();
+    // 模拟北京时间凌晨 1~2 点创建的记录（UTC+8）
+    const todayLocal = '2026-07-07';
+    db.prepare(
+      `INSERT INTO records (mode, subject, duration_ms, created_at)
+       VALUES (?, ?, ?, ?)`
+    ).run('study', '数学', 3600000, `${todayLocal} 01:00:00`);
+    db.prepare(
+      `INSERT INTO records (mode, subject, duration_ms, created_at)
+       VALUES (?, ?, ?, ?)`
+    ).run('study', '英语', 1800000, `${todayLocal} 02:00:00`);
+
+    // Mock 为北京时间凌晨 3:00 —— 此时 UTC 日期仍是前一天 (2026-07-06)
+    jest.useFakeTimers({ now: new Date(`${todayLocal}T03:00:00`) });
+    const res = await request(app).get('/api/records/today');
+    jest.useRealTimers();
+
+    expect(res.status).toBe(200);
+    // 旧代码用 UTC 算今天会返回 0，新代码用本地时间应正确统计到
+    expect(res.body.total_study_ms).toBe(3600000 + 1800000);
+    expect(res.body.total_records).toBe(2);
+    expect(res.body.by_subject).toHaveLength(2);
+  });
 });

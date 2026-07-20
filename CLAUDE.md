@@ -114,10 +114,12 @@ CREATE INDEX IF NOT EXISTS idx_records_notes ON records(notes);
 
 | 文件/配置 | 说明 |
 |-----------|------|
-| `__tests__/records.test.js` | records 路由测试（24 条） |
-| `__tests__/subjects.test.js` | subjects 路由测试（13 条） |
+| `__tests__/records.test.js` | records 路由测试 |
+| `__tests__/subjects.test.js` | subjects 路由测试 |
 | `jest.setup.cjs` | 测试前设 `DB_PATH=:memory:`、`NODE_ENV=test` |
 | `package.json#jest` | Jest 30 配置，原生 ESM + `--experimental-vm-modules` |
+
+用例数见 [`code/server/TESTING.md`](code/server/TESTING.md)。
 
 **关键决策（服务端）：**
 - **Jest 30** + **supertest**：supertest 直接驱动 Express app，无需监听端口
@@ -128,17 +130,18 @@ CREATE INDEX IF NOT EXISTS idx_records_notes ON records(notes);
 
 #### 客户端 (`code/client/src/`)
 
-| 测试文件 | 用例数 | 说明 |
-|----------|-------:|------|
-| `utils/api.test.js` | 11 | fetch 封装测试 |
-| `hooks/useTimer.test.js` | 9 | 状态机全路径覆盖 |
-| `components/TimerPage.test.jsx` | 13 | 4 态渲染 + 保存 |
-| `components/SubjectSelector.test.jsx` | 11 | CRUD + confirm 弹窗 |
-| `components/HistoryPage.test.jsx` | 8 | 日期导航 + 列表 |
-| `components/TodayOverview.test.jsx` | 6 | 概览 + 条形图 |
-| `components/ExamCountdown.test.jsx` | 3 | 考研倒计时 |
-| `App.test.jsx` | 3 | Tab 切换 |
-| **合计** | **64** | **8 个测试文件** |
+| 测试文件 | 说明 |
+|----------|------|
+| `utils/api.test.js` | fetch 封装测试 |
+| `hooks/useTimer.test.js` | 状态机全路径覆盖 |
+| `components/TimerPage.test.jsx` | 4 态渲染 + 保存 |
+| `components/SubjectSelector.test.jsx` | CRUD + confirm 弹窗 |
+| `components/HistoryPage.test.jsx` | 日期导航 + 列表 |
+| `components/TodayOverview.test.jsx` | 概览 + 条形图 |
+| `components/ExamCountdown.test.jsx` | 考研倒计时 |
+| `App.test.jsx` | Tab 切换 |
+
+用例数及合计见 [`code/client/TESTING.md`](code/client/TESTING.md)。
 
 **关键决策（客户端）：**
 - **Vitest** + **React Testing Library** + **jsdom**：Vitest 原生 Vite 集成，零额外配置

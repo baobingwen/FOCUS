@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+
+## [2.0.2] — 2026-07-20
+
+### Fixed
+
+- **今日概览时区错误**：北京时间 0:00~8:00 间今日概览显示前一日数据。根因为 `/api/records/today`
+  用 UTC 计算"今天"（`toISOString().slice(0,10)`），而 `created_at` 用本地时间存储，二者不一致。
+  改为使用本地时间取得日期字符串。
+  - `server/routes/records.js` — `/today` 端点日期计算从 UTC 改为本地时间
+  - `server/__tests__/records.test.js` — 新增凌晨边界测试，防止回归
+
+### Changed
+
+- docs: 测试计数从 `CLAUDE.md` 移至 `TESTING.md` 统一管理，避免重复维护
+- docs: `README.md` / `ROADMAP.md` 版本号同步至 v2.0.2
+
 ## [2.0.1] — 2026-07-13
 
 ### Added
@@ -25,7 +42,7 @@ All notable changes to this project will be documented in this file.
 - `code/ROADMAP.md` — 已实现列表新增考研倒计时
 - `code/client/package-lock.json` — 更新依赖锁
 
-## [Unreleased]
+## [2.0.0] — 2026-07-09
 
 ### Fixed
 
