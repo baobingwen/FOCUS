@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
-## [2.0.2] — 2026-07-20
+## [0.2.2] — 2026-07-20
 
 ### Fixed
 
@@ -17,9 +17,10 @@ All notable changes to this project will be documented in this file.
 ### Changed
 
 - docs: 测试计数从 `CLAUDE.md` 移至 `TESTING.md` 统一管理，避免重复维护
-- docs: `README.md` / `ROADMAP.md` 版本号同步至 v2.0.2
+- docs: `README.md` / `ROADMAP.md` 版本号同步至 v0.2.2
+- **版本号修正**：此前错误使用了 v2.0.x 系列号，实际应为 v0.2.x。已创建正确 tag（v0.2.1、v0.2.2），移除错误 tag（v2.0.1、v2.0.2）。
 
-## [2.0.1] — 2026-07-13
+## [0.2.1] — 2026-07-13
 
 ### Added
 
@@ -42,7 +43,7 @@ All notable changes to this project will be documented in this file.
 - `code/ROADMAP.md` — 已实现列表新增考研倒计时
 - `code/client/package-lock.json` — 更新依赖锁
 
-## [2.0.0] — 2026-07-09
+## [0.2.0] — 2026-07-09
 
 ### Fixed
 
