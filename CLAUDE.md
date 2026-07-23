@@ -75,9 +75,9 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 | 文件 | 说明 |
 |------|------|
 | `App.jsx` | 主布局 + 底部导航 + useTimer 调用（计时状态托管于此，跨标签切换不丢失） |
-| `components/TimerPage.jsx` | 计时器页面，4 状态机 (idle→studying→rest_prompt→resting)，从 props 接收 timer |
+| `components/TimerPage.jsx` | 计时器页面，4 状态机 (idle→studying→rest_prompt→resting)，从 props 接收 timer；idle 态支持直接休息 |
 | `components/ExamCountdown.jsx` | 考研倒计时（右上角常驻，写死 2026-12-19，过期自动隐藏） |
-| `components/SubjectSelector.jsx` | 科目选择（固定列表 + 自定义新增/删除） |
+| `components/SubjectSelector.jsx` | 科目选择（固定列表 + 自定义新增/删除 + 休息） |
 | `components/HistoryPage.jsx` | 历史记录（按日查看 + 日期导航） |
 | `components/TodayOverview.jsx` | 今日概览（总时长 + 按科目分组条形图） |
 | `hooks/useTimer.js` | 极简计时器，使用 Date.now() 绝对时间戳 |
@@ -134,8 +134,8 @@ CREATE INDEX IF NOT EXISTS idx_records_notes ON records(notes);
 |----------|------|
 | `utils/api.test.js` | fetch 封装测试 |
 | `hooks/useTimer.test.js` | 状态机全路径覆盖 |
-| `components/TimerPage.test.jsx` | 4 态渲染 + 保存 |
-| `components/SubjectSelector.test.jsx` | CRUD + confirm 弹窗 |
+| `components/TimerPage.test.jsx` | 4 态渲染 + 保存 + 休息 |
+| `components/SubjectSelector.test.jsx` | CRUD + confirm 弹窗 + 休息 |
 | `components/HistoryPage.test.jsx` | 日期导航 + 列表 |
 | `components/TodayOverview.test.jsx` | 概览 + 条形图 |
 | `components/ExamCountdown.test.jsx` | 考研倒计时 |

@@ -11,6 +11,8 @@ import { subjectsApi } from '../utils/api';
  * @param {Function} props.onSelect - 选中科目时的回调函数，接收科目对象作为参数
  */
 export default function SubjectSelector({ selected, onSelect }) {
+  // 休息标记对象，用于表示选择了「休息」而非科目
+  const REST = { id: '__rest__', name: '☕ 休息' };
   // 科目列表
   const [subjects, setSubjects] = useState([]);
   // 是否显示新增科目输入框
@@ -43,6 +45,10 @@ export default function SubjectSelector({ selected, onSelect }) {
    */
   const handleAdd = async () => {
     if (!newName.trim()) return;
+    if (newName.trim() === '休息') {
+      alert('「休息」为内置选项，无需添加');
+      return;
+    }
     try {
       const subject = await subjectsApi.create(newName.trim());
       setSubjects(prev => [...prev, subject]);
@@ -145,6 +151,18 @@ export default function SubjectSelector({ selected, onSelect }) {
             </button>
           </div>
         )}
+
+        {/* 休息按钮 */}
+        <button
+          onClick={() => onSelect(REST)}
+          className={`px-4 py-2 rounded-xl text-sm font-medium transition-all ${
+            selected?.id === REST.id
+              ? 'bg-blue-500 text-white shadow-md'
+              : 'bg-white text-gray-700 border border-gray-200 hover:border-blue-300 hover:text-blue-600'
+          }`}
+        >
+          {REST.name}
+        </button>
       </div>
     </div>
   );

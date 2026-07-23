@@ -1,17 +1,9 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { execSync } from 'child_process';
+import { readFileSync } from 'node:fs';
 
-const APP_VERSION = (() => {
-  try {
-    return execSync('git describe --tags --always --dirty', {
-      encoding: 'utf-8',
-      timeout: 3000,
-    }).trim();
-  } catch {
-    return 'dev';
-  }
-})();
+const pkg = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf-8'));
+const APP_VERSION = pkg.version;
 
 export default defineConfig({
   plugins: [react()],

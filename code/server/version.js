@@ -1,19 +1,12 @@
 // code/server/version.js
-import { execSync } from 'child_process';
+import { createRequire } from 'node:module';
+const require = createRequire(import.meta.url);
+const { version } = require('./package.json');
 
 /**
- * 从 git tag 读取当前版本号
- * 格式：v0.2.0 / v0.2.0-3-ge28d8fe / dev
- * 无 git 环境时返回 'dev'
+ * 从 server/package.json 读取服务端版本号
  * @returns {string}
  */
 export function getVersion() {
-  try {
-    return execSync('git describe --tags --always --dirty', {
-      encoding: 'utf-8',
-      timeout: 3000,
-    }).trim();
-  } catch {
-    return 'dev';
-  }
+  return version;
 }

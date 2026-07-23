@@ -92,8 +92,10 @@ export default function TimerPage({ timer, onRecordSaved }) {
 
   // ===== 渲染各状态 =====
 
-  // 状态 1：空闲 — 选科目 + 开始按钮
+  // 状态 1：空闲 — 选科目/选休息 + 开始按钮
   if (timer.phase === 'idle') {
+    const isRest = timer.selectedSubject?.id === '__rest__';
+
     return (
       <div className="flex flex-col items-center pt-12 px-4">
         <h1 className="text-2xl font-bold text-gray-800 mb-2">🎯 FOCUS</h1>
@@ -105,7 +107,7 @@ export default function TimerPage({ timer, onRecordSaved }) {
         />
 
         <button
-          onClick={timer.startStudy}
+          onClick={isRest ? timer.startRest : timer.startStudy}
           disabled={!timer.selectedSubject}
           className={`mt-6 w-48 h-48 rounded-full flex items-center justify-center
             shadow-lg transition-all duration-200 text-white font-bold text-xl
@@ -115,13 +117,13 @@ export default function TimerPage({ timer, onRecordSaved }) {
             }`}
         >
           <div className="text-center">
-            <div className="text-4xl mb-1">▶</div>
-            <div>开始学习</div>
+            <div className="text-4xl mb-1">{isRest ? '☕' : '▶'}</div>
+            <div>{isRest ? '开始休息' : '开始学习'}</div>
           </div>
         </button>
 
         {!timer.selectedSubject && (
-          <p className="text-xs text-gray-300 mt-4">请先选择一个科目</p>
+          <p className="text-xs text-gray-300 mt-4">请先选择一个科目或休息</p>
         )}
 
         {/* Toast */}

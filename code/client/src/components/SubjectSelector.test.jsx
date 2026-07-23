@@ -173,4 +173,56 @@ describe('SubjectSelector', () => {
 
     expect(subjectsApi.delete).not.toHaveBeenCalled();
   });
+
+  it('渲染「☕ 休息」按钮', async () => {
+    subjectsApi.list.mockResolvedValueOnce(defaultSubjects);
+    render(<SubjectSelector selected={null} onSelect={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('☕ 休息')).toBeInTheDocument();
+    });
+  });
+
+  it('点击「☕ 休息」调用 onSelect(REST)', async () => {
+    const onSelect = vi.fn();
+    subjectsApi.list.mockResolvedValueOnce(defaultSubjects);
+    render(<SubjectSelector selected={null} onSelect={onSelect} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('☕ 休息')).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByText('☕ 休息'));
+    expect(onSelect).toHaveBeenCalledWith(
+      expect.objectContaining({ id: '__rest__', name: '☕ 休息' })
+    );
+  });
+
+  it('选中休息时按钮包含蓝色样式', async () => {
+    subjectsApi.list.mockResolvedValueOnce(defaultSubjects);
+    const restMarker = { id: '__rest__', name: '☕ 休息' };
+    render(<SubjectSelector selected={restMarker} onSelect={vi.fn()} />);
+
+    await waitFor(() => {
+      const btn = screen.getByText('☕ 休息').closest('button');
+      expect(btn.className).toContain('bg-blue-500');
+    });
+  });
+
+  it('不能创建名为「休息」的科目', async () => {
+    window.alert = vi.fn();
+    subjectsApi.list.mockResolvedValueOnce(defaultSubjects);
+    render(<SubjectSelector selected={null} onSelect={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('数学')).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByText('+ 新增'));
+    await userEvent.type(screen.getByPlaceholderText('输入科目名'), '休息');
+    await userEvent.click(screen.getByText('确认'));
+
+    expect(window.alert).toHaveBeenCalledWith('「休息」为内置选项，无需添加');
+    expect(subjectsApi.create).not.toHaveBeenCalled();
+  });
 });

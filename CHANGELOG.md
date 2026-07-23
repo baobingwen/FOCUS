@@ -2,7 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
-## [Unreleased]
+## [0.2.3] — 2026-07-23
+
+### Added
+
+- **空闲态可直接休息**：SubjectSelector 新增「☕ 休息」芯片（与科目互斥），选中后大按钮变为「开始休息」，点击进入已有休息流程。休息存库（mode: rest），结束后自动清空选中态。纯前端改动，useTimer.js 零改动。
+  - `SubjectSelector.jsx` — 新增 `REST` 标记对象、休息芯片渲染、防止添加"休息"科目
+  - `TimerPage.jsx` — idle 态支持休息选择与启动
+  - `SubjectSelector.test.jsx` — +4 条测试
+  - `TimerPage.test.jsx` — +3 条测试（含提示文字更新）
+
+### Changed
+
+- **版本策略重构**：分为三轨独立管理——`client/package.json`（客户端版本 0.2.1）、`server/package.json`（服务端版本 0.2.2）、git tag `v0.2.3`（项目里程碑标记）。运行时不再依赖 `git describe`。
+  - `server/version.js` — 从 `git describe` 改为读自身 `package.json#version`
+  - `client/vite.config.js` — 从 `git describe` 改为读自身 `package.json#version`
+- docs: 测试计数更新 64 → 70（`TESTING.md`）
+- docs: 版本声明从单号改为三轨显示（`README.md` / `ROADMAP.md`）
 
 ## [0.2.2] — 2026-07-20
 

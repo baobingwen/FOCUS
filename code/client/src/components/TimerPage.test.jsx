@@ -36,7 +36,7 @@ describe('TimerPage', () => {
 
     const btn = screen.getByText('开始学习').closest('button');
     expect(btn).toBeDisabled();
-    expect(screen.getByText('请先选择一个科目')).toBeInTheDocument();
+    expect(screen.getByText('请先选择一个科目或休息')).toBeInTheDocument();
   });
 
   it('idle 且已选科目时，开始按钮 enabled', () => {
@@ -206,5 +206,32 @@ describe('TimerPage', () => {
     const timer = createMockTimer({ phase: 'unknown' });
     const { container } = render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
     expect(container.innerHTML).toBe('');
+  });
+
+  it('idle 且选中休息时，按钮显示 ☕ 和「开始休息」', () => {
+    subjectsApi.list.mockImplementation(() => new Promise(() => {}));
+    const timer = createMockTimer({
+      selectedSubject: { id: '__rest__', name: '☕ 休息' },
+    });
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    expect(screen.getByText('☕')).toBeInTheDocument();
+    expect(screen.getByText('开始休息')).toBeInTheDocument();
+
+    const btn = screen.getByText('开始休息').closest('button');
+    expect(btn).not.toBeDisabled();
+  });
+
+  it('idle 且选中休息时，点击按钮调用 startRest', async () => {
+    subjectsApi.list.mockImplementation(() => new Promise(() => {}));
+    const startRest = vi.fn();
+    const timer = createMockTimer({
+      selectedSubject: { id: '__rest__', name: '☕ 休息' },
+      startRest,
+    });
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    await userEvent.click(screen.getByText('开始休息'));
+    expect(startRest).toHaveBeenCalled();
   });
 });

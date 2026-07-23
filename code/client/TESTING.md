@@ -117,16 +117,16 @@ src/
     ├── ExamCountdown.jsx
     ├── ExamCountdown.test.jsx # 考研倒计时 3 条
     ├── TimerPage.jsx
-    ├── TimerPage.test.jsx     # 4 态渲染 + 保存 13 条
+    ├── TimerPage.test.jsx     # 4 态渲染 + 保存 + 休息 15 条
     ├── SubjectSelector.jsx
-    ├── SubjectSelector.test.jsx # CRUD 11 条
+    ├── SubjectSelector.test.jsx # CRUD + 休息 15 条
     ├── HistoryPage.jsx
     ├── HistoryPage.test.jsx   # 日期导航 + 列表 8 条
     ├── TodayOverview.jsx
     └── TodayOverview.test.jsx  # 概览 + 条形图 6 条
 ```
 
-总计 **64 条测试用例**，8 个测试文件。
+总计 **70 条测试用例**，8 个测试文件。
 
 ## 测试模式详解
 
