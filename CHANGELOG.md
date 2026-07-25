@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.4] — 2026-07-25
+
+### Added
+
+- **暂停功能**：学习途中可暂停/继续，暂停时间计入今日休息统计，历史记录千层饼可视化。
+  - `useTimer.js` — 新增 `paused` phase、`pauseStudy()`/`resumeStudy()`、segments 追踪、paused_ms 累计
+  - `TimerPage.jsx` — 学习中/暂停中合并渲染，桌面 hover/移动端常驻 ⏸ 按钮，暂停态灰化 + 暂停计时，暂停态结束弹窗确认
+  - `HistoryPage.jsx` — `SegmentStack` 千层饼组件（按时间比例堆叠蓝/灰条展示学习/暂停段）
+- **数据库迁移**：`001_add_pause_fields.sql` — records 表新增 `segments TEXT`、`paused_ms INTEGER`
+
+### Changed
+
+- `server/routes/records.js` — POST 接受可选 `segments`/`paused_ms`，GET 返回解析后的 segments，今日概览 rest 统计含暂停时长
+- `docs/adr/0002-pause-feature.md` — 暂停功能设计文档
+- `CONTEXT.md` — 新增"暂停段"领域定义
+- 版本号：client `0.2.1`→`0.2.2`，server `0.2.2`→`0.2.3`，git tag `v0.2.4`
+
+### Tests
+
+- 服务端：+5 条（segments 存读、paused_ms 统计兼容性）43→43 全绿
+- 客户端：+16 条（暂停态机 6 + TimerPage 暂停交互 6 + 千层饼渲染 3 + 兼容性 1）86→86 全绿
+
 ## [0.2.3] — 2026-07-23
 
 ### Added

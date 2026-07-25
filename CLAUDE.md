@@ -75,7 +75,7 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 | 文件 | 说明 |
 |------|------|
 | `App.jsx` | 主布局 + 底部导航 + useTimer 调用（计时状态托管于此，跨标签切换不丢失） |
-| `components/TimerPage.jsx` | 计时器页面，4 状态机 (idle→studying→rest_prompt→resting)，从 props 接收 timer；idle 态支持直接休息 |
+| `components/TimerPage.jsx` | 计时器页面，5 状态机 (idle→studying→paused→rest_prompt→resting)，从 props 接收 timer；idle 态支持直接休息；暂停态支持继续和确认结束 |
 | `components/ExamCountdown.jsx` | 考研倒计时（右上角常驻，写死 2026-12-19，过期自动隐藏） |
 | `components/SubjectSelector.jsx` | 科目选择（固定列表 + 自定义新增/删除 + 休息） |
 | `components/HistoryPage.jsx` | 历史记录（按日查看 + 日期导航） |
@@ -174,12 +174,12 @@ code/start-local.bat
 
 ### 数据库
 
-**records** — `mode` (study/rest), `subject`, `duration_ms`, `notes`, `created_at`
+**records** — `mode` (study/rest), `subject`, `duration_ms`, `paused_ms` (暂停总时长), `segments` (JSON 段列表), `notes`, `created_at`
 **subjects** — `name`, `sort_order`（默认：数学、英语、专业课）
 **_migrations** — 迁移追踪表，记录已执行的迁移脚本名
 
 ### 核心概念
-- **状态机**: idle → studying → rest_prompt → resting → idle
+- **状态机**: idle → studying → paused → studying → paused → ... → rest_prompt → resting → idle
 - **极简**: 没有计次、没有分段、没有自动分类、没有二级标签
 - **双轨时间**: Date.now() 绝对时间戳，锁屏休眠恢复后精准咬合
 - **科目**: 一级分类，固定列表 + 用户自定义
