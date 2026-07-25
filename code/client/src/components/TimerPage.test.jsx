@@ -16,9 +16,12 @@ function createMockTimer(overrides = {}) {
     updateNotes: vi.fn(),
     startStudy: vi.fn(),
     endStudy: vi.fn(),
+    pauseStudy: vi.fn(),
+    resumeStudy: vi.fn(),
     startRest: vi.fn(),
     endRest: vi.fn(),
     skipRest: vi.fn(),
+    pausedElapsed: 0,
     ...overrides,
   };
 }
@@ -82,7 +85,7 @@ describe('TimerPage', () => {
   });
 
   it('结束学习 → API 成功 → 调用 onRecordSaved', async () => {
-    const endStudy = vi.fn(() => 5000);
+    const endStudy = vi.fn(() => ({ duration_ms: 5000, paused_ms: 0, segments: [{ type: 'study', duration_ms: 5000 }] }));
     const onRecordSaved = vi.fn();
     const timer = createMockTimer({
       phase: 'studying',
@@ -102,6 +105,8 @@ describe('TimerPage', () => {
       mode: 'study',
       subject: '数学',
       duration_ms: 5000,
+      paused_ms: 0,
+      segments: [{ type: 'study', duration_ms: 5000 }],
       notes: '做练习',
     });
     await waitFor(() => {
@@ -110,7 +115,7 @@ describe('TimerPage', () => {
   });
 
   it('结束学习 → API 失败 → 显示错误 toast', async () => {
-    const endStudy = vi.fn(() => 5000);
+    const endStudy = vi.fn(() => ({ duration_ms: 5000, paused_ms: 0, segments: [{ type: 'study', duration_ms: 5000 }] }));
     const timer = createMockTimer({
       phase: 'studying',
       elapsed: 5000,
@@ -233,5 +238,106 @@ describe('TimerPage', () => {
 
     await userEvent.click(screen.getByText('开始休息'));
     expect(startRest).toHaveBeenCalled();
+  });
+
+  // ──── 暂停交互测试 ────
+
+  it('学习中显示暂停按钮', () => {
+    const timer = createMockTimer({ phase: 'studying', elapsed: 5000 });
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    expect(screen.getByLabelText('暂停')).toBeInTheDocument();
+    expect(screen.getByText('结束学习')).toBeInTheDocument();
+  });
+
+  it('暂停态显示继续按钮和暂停计时', () => {
+    const timer = createMockTimer({
+      phase: 'paused',
+      elapsed: 5000,
+      pausedElapsed: 2000,
+      notes: '暂停中记录',
+      selectedSubject: { id: 1, name: '数学' },
+    });
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    expect(screen.getByLabelText('继续')).toBeInTheDocument();
+    expect(screen.getByText(/暂停中 00:02/)).toBeInTheDocument();
+    expect(screen.getByText('结束学习')).toBeInTheDocument();
+  });
+
+  it('暂停态点击继续 → 调用 resumeStudy', async () => {
+    const resumeStudy = vi.fn();
+    const timer = createMockTimer({ phase: 'paused', resumeStudy });
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    await userEvent.click(screen.getByLabelText('继续'));
+    expect(resumeStudy).toHaveBeenCalled();
+  });
+
+  it('暂停态点击结束 → 弹出确认窗', async () => {
+    const timer = createMockTimer({ phase: 'paused' });
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    await userEvent.click(screen.getByText('结束学习'));
+    expect(screen.getByText('当前处于暂停中，确定结束吗？')).toBeInTheDocument();
+  });
+
+  it('暂停态结束确认 → 保存记录并调用 onRecordSaved', async () => {
+    const endStudy = vi.fn(() => ({ duration_ms: 8000, paused_ms: 2000, segments: [
+      { type: 'study', duration_ms: 8000 },
+      { type: 'pause', duration_ms: 2000 },
+    ] }));
+    const onRecordSaved = vi.fn();
+    const timer = createMockTimer({
+      phase: 'paused',
+      endStudy,
+      selectedSubject: { id: 1, name: '数学' },
+    });
+    recordsApi.create.mockResolvedValueOnce({ id: 1 });
+
+    render(<TimerPage timer={timer} onRecordSaved={onRecordSaved} />);
+
+    await userEvent.click(screen.getByText('结束学习'));
+    expect(screen.getByText('当前处于暂停中，确定结束吗？')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByText('确定'));
+
+    expect(endStudy).toHaveBeenCalled();
+    expect(recordsApi.create).toHaveBeenCalledWith({
+      mode: 'study',
+      subject: '数学',
+      duration_ms: 8000,
+      paused_ms: 2000,
+      segments: [
+        { type: 'study', duration_ms: 8000 },
+        { type: 'pause', duration_ms: 2000 },
+      ],
+      notes: '',
+    });
+    await waitFor(() => {
+      expect(onRecordSaved).toHaveBeenCalled();
+    });
+  });
+
+  it('暂停态结束确认弹窗 → 取消关闭弹窗', async () => {
+    const endStudy = vi.fn();
+    const timer = createMockTimer({ phase: 'paused', endStudy });
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    await userEvent.click(screen.getByText('结束学习'));
+    expect(screen.getByText('当前处于暂停中，确定结束吗？')).toBeInTheDocument();
+
+    await userEvent.click(screen.getByText('取消'));
+    expect(endStudy).not.toHaveBeenCalled();
+    expect(screen.queryByText('当前处于暂停中，确定结束吗？')).not.toBeInTheDocument();
+  });
+
+  it('学习中点击暂停按钮 → 调用 pauseStudy', async () => {
+    const pauseStudy = vi.fn();
+    const timer = createMockTimer({ phase: 'studying', pauseStudy });
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    await userEvent.click(screen.getByLabelText('暂停'));
+    expect(pauseStudy).toHaveBeenCalled();
   });
 });

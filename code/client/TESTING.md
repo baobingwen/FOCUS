@@ -110,23 +110,23 @@ src/
 │   └── api.test.js            # API 层 11 条
 ├── hooks/
 │   ├── useTimer.js
-│   └── useTimer.test.js       # 状态机 9 条
+│   └── useTimer.test.js       # 状态机 15 条（含暂停态 6 条）
 └── components/
     ├── App.jsx
     ├── App.test.jsx           # Tab 切换 3 条
     ├── ExamCountdown.jsx
     ├── ExamCountdown.test.jsx # 考研倒计时 3 条
     ├── TimerPage.jsx
-    ├── TimerPage.test.jsx     # 4 态渲染 + 保存 + 休息 15 条
+    ├── TimerPage.test.jsx     # 5 态渲染 + 保存 + 休息 + 暂停交互 + 弹窗确认 22 条
     ├── SubjectSelector.jsx
     ├── SubjectSelector.test.jsx # CRUD + 休息 15 条
     ├── HistoryPage.jsx
-    ├── HistoryPage.test.jsx   # 日期导航 + 列表 8 条
+    ├── HistoryPage.test.jsx   # 日期导航 + 列表 + 千层饼堆叠条 11 条
     ├── TodayOverview.jsx
     └── TodayOverview.test.jsx  # 概览 + 条形图 6 条
 ```
 
-总计 **70 条测试用例**，8 个测试文件。
+总计 **86 条测试用例**，8 个测试文件。
 
 ## 测试模式详解
 

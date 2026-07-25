@@ -135,6 +135,42 @@ describe('POST /api/records', () => {
     // 期望服务端给出错误（400 或 500 都可接受）
     expect([400, 500]).toContain(res.status);
   });
+
+  it('创建带 segments 和 paused_ms 的学习记录', async () => {
+    const res = await request(app).post('/api/records').send({
+      mode: 'study',
+      subject: '数学',
+      duration_ms: 600000,
+      paused_ms: 300000,
+      segments: [
+        { type: 'study', duration_ms: 600000 },
+        { type: 'pause', duration_ms: 300000 },
+        { type: 'study', duration_ms: 900000 },
+      ],
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.segments).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'study' }),
+    ]));
+    expect(res.body.paused_ms).toBe(300000);
+  });
+
+  it('不传 segments/paused_ms 时兼容老数据', async () => {
+    const res = await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.segments).toBeNull();
+    expect(res.body.paused_ms).toBe(0);
+  });
+
+  it('休息模式传 paused_ms 被忽略', async () => {
+    const res = await request(app).post('/api/records').send({
+      mode: 'rest', duration_ms: 600000, paused_ms: 99999,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.paused_ms).toBe(0);
+  });
 });
 
 // ──────────────────────────────────────────────
@@ -319,6 +355,46 @@ describe('GET /api/records/today', () => {
     expect(res.status).toBe(200);
     expect(res.body.total_study_ms).toBe(0);
     expect(res.body.total_records).toBe(0);
+  });
+
+  it('暂停时间 (paused_ms) 计入今日总休息', async () => {
+    const db = getDb();
+    const today = '2026-07-06';
+    const insert = db.prepare(
+      `INSERT INTO records (mode, subject, duration_ms, paused_ms, created_at)
+       VALUES (?, ?, ?, ?, ?)`
+    );
+    // 一条手动休息 10min
+    insert.run('rest', null, 600000, 0, `${today} 10:00:00`);
+    // 一条学习记录含暂停 5min
+    insert.run('study', '数学', 1800000, 300000, `${today} 11:00:00`);
+
+    jest.useFakeTimers({ now: new Date(`${today}T23:00:00`) });
+    const res = await request(app).get('/api/records/today');
+    jest.useRealTimers();
+
+    expect(res.status).toBe(200);
+    // 总休息 = 手动 10min + 暂停 5min = 15min
+    expect(res.body.total_rest_ms).toBe(900000);
+    expect(res.body.total_study_ms).toBe(1800000);
+    expect(res.body.total_records).toBe(2);
+  });
+
+  it('有 paused_ms 但无手动 rest 时，休息统计只来自暂停', async () => {
+    const db = getDb();
+    const today = '2026-07-06';
+    db.prepare(
+      `INSERT INTO records (mode, subject, duration_ms, paused_ms, created_at)
+       VALUES (?, ?, ?, ?, ?)`
+    ).run('study', '英语', 1200000, 600000, `${today} 14:00:00`);
+
+    jest.useFakeTimers({ now: new Date(`${today}T23:00:00`) });
+    const res = await request(app).get('/api/records/today');
+    jest.useRealTimers();
+
+    expect(res.status).toBe(200);
+    expect(res.body.total_rest_ms).toBe(600000); // 只有暂停
+    expect(res.body.total_study_ms).toBe(1200000);
   });
 
   it('凌晨 0~8 点用本地时间而非 UTC 算今天', async () => {

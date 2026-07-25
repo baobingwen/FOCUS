@@ -23,7 +23,7 @@ function fmtTime(ms) {
 /**
  * 计时器页面组件
  * 管理学习/休息的计时、记录保存和UI状态切换
- * 
+ *
  * @param {Object} props - 组件属性
  * @param {Object} props.timer - 计时器状态对象（来自useTimer钩子）
  * @param {Function} props.onRecordSaved - 记录保存后的回调函数
@@ -33,6 +33,8 @@ export default function TimerPage({ timer, onRecordSaved }) {
   const [saving, setSaving] = useState(false);
   // Toast通知状态
   const [toast, setToast] = useState(null);
+  // 控制暂停态结束学习确认弹窗的显示状态
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
 
   /**
    * 显示Toast通知
@@ -49,8 +51,8 @@ export default function TimerPage({ timer, onRecordSaved }) {
    * 停止计时器并保存学习记录到后端
    */
   const handleEndStudy = async () => {
-    const duration = timer.endStudy(); // 停止计时并获取时长
-    if (!duration) return; // 如果没有有效时长则退出
+    const data = timer.endStudy(); // 停止计时并获取数据
+    if (!data) return; // 退出
 
     setSaving(true);
     try {
@@ -58,7 +60,9 @@ export default function TimerPage({ timer, onRecordSaved }) {
       await recordsApi.create({
         mode: 'study',
         subject: timer.selectedSubject.name,
-        duration_ms: duration,
+        duration_ms: data.duration_ms,
+        paused_ms: data.paused_ms,
+        segments: data.segments,
         notes: timer.notes.trim(),
       });
       onRecordSaved?.(); // 通知父组件刷新数据
@@ -66,6 +70,28 @@ export default function TimerPage({ timer, onRecordSaved }) {
       showToast(`保存失败: ${err.message}`, 'error');
     }
     setSaving(false);
+  };
+
+  /**
+   * 处理暂停态下点击结束 → 弹窗确认
+   */
+  const handleEndFromPaused = () => {
+    setShowEndConfirm(true);
+  };
+
+  /**
+   * 确认结束（暂停态）
+   */
+  const confirmEndFromPaused = async () => {
+    setShowEndConfirm(false);
+    await handleEndStudy();
+  };
+
+  /**
+   * 取消结束（暂停态）
+   */
+  const cancelEndFromPaused = () => {
+    setShowEndConfirm(false);
   };
 
   /**
@@ -126,57 +152,126 @@ export default function TimerPage({ timer, onRecordSaved }) {
           <p className="text-xs text-gray-300 mt-4">请先选择一个科目或休息</p>
         )}
 
-        {/* Toast */}
         {toast && <Toast message={toast.message} type={toast.type} />}
       </div>
     );
   }
 
-  // 状态 2：学习中 — 计时器 + 备注 + 结束按钮
-  if (timer.phase === 'studying') {
+  // 状态 2 & 3：学习中 / 暂停中 — 计时器 + 备注 + 结束按钮 + 暂停按钮 — 用 isPaused 控制差异
+  const isPaused = timer.phase === 'paused';
+  if (timer.phase === 'studying' || isPaused) {
+    const isStudying = timer.phase === 'studying';
+
     return (
       <div className="flex flex-col items-center pt-8 px-4">
         {/* 科目标签 */}
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-medium mb-6">
+        <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium mb-6 ${
+          isStudying
+            ? 'bg-blue-100 text-blue-700'
+            : 'bg-gray-200 text-gray-500'
+        }`}>
           📚 {timer.selectedSubject?.name}
         </div>
 
-        {/* 计时器 */}
-        <div className="timer-font text-7xl font-light tracking-tight text-gray-900 mb-8 select-none">
+        {/* 计时器 — 暂停时灰化 */}
+        <div className={`timer-font text-7xl font-light tracking-tight select-none mb-2 ${
+          isStudying ? 'text-gray-900' : 'text-gray-300'
+        }`}>
           {fmtTime(timer.elapsed)}
         </div>
 
+        {/* 暂停计时 — 仅暂停态显示 */}
+        {isPaused && (
+          <div className="text-sm text-gray-400 mb-8">
+            暂停中 {fmtTime(timer.pausedElapsed)}
+          </div>
+        )}
+        {isStudying && <div className="mb-8" />}
+
         {/* 备注输入框 */}
         <div className="w-full max-w-sm mb-8">
-          <label className="text-xs text-gray-400 mb-1 block">备注（选填）</label>
+          <label className={`text-xs mb-1 block ${isStudying ? 'text-gray-400' : 'text-gray-300'}`}>备注（选填）</label>
           <textarea
             value={timer.notes}
             onChange={(e) => timer.updateNotes(e.target.value)}
             placeholder="记录一下当前的学习内容..."
-            className="w-full h-24 px-3 py-2 text-sm text-gray-700 bg-white border border-gray-200 rounded-xl
-              resize-none outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 transition-all"
+            className={`w-full h-24 px-3 py-2 text-sm border border-gray-200 rounded-xl
+              resize-none outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 transition-all ${
+              isStudying ? 'text-gray-700 bg-white' : 'text-gray-500 bg-gray-50'
+            }`}
           />
         </div>
 
-        {/* 结束学习按钮 */}
-        <button
-          onClick={handleEndStudy}
-          disabled={saving}
-          className="w-36 h-36 rounded-full bg-orange-400 hover:bg-orange-500 active:bg-orange-600
-            shadow-lg transition-all duration-200 text-white font-bold flex items-center justify-center"
-        >
-          <div className="text-center">
-            <div className="text-3xl mb-1">⬛</div>
-            <div>{saving ? '保存中...' : '结束学习'}</div>
-          </div>
-        </button>
+        {/* 结束 + 暂停/继续按钮 */}
+        <div className={`flex items-center justify-center ${isStudying ? 'group' : ''}`}>
+          {/* 结束学习按钮 */}
+          <button
+            onClick={isStudying ? handleEndStudy : handleEndFromPaused}
+            disabled={saving}
+            className="w-36 h-36 rounded-full bg-orange-400 hover:bg-orange-500 active:bg-orange-600
+              shadow-lg transition-all duration-200 text-white font-bold flex items-center justify-center"
+          >
+            <div className="text-center">
+              <div className="text-3xl mb-1">⬛</div>
+              <div>{saving ? '保存中...' : '结束学习'}</div>
+            </div>
+          </button>
+
+          {/* 暂停/继续按钮 — 学习中：桌面 hover 显示；暂停中：常驻 */}
+          <button
+            onClick={isStudying ? timer.pauseStudy : timer.resumeStudy}
+            className={`
+              ${isStudying
+                ? 'md:opacity-0 md:group-hover:opacity-100 md:group-hover:translate-x-0 md:translate-x-4'
+                : ''
+              }
+              transition-all duration-200
+              w-14 h-14 rounded-full shadow-md flex items-center justify-center text-xl ml-4 flex-shrink-0
+              ${isStudying
+                ? 'bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-gray-600'
+                : 'bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white'
+              }
+            `}
+            aria-label={isStudying ? '暂停' : '继续'}
+          >
+            {isStudying ? '⏸' : '▶'}
+          </button>
+        </div>
 
         {toast && <Toast message={toast.message} type={toast.type} />}
+
+        {/* 暂停态结束确认弹窗 */}
+        {isPaused && showEndConfirm && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+            <div className="bg-white rounded-3xl p-8 mx-4 max-w-sm w-full shadow-2xl text-center">
+              <h2 className="text-lg font-bold text-gray-800 mb-2">结束学习？</h2>
+              <p className="text-sm text-gray-400 mb-8">当前处于暂停中，确定结束吗？</p>
+
+              <div className="flex gap-4 justify-center">
+                <button
+                  onClick={confirmEndFromPaused}
+                  disabled={saving}
+                  className="px-8 py-3 bg-orange-400 text-white rounded-xl font-medium
+                    hover:bg-orange-500 active:bg-orange-600 transition-all shadow-md"
+                >
+                  {saving ? '保存中...' : '确定'}
+                </button>
+                <button
+                  onClick={cancelEndFromPaused}
+                  className="px-8 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium
+                    hover:bg-gray-200 active:bg-gray-300 transition-all"
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
 
-  // 状态 3：休息弹窗
+  // 状态 4：休息弹窗
   if (timer.phase === 'rest_prompt') {
     return (
       <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
@@ -206,7 +301,7 @@ export default function TimerPage({ timer, onRecordSaved }) {
     );
   }
 
-  // 状态 4：休息中
+  // 状态 5：休息中
   if (timer.phase === 'resting') {
     return (
       <div className="flex flex-col items-center pt-16 px-4">

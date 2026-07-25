@@ -17,10 +17,23 @@ export const recordsRouter = Router();
  * @param {Response} res - Express 响应对象
  * @returns {Promise<void>}
  */
+
+/**
+ * 解析数据库记录中的 segments 字段（JSON 字符串 → 数组）
+ * @param {Record} row
+ * @returns {Record}
+ */
+function parseSegments(row) {
+  if (row && row.segments && typeof row.segments === 'string') {
+    try { row.segments = JSON.parse(row.segments); } catch { /* 保持原样 */ }
+  }
+  return row;
+}
+
 recordsRouter.post('/', (req, res) => {
   try {
     const db = getDb();
-    const { mode, subject, duration_ms, notes } = req.body;
+    const { mode, subject, duration_ms, notes, segments, paused_ms } = req.body;
 
     if (!mode || !['study', 'rest'].includes(mode)) {
       return res.status(400).json({ error: '无效的 mode，必须为 study 或 rest' });
@@ -32,14 +45,17 @@ recordsRouter.post('/', (req, res) => {
       return res.status(400).json({ error: '学习模式需要指定 subject' });
     }
 
+    const segmentsStr = segments ? JSON.stringify(segments) : null;
+    const pausedMs = (mode === 'study' && typeof paused_ms === 'number' && paused_ms > 0) ? paused_ms : 0;
+
     const result = db.prepare(`
-      INSERT INTO records (mode, subject, duration_ms, notes)
-      VALUES (?, ?, ?, ?)
-    `).run(mode, mode === 'study' ? subject : null, duration_ms, notes || '');
+      INSERT INTO records (mode, subject, duration_ms, notes, segments, paused_ms)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(mode, mode === 'study' ? subject : null, duration_ms, notes || '', segmentsStr, pausedMs);
 
     /** @type {Record} */
-    const record = db.prepare('SELECT * FROM records WHERE id = ?').get(result.lastInsertRowid);
-    res.json(record);
+    const row = db.prepare('SELECT * FROM records WHERE id = ?').get(result.lastInsertRowid);
+    res.json(parseSegments(row));
   } catch (err) {
     console.error('保存记录失败:', err);
     res.status(500).json({ error: '保存记录失败' });
@@ -59,21 +75,22 @@ recordsRouter.get('/', (req, res) => {
     const { date } = req.query;
 
     /** @type {Record[]} */
-    let records;
+    let rows;
     if (date) {
-      records = db.prepare(`
+      rows = db.prepare(`
         SELECT * FROM records
         WHERE DATE(created_at) = DATE(?)
         ORDER BY created_at DESC
       `).all(date);
     } else {
-      records = db.prepare(`
+      rows = db.prepare(`
         SELECT * FROM records
         ORDER BY created_at DESC
         LIMIT 200
       `).all();
     }
 
+    const records = rows.map(parseSegments);
     res.json({ records });
   } catch (err) {
     console.error('获取记录失败:', err);
@@ -127,13 +144,15 @@ recordsRouter.get('/today', (req, res) => {
     `).all(today);
 
     /**
-     * 今日休息总时长
+     * 今日休息总时长 = 手动 rest 记录的时长 + 学习记录中的暂停时长
+     * 注意：SUM(duration_ms) 只统计 mode='rest' 的记录，避免把学习时长也算进去
      * @type {{ total_ms: number }}
      */
     const totalRest = db.prepare(`
-      SELECT COALESCE(SUM(duration_ms), 0) as total_ms
+      SELECT COALESCE(SUM(CASE WHEN mode = 'rest' THEN duration_ms ELSE 0 END), 0)
+           + COALESCE(SUM(paused_ms), 0) as total_ms
       FROM records
-      WHERE DATE(created_at) = ? AND mode = 'rest'
+      WHERE DATE(created_at) = ? AND (mode = 'rest' OR paused_ms > 0)
     `).get(today);
 
     /**

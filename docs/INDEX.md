@@ -40,6 +40,7 @@
 | 文件 | 位置 | 说明 |
 |------|------|------|
 | `docs/adr/0001-timer-state-lift.md` | `docs/adr/` | 计时状态上提到 App 组件（解决标签切换状态丢失） |
+| `docs/adr/0002-pause-feature.md` | `docs/adr/` | 暂停功能 — 学习中的暂停/继续、千层饼可视化、暂停段计入休息统计 |
 
 ---
 

@@ -3,24 +3,33 @@ import { useState, useRef, useCallback, useEffect } from 'react';
 /**
  * 极简计时器 hook
  *
- * 状态机：idle → studying → rest_prompt → resting → idle
+ * 状态机：idle → studying → paused → studying → paused → ... → rest_prompt → resting → idle
  *   idle: 等待用户选择科目后开始
- *   studying: 学习计时中
+ *   studying: 学习计时中，可按暂停
+ *   paused: 暂停中，暂停时间计入 paused_ms，可继续或结束
  *   rest_prompt: 学习结束，询问是否休息
  *   resting: 休息计时中
  *
  * 时间轴使用 Date.now() 绝对时间戳，不依赖累加器，
  * 即使浏览器锁屏/休眠恢复后也能精确咬合真实时间。
+ * 暂停通过 accumulatedStudyRef 追踪总学习时长，不受暂停段影响。
  */
 export default function useTimer() {
-  const [phase, setPhase] = useState('idle'); // idle | studying | rest_prompt | resting
-  const [elapsed, setElapsed] = useState(0);   // 当前计时段的已用毫秒数
+  const [phase, setPhase] = useState('idle'); // idle | studying | paused | rest_prompt | resting
+  const [elapsed, setElapsed] = useState(0);   // 当前总学习时长（毫秒，不含暂停）
+  const [pausedElapsed, setPausedElapsed] = useState(0); // 当前暂停段时长
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [notes, setNotes] = useState('');
 
-  const startRef = useRef(null);   // 当前计时段的起始时间戳
+  const segmentStartRef = useRef(null);      // 当前段的起始时间戳
+  const accumulatedStudyRef = useRef(0);     // 已完成的 study 段总时长
+  const accumulatedPauseRef = useRef(0);     // 已完成的 pause 段总时长
+  const segmentsRef = useRef([]);            // 已完成的段列表 [{type, duration_ms}]
   const intervalRef = useRef(null);
-  const tickRef = useRef(null);   // 持有一个稳定的 tick 引用
+  const phaseRef = useRef(phase);            // 同步 ref，tick 闭包内读取
+
+  // 同步 phaseRef
+  useEffect(() => { phaseRef.current = phase; }, [phase]);
 
   // 清理定时器
   useEffect(() => {
@@ -29,68 +38,124 @@ export default function useTimer() {
     };
   }, []);
 
-  // tick 使用 ref 持有，避免闭包陈旧
-  useEffect(() => {
-    tickRef.current = () => {
-      if (!startRef.current) return;
-      const now = Date.now();
-      const diff = Math.max(0, now - startRef.current);
-      setElapsed(diff);
-    };
-  }, []);
-
-  const startTimer = useCallback(() => {
+  const tick = useCallback(() => {
+    if (!segmentStartRef.current) return;
     const now = Date.now();
-    startRef.current = now;
-    setElapsed(0);
-    intervalRef.current = setInterval(() => {
-      tickRef.current();
-    }, 100);
-  }, []);
+    const currentSegmentMs = Math.max(0, now - segmentStartRef.current);
+    const currentPhase = phaseRef.current;
 
-  const stopTimer = useCallback(() => {
+    if (currentPhase === 'studying') {
+      setElapsed(accumulatedStudyRef.current + currentSegmentMs);
+    } else if (currentPhase === 'paused') {
+      setPausedElapsed(currentSegmentMs);
+    } else if (currentPhase === 'resting') {
+      setElapsed(currentSegmentMs);
+    }
+  }, []); // 依赖为空：用 ref 读取最新 phase/accumulated，不依赖 state
+
+  // 启动 tick 定时器（tick 稳定无依赖，startTicker 也只创建一次）
+  const startTicker = useCallback(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(tick, 100);
+  }, [tick]);
+
+  // 停止 tick 定时器
+  const stopTicker = useCallback(() => {
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
       intervalRef.current = null;
     }
-    // 计算最终时长
-    if (startRef.current) {
-      const finalElapsed = Math.max(0, Date.now() - startRef.current);
-      startRef.current = null;
-      setElapsed(finalElapsed);
-      return finalElapsed;
-    }
-    return 0;
   }, []);
 
   // 开始学习
   const startStudy = useCallback(() => {
     setPhase('studying');
-    startTimer();
-  }, [startTimer]);
+    setElapsed(0);
+    setPausedElapsed(0);
+    accumulatedStudyRef.current = 0;
+    accumulatedPauseRef.current = 0;
+    segmentsRef.current = [];
+    segmentStartRef.current = Date.now();
+    startTicker();
+  }, [startTicker]);
 
-  // 结束学习
+  // 暂停
+  const pauseStudy = useCallback(() => {
+    if (phase !== 'studying') return;
+    // 结束当前学习段
+    const studyMs = Math.max(0, Date.now() - segmentStartRef.current);
+    accumulatedStudyRef.current += studyMs;
+    segmentsRef.current.push({ type: 'study', duration_ms: studyMs });
+    setElapsed(accumulatedStudyRef.current);
+    // 开始暂停段
+    segmentStartRef.current = Date.now();
+    setPausedElapsed(0);
+    setPhase('paused');
+  }, [phase]);
+
+  // 继续学习
+  const resumeStudy = useCallback(() => {
+    if (phase !== 'paused') return;
+    // 结束当前暂停段
+    const pauseMs = Math.max(0, Date.now() - segmentStartRef.current);
+    accumulatedPauseRef.current += pauseMs;
+    segmentsRef.current.push({ type: 'pause', duration_ms: pauseMs });
+    // 开始新的学习段
+    segmentStartRef.current = Date.now();
+    setPhase('studying');
+  }, [phase]);
+
+  // 结束学习（返回 { duration_ms, paused_ms, segments }）
   const endStudy = useCallback(() => {
-    const duration = stopTimer();
-    if (duration <= 0) {
-      // 没计时就结束了，回到 idle
+    // 结束当前段（无论学习还是暂停）
+    if (segmentStartRef.current) {
+      const currentMs = Math.max(0, Date.now() - segmentStartRef.current);
+      if (phase === 'studying') {
+        accumulatedStudyRef.current += currentMs;
+        segmentsRef.current.push({ type: 'study', duration_ms: currentMs });
+      } else if (phase === 'paused') {
+        accumulatedPauseRef.current += currentMs;
+        segmentsRef.current.push({ type: 'pause', duration_ms: currentMs });
+      }
+    }
+
+    stopTicker();
+    segmentStartRef.current = null;
+
+    if (accumulatedStudyRef.current <= 0) {
       setPhase('idle');
       return null;
     }
+
+    // 返回完整的学习段数据
+    const result = {
+      duration_ms: accumulatedStudyRef.current,
+      paused_ms: accumulatedPauseRef.current,
+      segments: segmentsRef.current,
+    };
+
+    // phase 切换
     setPhase('rest_prompt');
-    return duration;
-  }, [stopTimer]);
+    return result;
+  }, [phase, stopTicker]);
 
   // 开始休息
   const startRest = useCallback(() => {
     setNotes('');
+    setElapsed(0);
     setPhase('resting');
-    startTimer();
-  }, [startTimer]);
+    segmentStartRef.current = Date.now();
+    startTicker();
+  }, [startTicker]);
 
   // 结束休息
   const endRest = useCallback(() => {
-    const duration = stopTimer();
+    stopTicker();
+    let duration = 0;
+    if (segmentStartRef.current) {
+      duration = Math.max(0, Date.now() - segmentStartRef.current);
+      segmentStartRef.current = null;
+    }
     if (duration <= 0) {
       setPhase('idle');
       return null;
@@ -99,7 +164,7 @@ export default function useTimer() {
     setNotes('');
     setPhase('idle');
     return duration;
-  }, [stopTimer]);
+  }, [stopTicker]);
 
   // 不休息，直接返回 idle
   const skipRest = useCallback(() => {
@@ -121,11 +186,14 @@ export default function useTimer() {
   return {
     phase,
     elapsed,
+    pausedElapsed,
     selectedSubject,
     notes,
     selectSubject,
     updateNotes,
     startStudy,
+    pauseStudy,
+    resumeStudy,
     endStudy,
     startRest,
     endRest,

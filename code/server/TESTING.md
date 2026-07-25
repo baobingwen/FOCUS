@@ -39,7 +39,7 @@ npm run test:watch
 
 ```
 ├── __tests__/
-│   ├── records.test.js     # 记录路由（25 条用例）
+│   ├── records.test.js     # 记录路由（30 条用例，含暂停/segments）
 │   └── subjects.test.js    # 科目路由（13 条用例）
 ├── jest.setup.cjs          # 环境变量初始化（CJS，在 ESM 加载前执行）
 └── package.json            # Jest 配置内联于此
@@ -207,7 +207,7 @@ describe('GET /api/xxx', () => {
 
 | 文件 | 说明 |
 |------|------|
-| `__tests__/records.test.js` | 25 条用例，含时间边界 |
+| `__tests__/records.test.js` | 30 条用例，含暂停/segments |
 | `__tests__/subjects.test.js` | 13 条用例，默认科目保护等 |
 | `jest.setup.cjs` | 环境变量初始化 |
 | `../database.js` | 支持 `DB_PATH` 环境变量和 `closeDb()` |

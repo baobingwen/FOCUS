@@ -156,4 +156,85 @@ describe('HistoryPage', () => {
       expect(recordsApi.list.mock.calls.length).toBeGreaterThanOrEqual(2);
     });
   });
+
+  // ──── 千层饼测试 ────
+
+  it('有 segments 的记录显示千层饼堆叠条', async () => {
+    const recordWithSegments = {
+      records: [
+        {
+          id: 10,
+          mode: 'study',
+          subject: '数学',
+          duration_ms: 600000,
+          paused_ms: 300000,
+          segments: [
+            { type: 'study', duration_ms: 600000 },
+            { type: 'pause', duration_ms: 100000 },
+            { type: 'study', duration_ms: 900000 },
+          ],
+          notes: '暂停实验',
+          created_at: '2026-07-07 10:00:00',
+        },
+      ],
+    };
+    recordsApi.list.mockResolvedValueOnce(recordWithSegments);
+    recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 600000, total_rest_ms: 300000, total_records: 1, by_subject: [] });
+
+    render(<HistoryPage refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('暂停实验')).toBeInTheDocument();
+    });
+
+    // 显示千层饼段标签
+    await waitFor(() => {
+      expect(screen.getByText(/含暂停/)).toBeInTheDocument();
+    });
+  });
+
+  it('无 segments 的记录正常显示（不出现千层饼）', async () => {
+    const recordNoSegments = {
+      records: [
+        { id: 11, mode: 'study', subject: '英语', duration_ms: 1200000, notes: '背单词', created_at: '2026-07-07 11:00:00' },
+      ],
+    };
+    recordsApi.list.mockResolvedValueOnce(recordNoSegments);
+    recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 1200000, total_rest_ms: 0, total_records: 1, by_subject: [] });
+
+    render(<HistoryPage refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('背单词')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/含暂停/)).not.toBeInTheDocument();
+  });
+
+  it('单段 segments 不显示千层饼（同老数据）', async () => {
+    const recordSingleSegment = {
+      records: [
+        {
+          id: 12,
+          mode: 'study',
+          subject: '数学',
+          duration_ms: 600000,
+          paused_ms: 0,
+          segments: [{ type: 'study', duration_ms: 600000 }],
+          notes: '只有一段',
+          created_at: '2026-07-07 09:00:00',
+        },
+      ],
+    };
+    recordsApi.list.mockResolvedValueOnce(recordSingleSegment);
+    recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 600000, total_rest_ms: 0, total_records: 1, by_subject: [] });
+
+    render(<HistoryPage refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('只有一段')).toBeInTheDocument();
+    });
+
+    expect(screen.queryByText(/含暂停/)).not.toBeInTheDocument();
+  });
 });
