@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.5] — 2026-07-25
+
+### Added
+
+- **MIT 开源协议**：项目根 `LICENSE` 文件 + `package.json` license 字段。
+  - 协议：MIT © 2026 Bingwen Bao (baobingwen)
+  - 三个 `package.json`（根/server/client）均添加 `"license": "MIT"`
+  - README 底部添加许可声明、ROADMAP 已实现
+
 ## [0.2.4] — 2026-07-25
 
 ### Added

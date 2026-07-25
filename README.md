@@ -173,3 +173,7 @@ git tag              → v0.2.4 (项目里程碑标记)
 ## 文档
 
 完整文档索引见 [`docs/INDEX.md`](docs/INDEX.md)。
+
+## 许可
+
+[MIT](LICENSE) © 2026 Bingwen Bao (baobingwen)
