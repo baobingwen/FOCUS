@@ -161,21 +161,22 @@ export default function TimerPage({ timer, onRecordSaved }) {
   const isPaused = timer.phase === 'paused';
   if (timer.phase === 'studying' || isPaused) {
     const isStudying = timer.phase === 'studying';
+    const isFrozen = timer.frozen;
 
     return (
       <div className="flex flex-col items-center pt-8 px-4">
         {/* 科目标签 */}
         <div className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium mb-6 ${
-          isStudying
+          isStudying && !isFrozen
             ? 'bg-blue-100 text-blue-700'
             : 'bg-gray-200 text-gray-500'
         }`}>
           📚 {timer.selectedSubject?.name}
         </div>
 
-        {/* 计时器 — 暂停时灰化 */}
+        {/* 计时器 — 暂停时或冻结时灰化 */}
         <div className={`timer-font text-7xl font-light tracking-tight select-none mb-2 ${
-          isStudying ? 'text-gray-900' : 'text-gray-300'
+          isStudying && !isFrozen ? 'text-gray-900' : 'text-gray-300'
         }`}>
           {fmtTime(timer.elapsed)}
         </div>
@@ -197,7 +198,7 @@ export default function TimerPage({ timer, onRecordSaved }) {
             placeholder="记录一下当前的学习内容..."
             className={`w-full h-24 px-3 py-2 text-sm border border-gray-200 rounded-xl
               resize-none outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 transition-all ${
-              isStudying ? 'text-gray-700 bg-white' : 'text-gray-500 bg-gray-50'
+              isStudying && !isFrozen ? 'text-gray-700 bg-white' : 'text-gray-500 bg-gray-50'
             }`}
           />
         </div>

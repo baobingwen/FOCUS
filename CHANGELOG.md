@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.6] — 2026-07-29
+
+### Added
+
+- **离开页面自动冻结**：学习中离开页面（切标签页/最小化/切换应用）时自动停止计时但**不产生暂停记录**，回来后自动恢复，时间无缝续接。
+  - `useTimer.js` — 新增 `frozen` state、`freeze()`/`thaw()` 方法，冻结仅快照累计时长，不产生 `paused_ms` 或 pause segment
+  - `useFreezeOnLeave.js` — 新 hook，监听 `visibilitychange`/`blur`/`focus`，零缓冲，纯前端
+  - `App.jsx` — 挂载 `useFreezeOnLeave`（持续监听，不受标签切换影响）
+  - `TimerPage.jsx` — 冻结态计时器数字及科目标签变灰（与暂停态同色），无"暂停中"标签
+
+### Tests
+
+- 客户端：+18 条（useTimer freeze/thaw 6 + useFreezeOnLeave 8 + TimerPage 冻结 UI 4）86→104 全绿
+
+### Docs
+
+- `docs/adr/0003-freeze-on-leave.md` — 新建设计文档（冻结 vs 暂停区别、关注点分离、边界情况）
+- `CONTEXT.md` — 新增"冻结"领域概念定义
+- `code/ROADMAP.md` — 从"日常点子"移到"开发中"
+- `docs/INDEX.md` — 加入 ADR-0003 链接
+- `code/client/TESTING.md` — 新增 useFreezeOnLeave 文件树 + 计数 86→104
+- `CLAUDE.md` — 新增 useFreezeOnLeave 组件描述
+
 ## [0.2.5] — 2026-07-25
 
 ### Added

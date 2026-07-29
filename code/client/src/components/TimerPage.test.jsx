@@ -22,6 +22,9 @@ function createMockTimer(overrides = {}) {
     endRest: vi.fn(),
     skipRest: vi.fn(),
     pausedElapsed: 0,
+    frozen: false,
+    freeze: vi.fn(),
+    thaw: vi.fn(),
     ...overrides,
   };
 }
@@ -339,5 +342,58 @@ describe('TimerPage', () => {
 
     await userEvent.click(screen.getByLabelText('暂停'));
     expect(pauseStudy).toHaveBeenCalled();
+  });
+
+  // ──── 冻结 UI 测试 ────
+
+  it('冻结态计时器数字变灰', () => {
+    const timer = createMockTimer({
+      phase: 'studying',
+      elapsed: 5000,
+      frozen: true,
+      selectedSubject: { id: 1, name: '数学' },
+    });
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    const timeEl = screen.getByText(/00:05/);
+    expect(timeEl.className).toContain('text-gray-300');
+  });
+
+  it('冻结态不显示暂停计时标签', () => {
+    const timer = createMockTimer({
+      phase: 'studying',
+      elapsed: 5000,
+      frozen: true,
+      selectedSubject: { id: 1, name: '数学' },
+    });
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    expect(screen.queryByText(/暂停中/)).not.toBeInTheDocument();
+  });
+
+  it('冻结态科目标签变灰', () => {
+    const timer = createMockTimer({
+      phase: 'studying',
+      elapsed: 5000,
+      frozen: true,
+      selectedSubject: { id: 1, name: '数学' },
+    });
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    const badge = screen.getByText('📚 数学');
+    expect(badge.className).toContain('text-gray-500');
+  });
+
+  it('学习非冻结态计时器正常显色', () => {
+    const timer = createMockTimer({
+      phase: 'studying',
+      elapsed: 5000,
+      frozen: false,
+      selectedSubject: { id: 1, name: '数学' },
+    });
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    const timeEl = screen.getByText(/00:05/);
+    expect(timeEl.className).toContain('text-gray-900');
   });
 });

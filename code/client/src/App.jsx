@@ -3,6 +3,7 @@ import TimerPage from './components/TimerPage';
 import HistoryPage from './components/HistoryPage';
 import ExamCountdown from './components/ExamCountdown';
 import useTimer from './hooks/useTimer';
+import useFreezeOnLeave from './hooks/useFreezeOnLeave';
 
 const TABS = [
   { key: 'timer', label: '计时', icon: '⏱️' },
@@ -13,6 +14,9 @@ export default function App() {
   const [activeTab, setActiveTab] = useState('timer');
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   const timer = useTimer();
+
+  // 离开页面自动冻结（仅 studying 态，不计入暂停记录，持续监听不受标签切换影响）
+  useFreezeOnLeave(timer);
 
   const handleRecordSaved = useCallback(() => {
     setHistoryRefreshKey(k => k + 1);

@@ -241,4 +241,94 @@ describe('useTimer', () => {
     act(() => { result.current.resumeStudy(); }); // studying 态调用 resume 无效
     expect(result.current.phase).toBe('studying');
   });
+
+  // ──── 冻结功能测试 ────
+
+  it('freeze → frozen=true, elapsed 冻结不增长', () => {
+    const { result } = renderHook(() => useTimer());
+
+    act(() => { result.current.startStudy(); });
+    act(() => { vi.advanceTimersByTime(5000); });
+
+    act(() => { result.current.freeze(); });
+
+    expect(result.current.frozen).toBe(true);
+    expect(result.current.phase).toBe('studying');
+    expect(result.current.elapsed).toBe(5000);
+
+    // 冻结期间 elapsed 不变
+    act(() => { vi.advanceTimersByTime(3000); });
+    expect(result.current.elapsed).toBe(5000);
+  });
+
+  it('freeze → thaw → 继续计时，冻结时间不计入', () => {
+    const { result } = renderHook(() => useTimer());
+
+    act(() => { result.current.startStudy(); });
+    act(() => { vi.advanceTimersByTime(5000); });
+
+    act(() => { result.current.freeze(); });
+    act(() => { vi.advanceTimersByTime(3000); }); // 冻结 3s（不计入）
+
+    act(() => { result.current.thaw(); });
+    act(() => { vi.advanceTimersByTime(2000); }); // 恢复后学 2s
+
+    // 总时长 = 5s + 2s = 7s（冻结 3s 不计算）
+    expect(result.current.elapsed).toBe(7000);
+    expect(result.current.frozen).toBe(false);
+  });
+
+  it('freeze → endStudy → 返回正确 duration，不含冻结时间', () => {
+    const { result } = renderHook(() => useTimer());
+
+    act(() => { result.current.startStudy(); });
+    act(() => { vi.advanceTimersByTime(10000); });
+
+    act(() => { result.current.freeze(); });
+    act(() => { vi.advanceTimersByTime(5000); }); // 冻结 5s（不计入）
+
+    let data;
+    act(() => { data = result.current.endStudy(); });
+
+    expect(data).toEqual({
+      duration_ms: 10000,
+      paused_ms: 0,
+      segments: [{ type: 'study', duration_ms: 10000 }],
+    });
+    expect(result.current.phase).toBe('rest_prompt');
+  });
+
+  it('freeze 在非 studying 态不生效', () => {
+    const { result } = renderHook(() => useTimer());
+
+    act(() => { result.current.freeze(); }); // idle 态
+    expect(result.current.frozen).toBe(false);
+  });
+
+  it('thaw 在非 studying 态不生效', () => {
+    const { result } = renderHook(() => useTimer());
+
+    act(() => { result.current.startStudy(); });
+    act(() => { vi.advanceTimersByTime(3000); });
+    act(() => { result.current.pauseStudy(); }); // paused 态
+
+    act(() => { result.current.thaw(); }); // 不应生效
+    expect(result.current.phase).toBe('paused');
+  });
+
+  it('重复 freeze 幂等', () => {
+    const { result } = renderHook(() => useTimer());
+
+    act(() => { result.current.startStudy(); });
+    act(() => { vi.advanceTimersByTime(5000); });
+
+    act(() => { result.current.freeze(); });
+    const elapsedAfterFreeze = result.current.elapsed;
+
+    act(() => { result.current.freeze(); }); // 再次 freeze
+
+    // elapsed 不应变化（第二次 freeze 被 guard 拦截）
+    expect(result.current.elapsed).toBe(elapsedAfterFreeze);
+    expect(result.current.frozen).toBe(true);
+  });
 });

@@ -80,7 +80,8 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 | `components/SubjectSelector.jsx` | 科目选择（固定列表 + 自定义新增/删除 + 休息） |
 | `components/HistoryPage.jsx` | 历史记录（按日查看 + 日期导航） |
 | `components/TodayOverview.jsx` | 今日概览（总时长 + 按科目分组条形图） |
-| `hooks/useTimer.js` | 极简计时器，使用 Date.now() 绝对时间戳 |
+| `hooks/useTimer.js` | 极简计时器，使用 Date.now() 绝对时间戳，含 freeze/thaw 冻结机制 |
+| `hooks/useFreezeOnLeave.js` | 离开页面自动冻结 — 监听 visibilitychange/blur/focus，调用 freeze/thaw |
 | `utils/api.js` | fetch 封装 |
 | `utils/fmtTime.js` | 时长格式化工具函数 |
 

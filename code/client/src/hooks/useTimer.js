@@ -20,6 +20,7 @@ export default function useTimer() {
   const [pausedElapsed, setPausedElapsed] = useState(0); // 当前暂停段时长
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [notes, setNotes] = useState('');
+  const [frozen, setFrozen] = useState(false); // 是否处于"离开冻结"态（不计入暂停记录）
 
   const segmentStartRef = useRef(null);      // 当前段的起始时间戳
   const accumulatedStudyRef = useRef(0);     // 已完成的 study 段总时长
@@ -173,6 +174,27 @@ export default function useTimer() {
     setPhase('idle');
   }, []);
 
+  // 冻结 — 离开页面时停止计时，结束时记录学习段但不产生暂停记录
+  const freeze = useCallback(() => {
+    if (phaseRef.current !== 'studying' || !segmentStartRef.current) return;
+    const now = Date.now();
+    const duration = Math.max(0, now - segmentStartRef.current);
+    accumulatedStudyRef.current += duration;
+    segmentsRef.current.push({ type: 'study', duration_ms: duration });
+    segmentStartRef.current = null;
+    setElapsed(accumulatedStudyRef.current);
+    stopTicker();
+    setFrozen(true);
+  }, [stopTicker]);
+
+  // 解冻 — 回到页面时自动恢复计时
+  const thaw = useCallback(() => {
+    if (phaseRef.current !== 'studying') return;
+    segmentStartRef.current = Date.now();
+    startTicker();
+    setFrozen(false);
+  }, [startTicker]);
+
   // 选择科目
   const selectSubject = useCallback((subject) => {
     setSelectedSubject(subject);
@@ -189,6 +211,7 @@ export default function useTimer() {
     pausedElapsed,
     selectedSubject,
     notes,
+    frozen,
     selectSubject,
     updateNotes,
     startStudy,
@@ -198,5 +221,7 @@ export default function useTimer() {
     startRest,
     endRest,
     skipRest,
+    freeze,
+    thaw,
   };
 }
