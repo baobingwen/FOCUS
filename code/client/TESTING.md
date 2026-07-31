@@ -123,12 +123,12 @@ src/
     ├── SubjectSelector.jsx
     ├── SubjectSelector.test.jsx # CRUD + 休息 15 条
     ├── HistoryPage.jsx
-    ├── HistoryPage.test.jsx   # 日期导航 + 列表 + 千层饼堆叠条 11 条
+    ├── HistoryPage.test.jsx   # 日期导航 + 列表 + 千层饼堆叠条 + 备注内联编辑 18 条
     ├── TodayOverview.jsx
     └── TodayOverview.test.jsx  # 概览 + 条形图 6 条
 ```
 
-总计 **104 条测试用例**，9 个测试文件。
+总计 **111 条测试用例**，9 个测试文件。
 
 ## 测试模式详解
 

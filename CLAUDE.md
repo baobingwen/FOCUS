@@ -78,7 +78,7 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 | `components/TimerPage.jsx` | 计时器页面，5 状态机 (idle→studying→paused→rest_prompt→resting)，从 props 接收 timer；idle 态支持直接休息；暂停态支持继续和确认结束 |
 | `components/ExamCountdown.jsx` | 考研倒计时（右上角常驻，写死 2026-12-19，过期自动隐藏） |
 | `components/SubjectSelector.jsx` | 科目选择（固定列表 + 自定义新增/删除 + 休息） |
-| `components/HistoryPage.jsx` | 历史记录（按日查看 + 日期导航） |
+| `components/HistoryPage.jsx` | 历史记录（按日查看 + 日期导航 + 学习记录备注内联编辑） |
 | `components/TodayOverview.jsx` | 今日概览（总时长 + 按科目分组条形图） |
 | `hooks/useTimer.js` | 极简计时器，使用 Date.now() 绝对时间戳，含 freeze/thaw 冻结机制 |
 | `hooks/useFreezeOnLeave.js` | 离开页面自动冻结 — 监听 visibilitychange/blur/focus，调用 freeze/thaw |
@@ -91,7 +91,7 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 |------|------|
 | `index.js` | 入口，express + cors + 静态文件托管 + `/health` 健康检查，导出 `app` 供 supertest 调用 |
 | `database.js` | SQLite 初始化 + 幂等迁移引擎 + `closeDb()`，支持 `DB_PATH` 环境变量覆写 |
-| `routes/records.js` | POST 保存记录，GET 按日期查询，GET /today 今日概览 |
+| `routes/records.js` | POST 保存记录，GET 按日期查询，GET /today 今日概览，PATCH /:id 修改备注（仅学习记录） |
 | `routes/subjects.js` | 科目 CRUD（默认科目不可删） |
 | `migrations/` | 增量 SQL 迁移脚本目录，按文件名排序执行，仅增不删改 |
 

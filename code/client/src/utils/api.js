@@ -20,6 +20,12 @@ export const recordsApi = {
       body: JSON.stringify(data),
     }),
 
+  update: (id, data) =>
+    request(`/records/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(data),
+    }),
+
   list: (date) => {
     const qs = date ? `?date=${encodeURIComponent(date)}` : '';
     return request(`/records${qs}`);

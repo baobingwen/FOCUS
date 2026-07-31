@@ -99,6 +99,52 @@ recordsRouter.get('/', (req, res) => {
 });
 
 /**
+ * 修改学习记录的备注
+ * @route PATCH /:id
+ * @param {Request<{ id: string }, {}, { notes?: unknown }>} req - Express 请求对象
+ * @param {Response} res - Express 响应对象
+ * @returns {void}
+ */
+recordsRouter.patch('/:id', (req, res) => {
+  try {
+    const db = getDb();
+
+    // id 非正整数（含非数字）视为不存在
+    const idStr = req.params.id;
+    if (!/^\d+$/.test(idStr)) {
+      return res.status(404).json({ error: '记录不存在' });
+    }
+    const id = Number(idStr);
+
+    /** @type {Record | undefined} */
+    const row = db.prepare('SELECT * FROM records WHERE id = ?').get(id);
+    if (!row) {
+      return res.status(404).json({ error: '记录不存在' });
+    }
+
+    // 只允许修改学习记录的备注（休息记录无备注概念）
+    if (row.mode !== 'study') {
+      return res.status(400).json({ error: '仅学习记录可修改备注' });
+    }
+
+    // 校验 notes 为字符串；空串合法，等价于清空备注
+    const notes = req.body?.notes;
+    if (typeof notes !== 'string') {
+      return res.status(400).json({ error: '无效的 notes，必须为字符串' });
+    }
+
+    db.prepare('UPDATE records SET notes = ? WHERE id = ?').run(notes.trim(), id);
+
+    /** @type {Record} */
+    const updated = db.prepare('SELECT * FROM records WHERE id = ?').get(id);
+    res.json(parseSegments(updated));
+  } catch (err) {
+    console.error('修改备注失败:', err);
+    res.status(500).json({ error: '修改备注失败' });
+  }
+});
+
+/**
  * 今日概览数据结构
  * @typedef {Object} TodayOverview
  * @property {string} date - 日期

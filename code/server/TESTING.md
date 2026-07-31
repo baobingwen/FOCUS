@@ -39,7 +39,7 @@ npm run test:watch
 
 ```
 ├── __tests__/
-│   ├── records.test.js     # 记录路由（30 条用例，含暂停/segments）
+│   ├── records.test.js     # 记录路由（39 条用例，含暂停/segments + PATCH 修改备注）
 │   └── subjects.test.js    # 科目路由（13 条用例）
 ├── jest.setup.cjs          # 环境变量初始化（CJS，在 ESM 加载前执行）
 └── package.json            # Jest 配置内联于此
@@ -173,6 +173,7 @@ app.get('/{*path}', handler);
 | `notes` | 不传（默认空字符串）、传空字符串、传普通字符串 |
 | `created_at` | 23:59:59（算当天）、00:00:00（算当天）、凌晨 0~8 点本地 vs UTC 日期分歧（算当天）、昨日（不算当天）、无效日期 |
 | `id` (DELETE) | 数字有效、非数字（abc）、超大数字（不存在） |
+| `PATCH /:id` 备注 | id 非数字（404）、不存在（404）、notes 非字符串（400）、休息记录（400）、空串清空（200）、trim（200） |
 
 ## 添加新测试
 
@@ -207,7 +208,7 @@ describe('GET /api/xxx', () => {
 
 | 文件 | 说明 |
 |------|------|
-| `__tests__/records.test.js` | 30 条用例，含暂停/segments |
+| `__tests__/records.test.js` | 39 条用例，含暂停/segments + PATCH 修改备注 |
 | `__tests__/subjects.test.js` | 13 条用例，默认科目保护等 |
 | `jest.setup.cjs` | 环境变量初始化 |
 | `../database.js` | 支持 `DB_PATH` 环境变量和 `closeDb()` |

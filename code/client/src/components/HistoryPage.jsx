@@ -51,6 +51,14 @@ export default function HistoryPage({ refreshKey }) {
   const [loading, setLoading] = useState(true);
   // 今日概览组件的刷新键
   const [overviewRefreshKey, setOverviewRefreshKey] = useState(0);
+  // 正在编辑备注的记录 id（单条互斥：同一时间只编辑一条）
+  const [editingId, setEditingId] = useState(null);
+  // 编辑草稿
+  const [draft, setDraft] = useState('');
+  // 正在保存的记录 id（用于按钮禁用 + 文案）
+  const [savingId, setSavingId] = useState(null);
+  // 保存失败的错误提示（保持编辑态不丢内容）
+  const [editError, setEditError] = useState('');
 
   /**
    * 加载指定日期的记录
@@ -71,6 +79,15 @@ export default function HistoryPage({ refreshKey }) {
    * 当日期变化、刷新键变化或概览刷新键变化时重新加载记录
    */
   useEffect(() => { loadRecords(); }, [loadRecords, refreshKey, overviewRefreshKey]);
+
+  /**
+   * 日期或刷新键变化时重置备注编辑状态（草稿随列表切换自然丢弃）
+   */
+  useEffect(() => {
+    setEditingId(null);
+    setDraft('');
+    setEditError('');
+  }, [currentDate, refreshKey]);
 
   /**
    * 切换到前一天
@@ -95,6 +112,46 @@ export default function HistoryPage({ refreshKey }) {
    */
   const goToToday = () => {
     setCurrentDate(getTodayStr());
+  };
+
+  /**
+   * 进入某条学习记录的备注编辑
+   * 单条互斥：editingId 指向新记录时自动收起上一条
+   * @param {{ id: number, notes?: string }} record
+   */
+  const startEdit = (record) => {
+    setEditingId(record.id);
+    setDraft(record.notes || '');
+    setEditError('');
+  };
+
+  /**
+   * 取消编辑，丢弃草稿
+   */
+  const cancelEdit = () => {
+    setEditingId(null);
+    setDraft('');
+    setEditError('');
+  };
+
+  /**
+   * 保存备注
+   * 成功后静默原地更新列表；失败保持编辑态并显示错误提示
+   * @param {{ id: number }} record
+   */
+  const saveEdit = async (record) => {
+    setSavingId(record.id);
+    setEditError('');
+    try {
+      const updated = await recordsApi.update(record.id, { notes: draft.trim() });
+      setRecords((prev) => prev.map((r) => (r.id === record.id ? updated : r)));
+      setEditingId(null);
+      setDraft('');
+    } catch (err) {
+      setEditError(`保存失败: ${err.message}`);
+    } finally {
+      setSavingId(null);
+    }
   };
 
   // 判断是否显示"后一天"按钮（当前不是今天时才显示）
@@ -178,9 +235,59 @@ export default function HistoryPage({ refreshKey }) {
                 </span>
               </div>
 
-              {/* 备注 */}
-              {record.notes && (
-                <p className="text-xs text-gray-400 mt-1 ml-1">{record.notes}</p>
+              {/* 备注 — 仅学习记录可内联编辑；休息记录无备注概念 */}
+              {record.mode === 'study' && (
+                editingId === record.id ? (
+                  <div className="mt-1 ml-1">
+                    <textarea
+                      value={draft}
+                      onChange={(e) => setDraft(e.target.value)}
+                      placeholder="记录一下当前的学习内容..."
+                      rows={2}
+                      className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg
+                        resize-none outline-none focus:border-blue-300 focus:ring-2
+                        focus:ring-blue-100 text-gray-700"
+                    />
+                    <div className="flex items-center gap-2 mt-1.5">
+                      <button
+                        onClick={() => saveEdit(record)}
+                        disabled={savingId === record.id}
+                        className="px-3 py-1 text-xs bg-blue-500 text-white rounded-lg
+                          hover:bg-blue-600 disabled:opacity-50 transition-colors"
+                      >
+                        {savingId === record.id ? '保存中...' : '保存'}
+                      </button>
+                      <button
+                        onClick={cancelEdit}
+                        className="px-3 py-1 text-xs bg-gray-100 text-gray-600 rounded-lg
+                          hover:bg-gray-200 transition-colors"
+                      >
+                        取消
+                      </button>
+                      {editError && (
+                        <span className="text-xs text-red-500">{editError}</span>
+                      )}
+                    </div>
+                  </div>
+                ) : record.notes ? (
+                  <div className="flex items-center gap-1 mt-1 ml-1">
+                    <button
+                      onClick={() => startEdit(record)}
+                      title="点击修改备注"
+                      className="text-xs text-left text-gray-400 hover:text-blue-500 transition-colors"
+                    >
+                      {record.notes}
+                    </button>
+                    <span className="text-xs text-gray-300 select-none cursor-default" aria-hidden="true">✏️</span>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => startEdit(record)}
+                    className="text-xs text-left text-gray-300 mt-1 ml-1 hover:text-blue-500 transition-colors"
+                  >
+                    ＋ 添加备注
+                  </button>
+                )
               )}
 
               {/* 千层饼 — 仅学习记录有 segments 时显示 */}

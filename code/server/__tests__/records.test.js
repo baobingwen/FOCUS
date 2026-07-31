@@ -174,6 +174,101 @@ describe('POST /api/records', () => {
 });
 
 // ──────────────────────────────────────────────
+// PATCH /api/records/:id
+// ──────────────────────────────────────────────
+describe('PATCH /api/records/:id', () => {
+  /** 创建一条学习记录，返回完整记录对象 */
+  async function createStudy(overrides = {}) {
+    const res = await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000,
+      ...overrides,
+    });
+    return res.body;
+  }
+
+  /** 创建一条休息记录，返回完整记录对象 */
+  async function createRest() {
+    const res = await request(app).post('/api/records').send({
+      mode: 'rest', duration_ms: 600000,
+    });
+    return res.body;
+  }
+
+  it('修改学习记录的备注', async () => {
+    const rec = await createStudy({ notes: '旧备注' });
+    const res = await request(app).patch(`/api/records/${rec.id}`).send({ notes: '新备注' });
+    expect(res.status).toBe(200);
+    expect(res.body).toMatchObject({ id: rec.id, mode: 'study', notes: '新备注' });
+  });
+
+  it('notes 前后空格被 trim', async () => {
+    const rec = await createStudy({ notes: '旧备注' });
+    const res = await request(app).patch(`/api/records/${rec.id}`).send({ notes: '  高数第三章  ' });
+    expect(res.status).toBe(200);
+    expect(res.body.notes).toBe('高数第三章');
+  });
+
+  it('空字符串保存等于清空备注', async () => {
+    const rec = await createStudy({ notes: '旧备注' });
+    const res = await request(app).patch(`/api/records/${rec.id}`).send({ notes: '' });
+    expect(res.status).toBe(200);
+    expect(res.body.notes).toBe('');
+  });
+
+  it('记录不存在返回 404', async () => {
+    const res = await request(app).patch('/api/records/999999').send({ notes: 'x' });
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBeDefined();
+  });
+
+  it('id 非数字返回 404', async () => {
+    const res = await request(app).patch('/api/records/abc').send({ notes: 'x' });
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBeDefined();
+  });
+
+  it('休息记录不可修改备注，返回 400', async () => {
+    const rec = await createRest();
+    const res = await request(app).patch(`/api/records/${rec.id}`).send({ notes: 'x' });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('学习记录');
+  });
+
+  it('notes 非字符串返回 400', async () => {
+    const rec = await createStudy();
+    const res = await request(app).patch(`/api/records/${rec.id}`).send({ notes: 123 });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeDefined();
+  });
+
+  it('不传 notes 字段返回 400', async () => {
+    const rec = await createStudy();
+    const res = await request(app).patch(`/api/records/${rec.id}`).send({});
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeDefined();
+  });
+
+  it('修改后返回的记录保留 segments 解析', async () => {
+    const createRes = await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 600000,
+      paused_ms: 300000,
+      segments: [
+        { type: 'study', duration_ms: 600000 },
+        { type: 'pause', duration_ms: 300000 },
+      ],
+    });
+    const rec = createRes.body;
+    const res = await request(app).patch(`/api/records/${rec.id}`).send({ notes: '分段测试' });
+    expect(res.status).toBe(200);
+    expect(res.body.notes).toBe('分段测试');
+    expect(res.body.segments).toEqual(expect.arrayContaining([
+      expect.objectContaining({ type: 'pause' }),
+    ]));
+    expect(res.body.paused_ms).toBe(300000);
+  });
+});
+
+// ──────────────────────────────────────────────
 // GET /api/records
 // ──────────────────────────────────────────────
 describe('GET /api/records', () => {

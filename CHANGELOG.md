@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.7] — 2026-07-31
+
+### Added
+
+- **历史记录修改备注**：学习记录的备注可在历史页内联编辑/补充/清空，休息记录不可编辑。
+  - `server/routes/records.js` — 新增 `PATCH /api/records/:id`（仅学习记录；id 非法/不存在 404，notes 非字符串或休息记录 400，trim 后存储，空串清空备注）
+  - `client/utils/api.js` — 新增 `recordsApi.update(id, { notes })`
+  - `HistoryPage.jsx` — 备注文字可点进入内联编辑（无备注时显示「＋ 添加备注」），保存成功静默原地更新，失败保持编辑态并显示错误，取消丢弃草稿，单条互斥
+- 版本号：client `0.2.3`→`0.2.4`，server `0.2.3`→`0.2.4`，git tag `v0.2.7`
+
+### Tests
+
+- 服务端：+9 条（PATCH 成功更新、trim、空串清空、404、rest 拒绝、notes 非字符串、缺字段、segments 保留）43→52 全绿
+- 客户端：+7 条（进编辑、添加空备注、保存原地更新、取消丢弃、失败提示、rest 无入口、单条互斥）104→111 全绿
+
+### Docs
+
+- `CONTEXT.md` — 「学习时段」定义补充备注可修改
+- `README.md` — 功能列表 + API 表新增 PATCH
+- `code/ROADMAP.md` — 从「日常点子」移到「已实现」
+- `CLAUDE.md` — HistoryPage / records.js 描述补充
+- `code/client/TESTING.md` — HistoryPage 计数 11→18、总计数 104→111
+- `code/server/TESTING.md` — records.test.js 计数 30→39
+
 ## [0.2.6] — 2026-07-29
 
 ### Added
