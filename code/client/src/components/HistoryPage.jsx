@@ -320,13 +320,15 @@ function SegmentStack({ segments }) {
 
   return (
     <div className="mt-2 space-y-0.5">
-      {segments.map((seg, i) => {
+      {/* 反转渲染：自下而上 = 最早段在最下、最晚段在最上（数组仍保持时间正序） */}
+      {[...segments].reverse().map((seg, i) => {
         const pct = seg.duration_ms / maxMs;
         const height = Math.max(20, Math.round(pct * 48));
         const isStudy = seg.type === 'study';
         return (
           <div
             key={i}
+            data-testid="segment-row"
             className="flex items-center gap-2 rounded-md px-2 transition-colors"
             style={{
               height: `${height}px`,

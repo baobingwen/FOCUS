@@ -193,6 +193,47 @@ describe('HistoryPage', () => {
     });
   });
 
+  it('千层饼段自下而上显示（最早段在最下、最晚段在最上）', async () => {
+    const recordWithSegments = {
+      records: [
+        {
+          id: 13,
+          mode: 'study',
+          subject: '数学',
+          duration_ms: 1600000,
+          paused_ms: 100000,
+          segments: [
+            { type: 'study', duration_ms: 600000 },
+            { type: 'pause', duration_ms: 100000 },
+            { type: 'study', duration_ms: 900000 },
+          ],
+          notes: '顺序测试',
+          created_at: '2026-07-07 10:00:00',
+        },
+      ],
+    };
+    recordsApi.list.mockResolvedValueOnce(recordWithSegments);
+    recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 1600000, total_rest_ms: 0, total_records: 1, by_subject: [] });
+
+    render(<HistoryPage refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('顺序测试')).toBeInTheDocument();
+    });
+
+    const rows = screen.getAllByTestId('segment-row');
+    expect(rows).toHaveLength(3);
+    // 最上 = 最晚段（study 900000 → 15:00）
+    expect(rows[0].textContent).toContain('学习');
+    expect(rows[0].textContent).toContain('15:00');
+    // 中间 = 暂停段
+    expect(rows[1].textContent).toContain('暂停');
+    expect(rows[1].textContent).toContain('01:40');
+    // 最下 = 最早段（study 600000 → 10:00）
+    expect(rows[2].textContent).toContain('学习');
+    expect(rows[2].textContent).toContain('10:00');
+  });
+
   it('无 segments 的记录正常显示（不出现千层饼）', async () => {
     const recordNoSegments = {
       records: [
