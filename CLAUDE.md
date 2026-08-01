@@ -78,11 +78,12 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 | `components/TimerPage.jsx` | 计时器页面，5 状态机 (idle→studying→paused→rest_prompt→resting)，从 props 接收 timer；idle 态支持直接休息；暂停态支持继续和确认结束 |
 | `components/ExamCountdown.jsx` | 考研倒计时（右上角常驻，写死 2026-12-19，过期自动隐藏） |
 | `components/SubjectSelector.jsx` | 科目选择（固定列表 + 自定义新增/删除 + 休息） |
-| `components/HistoryPage.jsx` | 历史记录（按日查看 + 日期导航 + 学习记录备注内联编辑） |
+| `components/HistoryPage.jsx` | 历史记录（按日查看 + 日期导航 + 学习记录备注内联编辑 + 备注点击复制） |
 | `components/TodayOverview.jsx` | 今日概览（总时长 + 按科目分组条形图） |
 | `hooks/useTimer.js` | 极简计时器，使用 Date.now() 绝对时间戳，含 freeze/thaw 冻结机制 |
 | `hooks/useFreezeOnLeave.js` | 离开页面自动冻结 — 监听 visibilitychange/blur/focus，调用 freeze/thaw |
 | `utils/api.js` | fetch 封装 |
+| `utils/clipboard.js` | 剪贴板复制工具（navigator.clipboard + execCommand 降级） |
 | `utils/fmtTime.js` | 时长格式化工具函数 |
 
 ### 服务端结构 (`code/server/`)
@@ -134,10 +135,12 @@ CREATE INDEX IF NOT EXISTS idx_records_notes ON records(notes);
 | 测试文件 | 说明 |
 |----------|------|
 | `utils/api.test.js` | fetch 封装测试 |
+| `utils/clipboard.test.js` | 剪贴板复制工具测试 |
 | `hooks/useTimer.test.js` | 状态机全路径覆盖 |
-| `components/TimerPage.test.jsx` | 4 态渲染 + 保存 + 休息 |
+| `hooks/useFreezeOnLeave.test.js` | 页面离开冻结事件测试 |
+| `components/TimerPage.test.jsx` | 5 态渲染 + 保存 + 休息 + 暂停 + 弹窗确认 + 冻结 UI |
 | `components/SubjectSelector.test.jsx` | CRUD + confirm 弹窗 + 休息 |
-| `components/HistoryPage.test.jsx` | 日期导航 + 列表 |
+| `components/HistoryPage.test.jsx` | 日期导航 + 列表 + 千层饼 + 备注编辑/复制 |
 | `components/TodayOverview.test.jsx` | 概览 + 条形图 |
 | `components/ExamCountdown.test.jsx` | 考研倒计时 |
 | `App.test.jsx` | Tab 切换 |

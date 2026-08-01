@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import HistoryPage, { getTodayStr } from './HistoryPage';
 import { recordsApi } from '../utils/api';
@@ -22,7 +22,14 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  delete navigator.clipboard;
+  delete document.execCommand;
+  vi.restoreAllMocks();
 });
+
+// 获取某条记录备注行内的 ✏️ 编辑按钮（备注文字现在是复制入口）
+const editButtonOf = (noteText) =>
+  within(screen.getByText(noteText).closest('div')).getByTitle('编辑备注');
 
 describe('HistoryPage', () => {
   it('loading 态显示加载中', () => {
@@ -281,7 +288,7 @@ describe('HistoryPage', () => {
 
   // ──── 备注内联编辑 ────
 
-  it('点击学习记录的备注进入编辑态（预填原备注）', async () => {
+  it('点击 ✏️ 进入编辑态（预填原备注）', async () => {
     recordsApi.list.mockResolvedValueOnce(mockRecords);
     recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 3600000, total_rest_ms: 300000, total_records: 2, by_subject: [] });
 
@@ -291,7 +298,7 @@ describe('HistoryPage', () => {
       expect(screen.getByText('高数练习')).toBeInTheDocument();
     });
 
-    await userEvent.click(screen.getByText('高数练习'));
+    await userEvent.click(editButtonOf('高数练习'));
     const textarea = screen.getByPlaceholderText('记录一下当前的学习内容...');
     expect(textarea.value).toBe('高数练习');
   });
@@ -326,7 +333,7 @@ describe('HistoryPage', () => {
       expect(screen.getByText('高数练习')).toBeInTheDocument();
     });
 
-    await userEvent.click(screen.getByText('高数练习'));
+    await userEvent.click(editButtonOf('高数练习'));
     const textarea = screen.getByPlaceholderText('记录一下当前的学习内容...');
     await userEvent.clear(textarea);
     await userEvent.type(textarea, '高数第三章 反常积分');
@@ -354,7 +361,7 @@ describe('HistoryPage', () => {
       expect(screen.getByText('高数练习')).toBeInTheDocument();
     });
 
-    await userEvent.click(screen.getByText('高数练习'));
+    await userEvent.click(editButtonOf('高数练习'));
     const textarea = screen.getByPlaceholderText('记录一下当前的学习内容...');
     await userEvent.type(textarea, ' 补充');
 
@@ -375,7 +382,7 @@ describe('HistoryPage', () => {
       expect(screen.getByText('高数练习')).toBeInTheDocument();
     });
 
-    await userEvent.click(screen.getByText('高数练习'));
+    await userEvent.click(editButtonOf('高数练习'));
     await userEvent.type(screen.getByPlaceholderText('记录一下当前的学习内容...'), ' 补充');
 
     recordsApi.update.mockRejectedValueOnce(new Error('网络错误'));
@@ -425,12 +432,77 @@ describe('HistoryPage', () => {
       expect(screen.getByText('高数练习')).toBeInTheDocument();
     });
 
-    await userEvent.click(screen.getByText('高数练习'));
+    await userEvent.click(editButtonOf('高数练习'));
     expect(screen.getByPlaceholderText('记录一下当前的学习内容...').value).toBe('高数练习');
 
-    await userEvent.click(screen.getByText('背单词'));
+    await userEvent.click(editButtonOf('背单词'));
     // 只有一条编辑框，且预填新记录内容
     expect(screen.getAllByPlaceholderText('记录一下当前的学习内容...')).toHaveLength(1);
     expect(screen.getByPlaceholderText('记录一下当前的学习内容...').value).toBe('背单词');
+  });
+
+  // ──── 备注复制 ────
+
+  it('点击备注文字复制到剪贴板并显示「已复制」', async () => {
+    const writeText = vi.fn().mockResolvedValue();
+    Object.defineProperty(navigator, 'clipboard', { value: { writeText }, configurable: true });
+
+    recordsApi.list.mockResolvedValueOnce(mockRecords);
+    recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 3600000, total_rest_ms: 300000, total_records: 2, by_subject: [] });
+
+    render(<HistoryPage refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('高数练习')).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByText('高数练习'));
+
+    expect(writeText).toHaveBeenCalledWith('高数练习');
+    await waitFor(() => {
+      expect(screen.getByText('已复制✓')).toBeInTheDocument();
+    });
+  });
+
+  it('无 navigator.clipboard 时降级 execCommand 复制', async () => {
+    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+    document.execCommand = vi.fn().mockReturnValue(true);
+
+    recordsApi.list.mockResolvedValueOnce(mockRecords);
+    recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 3600000, total_rest_ms: 300000, total_records: 2, by_subject: [] });
+
+    render(<HistoryPage refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('高数练习')).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByText('高数练习'));
+
+    expect(document.execCommand).toHaveBeenCalledWith('copy');
+    await waitFor(() => {
+      expect(screen.getByText('已复制✓')).toBeInTheDocument();
+    });
+  });
+
+  it('复制失败显示「复制失败」提示', async () => {
+    Object.defineProperty(navigator, 'clipboard', { value: undefined, configurable: true });
+    document.execCommand = vi.fn().mockReturnValue(false);
+
+    recordsApi.list.mockResolvedValueOnce(mockRecords);
+    recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 3600000, total_rest_ms: 300000, total_records: 2, by_subject: [] });
+
+    render(<HistoryPage refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('高数练习')).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByText('高数练习'));
+
+    expect(document.execCommand).toHaveBeenCalledWith('copy');
+    await waitFor(() => {
+      expect(screen.getByText('复制失败')).toBeInTheDocument();
+    });
   });
 });

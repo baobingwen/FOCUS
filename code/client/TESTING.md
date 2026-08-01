@@ -107,7 +107,9 @@ src/
 ├── test-setup.js              # 全局测试 setup
 ├── utils/
 │   ├── api.js
-│   └── api.test.js            # API 层 11 条
+│   ├── api.test.js            # API 层 11 条
+│   ├── clipboard.js
+│   └── clipboard.test.js      # 剪贴板复制工具 3 条
 ├── hooks/
 │   ├── useTimer.js
 │   ├── useTimer.test.js       # 状态机 21 条（含暂停态 6 条 + 冻结 6 条）
@@ -123,12 +125,12 @@ src/
     ├── SubjectSelector.jsx
     ├── SubjectSelector.test.jsx # CRUD + 休息 15 条
     ├── HistoryPage.jsx
-    ├── HistoryPage.test.jsx   # 日期导航 + 列表 + 千层饼堆叠条 + 备注内联编辑 18 条
+    ├── HistoryPage.test.jsx   # 日期导航 + 列表 + 千层饼堆叠条 + 备注内联编辑 + 备注复制 22 条
     ├── TodayOverview.jsx
     └── TodayOverview.test.jsx  # 概览 + 条形图 6 条
 ```
 
-总计 **111 条测试用例**，9 个测试文件。
+总计 **118 条测试用例**，10 个测试文件。
 
 ## 测试模式详解
 

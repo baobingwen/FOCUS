@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { recordsApi } from '../utils/api';
 import TodayOverview from './TodayOverview';
 import { fmtTime } from '../utils/fmtTime';
+import { copyText } from '../utils/clipboard';
 
 /**
  * 将 ms 格式化为短时间显示（MM:SS格式）
@@ -59,6 +60,8 @@ export default function HistoryPage({ refreshKey }) {
   const [savingId, setSavingId] = useState(null);
   // 保存失败的错误提示（保持编辑态不丢内容）
   const [editError, setEditError] = useState('');
+  // 复制反馈（{ id, status: 'ok' | 'fail' }），用于备注点击复制后的内联提示
+  const [copyFeedback, setCopyFeedback] = useState(null);
 
   /**
    * 加载指定日期的记录
@@ -87,6 +90,7 @@ export default function HistoryPage({ refreshKey }) {
     setEditingId(null);
     setDraft('');
     setEditError('');
+    setCopyFeedback(null);
   }, [currentDate, refreshKey]);
 
   /**
@@ -152,6 +156,19 @@ export default function HistoryPage({ refreshKey }) {
     } finally {
       setSavingId(null);
     }
+  };
+
+  /**
+   * 复制备注到剪贴板并显示内联反馈（已复制✓ / 复制失败）
+   * 反馈 1.5s 后自动消失；多次点击只保留最近一次状态
+   * @param {{ id: number, notes?: string }} record
+   */
+  const handleCopyNote = async (record) => {
+    const ok = await copyText(record.notes || '');
+    setCopyFeedback({ id: record.id, status: ok ? 'ok' : 'fail' });
+    setTimeout(() => {
+      setCopyFeedback((prev) => (prev && prev.id === record.id ? null : prev));
+    }, 1500);
   };
 
   // 判断是否显示"后一天"按钮（当前不是今天时才显示）
@@ -271,14 +288,31 @@ export default function HistoryPage({ refreshKey }) {
                   </div>
                 ) : record.notes ? (
                   <div className="flex items-center gap-1 mt-1 ml-1">
+                    {/* 备注文字 = 复制入口（hover 样式与编辑入口保持一致） */}
                     <button
-                      onClick={() => startEdit(record)}
-                      title="点击修改备注"
+                      onClick={() => handleCopyNote(record)}
+                      title="点击复制备注"
                       className="text-xs text-left text-gray-400 hover:text-blue-500 transition-colors"
                     >
                       {record.notes}
                     </button>
-                    <span className="text-xs text-gray-300 select-none cursor-default" aria-hidden="true">✏️</span>
+                    {copyFeedback?.id === record.id && (
+                      <span
+                        aria-live="polite"
+                        className={`text-xs ${copyFeedback.status === 'ok' ? 'text-green-500' : 'text-red-500'}`}
+                      >
+                        {copyFeedback.status === 'ok' ? '已复制✓' : '复制失败'}
+                      </span>
+                    )}
+                    {/* ✏️ = 编辑入口 */}
+                    <button
+                      onClick={() => startEdit(record)}
+                      title="编辑备注"
+                      aria-label="编辑备注"
+                      className="text-xs text-gray-300 hover:text-blue-500 transition-colors"
+                    >
+                      ✏️
+                    </button>
                   </div>
                 ) : (
                   <button

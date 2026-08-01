@@ -2,6 +2,44 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.2.9] — 2026-08-01
+
+### Added
+
+- **历史记录备注复制**：点击历史页学习记录的备注文字即复制到剪贴板，内联显示「已复制✓」/「复制失败」；编辑入口从备注文字移入 ✏️ 按钮（hover 样式保持一致）。
+  - `client/utils/clipboard.js` — 新增 `copyText`：优先 `navigator.clipboard`（仅安全上下文），降级隐藏 textarea + `document.execCommand('copy')`（兼容 Tailscale 手机 HTTP 访问）
+  - `HistoryPage.jsx` — 备注文字变为复制按钮，✏️ 升级为真实编辑按钮；复制反馈 1.5s 自动消失，单条互斥（新编辑/复制自动收起旧反馈）
+- 版本号：client `0.2.5`→`0.2.6`，server 不变 `0.2.4`，git tag `v0.2.9`
+
+### Tests
+
+- 客户端：+6 条（HistoryPage 复制成功/降级/失败 3 条 + clipboard 工具 3 条）112→118 全绿
+
+### Docs
+
+- `CONTEXT.md` — 「学习时段」备注补充"点击复制"
+- `README.md` — 功能列表「备注」补充点击复制 + 项目结构新增 clipboard.js
+- `code/ROADMAP.md` — 从「日常点子」移到「已实现」+ 版本头更新
+- `CLAUDE.md` — HistoryPage 描述补充 + utils 新增 clipboard.js
+- `code/client/TESTING.md` — HistoryPage 19→22、总计数 112→118、文件树新增 clipboard.js
+
+## [0.2.8] — 2026-07-31
+
+### Changed
+
+- **历史页千层饼自下而上显示**：单个学习记录内学习/暂停段堆叠顺序改为自下而上的时间顺序（最早段在最下、最晚段在最上）。存储仍为时间正序，仅渲染反转。
+  - `HistoryPage.jsx` — `SegmentStack` 反转渲染 + data-testid
+- 版本号：client `0.2.4`→`0.2.5`，server 不变 `0.2.4`，git tag `v0.2.8`
+
+### Tests
+
+- 客户端：+1 条（千层饼段自下而上顺序断言）111→112 全绿
+
+### Docs
+
+- `docs/adr/0002-pause-feature.md` — 千层饼图同步自下而上
+- `code/ROADMAP.md` — 已实现新增「千层饼自下而上显示」
+
 ## [0.2.7] — 2026-07-31
 
 ### Added
