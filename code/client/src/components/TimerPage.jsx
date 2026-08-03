@@ -1,6 +1,7 @@
 // code/client/src/components/TimerPage.jsx
 import React, { useState, useCallback } from 'react';
 import SubjectSelector from './SubjectSelector';
+import TagPicker from './TagPicker';
 import { recordsApi } from '../utils/api';
 
 /**
@@ -64,6 +65,7 @@ export default function TimerPage({ timer, onRecordSaved }) {
         paused_ms: data.paused_ms,
         segments: data.segments,
         notes: timer.notes.trim(),
+        tags: timer.tags,
       });
       onRecordSaved?.(); // 通知父组件刷新数据
     } catch (err) {
@@ -188,6 +190,16 @@ export default function TimerPage({ timer, onRecordSaved }) {
           </div>
         )}
         {isStudying && <div className="mb-8" />}
+
+        {/* 标签选择（学习中随时点选/新增，保存时随记录提交） */}
+        <div className="w-full max-w-sm mb-6">
+          <label className={`text-xs mb-1 block ${isStudying ? 'text-gray-400' : 'text-gray-300'}`}>标签（选填）</label>
+          <TagPicker
+            selected={timer.tags}
+            onToggle={timer.toggleTag}
+            onDelete={timer.removeTag}
+          />
+        </div>
 
         {/* 备注输入框 */}
         <div className="w-full max-w-sm mb-8">

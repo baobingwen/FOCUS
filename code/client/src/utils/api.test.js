@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { recordsApi, subjectsApi } from './api';
+import { recordsApi, subjectsApi, tagsApi } from './api';
 
 describe('recordsApi', () => {
   beforeEach(() => {
@@ -153,5 +153,66 @@ describe('subjectsApi', () => {
     });
 
     await expect(subjectsApi.create('数学')).rejects.toThrow('科目已存在');
+  });
+});
+
+describe('tagsApi', () => {
+  beforeEach(() => {
+    globalThis.fetch = vi.fn();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('list: 返回标签列表', async () => {
+    const mockTags = [{ id: 1, name: '高数' }];
+    globalThis.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockTags),
+    });
+
+    const result = await tagsApi.list();
+    expect(result).toEqual(mockTags);
+    expect(fetch).toHaveBeenCalledWith('/api/tags', expect.any(Object));
+  });
+
+  it('create: 发送 POST 并返回新标签', async () => {
+    const mockTag = { id: 4, name: '高数' };
+    globalThis.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockTag),
+    });
+
+    const result = await tagsApi.create('高数');
+    expect(result).toEqual(mockTag);
+    expect(fetch).toHaveBeenCalledWith('/api/tags', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name: '高数' }),
+    });
+  });
+
+  it('delete: 发送 DELETE 请求', async () => {
+    globalThis.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({}),
+    });
+
+    await tagsApi.delete(42);
+    expect(fetch).toHaveBeenCalledWith('/api/tags/42', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+    });
+  });
+
+  it('HTTP 错误时抛出 Error', async () => {
+    globalThis.fetch.mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: () => Promise.resolve({ error: '标签名不能为空' }),
+    });
+
+    await expect(tagsApi.create('')).rejects.toThrow('标签名不能为空');
   });
 });

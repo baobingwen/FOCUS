@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TimerPage from './TimerPage';
-import { recordsApi, subjectsApi } from '../utils/api';
+import { recordsApi, subjectsApi, tagsApi } from '../utils/api';
 
 vi.mock('../utils/api');
 
@@ -12,8 +12,11 @@ function createMockTimer(overrides = {}) {
     elapsed: 0,
     selectedSubject: null,
     notes: '',
+    tags: [],
     selectSubject: vi.fn(),
     updateNotes: vi.fn(),
+    toggleTag: vi.fn(),
+    removeTag: vi.fn(),
     startStudy: vi.fn(),
     endStudy: vi.fn(),
     pauseStudy: vi.fn(),
@@ -32,6 +35,7 @@ function createMockTimer(overrides = {}) {
 beforeEach(() => {
   vi.clearAllMocks();
   subjectsApi.list.mockResolvedValue([]);
+  tagsApi.list.mockResolvedValue([]);
 });
 
 describe('TimerPage', () => {
@@ -111,6 +115,7 @@ describe('TimerPage', () => {
       paused_ms: 0,
       segments: [{ type: 'study', duration_ms: 5000 }],
       notes: '做练习',
+      tags: [],
     });
     await waitFor(() => {
       expect(onRecordSaved).toHaveBeenCalled();
@@ -316,6 +321,7 @@ describe('TimerPage', () => {
         { type: 'pause', duration_ms: 2000 },
       ],
       notes: '',
+      tags: [],
     });
     await waitFor(() => {
       expect(onRecordSaved).toHaveBeenCalled();
@@ -395,5 +401,72 @@ describe('TimerPage', () => {
 
     const timeEl = screen.getByText(/00:05/);
     expect(timeEl.className).toContain('text-gray-900');
+  });
+
+  // ──── 标签交互测试 ────
+
+  it('studying 状态显示标签选择区，选中项高亮', async () => {
+    tagsApi.list.mockResolvedValue([{ id: 1, name: '高数' }, { id: 2, name: '线代' }]);
+    const timer = createMockTimer({
+      phase: 'studying',
+      elapsed: 5000,
+      selectedSubject: { id: 1, name: '数学' },
+      tags: ['高数'],
+    });
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('标签（选填）')).toBeInTheDocument();
+    });
+    // 选中「高数」chip 高亮，未选「线代」不高亮
+    expect(screen.getByText('高数').closest('button').className).toContain('bg-blue-500');
+    expect(screen.getByText('线代').closest('button').className).not.toContain('bg-blue-500');
+  });
+
+  it('studying 状态点击标签 chip → 调用 toggleTag', async () => {
+    tagsApi.list.mockResolvedValue([{ id: 1, name: '高数' }]);
+    const toggleTag = vi.fn();
+    const timer = createMockTimer({
+      phase: 'studying',
+      elapsed: 5000,
+      selectedSubject: { id: 1, name: '数学' },
+      toggleTag,
+    });
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('高数')).toBeInTheDocument();
+    });
+    await userEvent.click(screen.getByText('高数'));
+    expect(toggleTag).toHaveBeenCalledWith('高数');
+  });
+
+  it('结束学习提交选中的标签', async () => {
+    const endStudy = vi.fn(() => ({ duration_ms: 5000, paused_ms: 0, segments: [{ type: 'study', duration_ms: 5000 }] }));
+    const onRecordSaved = vi.fn();
+    const timer = createMockTimer({
+      phase: 'studying',
+      elapsed: 5000,
+      selectedSubject: { id: 1, name: '数学' },
+      tags: ['高数', '极限'],
+      endStudy,
+    });
+    recordsApi.create.mockResolvedValueOnce({ id: 1 });
+
+    render(<TimerPage timer={timer} onRecordSaved={onRecordSaved} />);
+    await userEvent.click(screen.getByText('结束学习'));
+
+    expect(recordsApi.create).toHaveBeenCalledWith({
+      mode: 'study',
+      subject: '数学',
+      duration_ms: 5000,
+      paused_ms: 0,
+      segments: [{ type: 'study', duration_ms: 5000 }],
+      notes: '',
+      tags: ['高数', '极限'],
+    });
+    await waitFor(() => {
+      expect(onRecordSaved).toHaveBeenCalled();
+    });
   });
 });

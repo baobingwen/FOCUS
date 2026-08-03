@@ -20,6 +20,7 @@ export default function useTimer() {
   const [pausedElapsed, setPausedElapsed] = useState(0); // 当前暂停段时长
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [notes, setNotes] = useState('');
+  const [tags, setTags] = useState([]); // 当前学习时段选中的标签名数组
   const [frozen, setFrozen] = useState(false); // 是否处于"离开冻结"态（不计入暂停记录）
 
   const segmentStartRef = useRef(null);      // 当前段的起始时间戳
@@ -73,6 +74,7 @@ export default function useTimer() {
     setPhase('studying');
     setElapsed(0);
     setPausedElapsed(0);
+    setTags([]);
     accumulatedStudyRef.current = 0;
     accumulatedPauseRef.current = 0;
     segmentsRef.current = [];
@@ -143,6 +145,7 @@ export default function useTimer() {
   // 开始休息
   const startRest = useCallback(() => {
     setNotes('');
+    setTags([]);
     setElapsed(0);
     setPhase('resting');
     segmentStartRef.current = Date.now();
@@ -163,6 +166,7 @@ export default function useTimer() {
     }
     setSelectedSubject(null);
     setNotes('');
+    setTags([]);
     setPhase('idle');
     return duration;
   }, [stopTicker]);
@@ -171,6 +175,7 @@ export default function useTimer() {
   const skipRest = useCallback(() => {
     setSelectedSubject(null);
     setNotes('');
+    setTags([]);
     setPhase('idle');
   }, []);
 
@@ -205,15 +210,28 @@ export default function useTimer() {
     setNotes(text);
   }, []);
 
+  // 切换标签选中状态（学习中点选/取消）
+  const toggleTag = useCallback((name) => {
+    setTags(prev => prev.includes(name) ? prev.filter(t => t !== name) : [...prev, name]);
+  }, []);
+
+  // 从当前选中中移除标签（标签被删除后清理）
+  const removeTag = useCallback((name) => {
+    setTags(prev => prev.filter(t => t !== name));
+  }, []);
+
   return {
     phase,
     elapsed,
     pausedElapsed,
     selectedSubject,
     notes,
+    tags,
     frozen,
     selectSubject,
     updateNotes,
+    toggleTag,
+    removeTag,
     startStudy,
     pauseStudy,
     resumeStudy,

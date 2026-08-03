@@ -241,11 +241,11 @@ describe('PATCH /api/records/:id', () => {
     expect(res.body.error).toBeDefined();
   });
 
-  it('不传 notes 字段返回 400', async () => {
-    const rec = await createStudy();
+  it('空 body 返回 200（notes/tags 均可选，什么都不传为无操作）', async () => {
+    const rec = await createStudy({ notes: '原备注' });
     const res = await request(app).patch(`/api/records/${rec.id}`).send({});
-    expect(res.status).toBe(400);
-    expect(res.body.error).toBeDefined();
+    expect(res.status).toBe(200);
+    expect(res.body.notes).toBe('原备注');
   });
 
   it('修改后返回的记录保留 segments 解析', async () => {
@@ -515,5 +515,126 @@ describe('GET /api/records/today', () => {
     expect(res.body.total_study_ms).toBe(3600000 + 1800000);
     expect(res.body.total_records).toBe(2);
     expect(res.body.by_subject).toHaveLength(2);
+  });
+});
+
+// ──────────────────────────────────────────────
+// records × 标签
+// ──────────────────────────────────────────────
+describe('records 与标签联动', () => {
+  it('POST 学习记录带 tags：自动建标签并返回 tags', async () => {
+    const res = await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000, tags: ['高数', '极限'],
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.tags).toEqual(['高数', '极限']);
+  });
+
+  it('POST 带 tags 的记录会自动建立标签库条目', async () => {
+    await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000, tags: ['高数'],
+    });
+    const tags = await request(app).get('/api/tags');
+    expect(tags.body.map(t => t.name)).toContain('高数');
+  });
+
+  it('POST tags 重名去重', async () => {
+    const res = await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000, tags: ['高数', '高数'],
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.tags).toEqual(['高数']);
+  });
+
+  it('POST 休息记录带 tags 被忽略', async () => {
+    const res = await request(app).post('/api/records').send({
+      mode: 'rest', duration_ms: 600000, tags: ['高数'],
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.tags).toEqual([]);
+  });
+
+  it('POST tags 非数组返回 400', async () => {
+    const res = await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000, tags: '高数',
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toBeDefined();
+  });
+
+  it('GET 记录返回每条的 tags 数组', async () => {
+    await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000, tags: ['高数', '线代'],
+    });
+    await request(app).post('/api/records').send({
+      mode: 'rest', duration_ms: 600000,
+    });
+
+    const res = await request(app).get('/api/records');
+    expect(res.status).toBe(200);
+    const study = res.body.records.find(r => r.mode === 'study');
+    expect(study.tags).toEqual(['高数', '线代']);
+    const rest = res.body.records.find(r => r.mode === 'rest');
+    expect(rest.tags).toEqual([]);
+  });
+
+  it('PATCH 整组替换标签', async () => {
+    const rec = (await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000, tags: ['高数'],
+    })).body;
+
+    const res = await request(app).patch(`/api/records/${rec.id}`).send({ tags: ['极限', '导数'] });
+    expect(res.status).toBe(200);
+    expect(res.body.tags).toEqual(['极限', '导数']);
+  });
+
+  it('PATCH tags 为空数组清空标签', async () => {
+    const rec = (await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000, tags: ['高数'],
+    })).body;
+
+    const res = await request(app).patch(`/api/records/${rec.id}`).send({ tags: [] });
+    expect(res.status).toBe(200);
+    expect(res.body.tags).toEqual([]);
+  });
+
+  it('PATCH 只传 tags 不影响 notes', async () => {
+    const rec = (await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000, notes: '原备注', tags: ['高数'],
+    })).body;
+
+    const res = await request(app).patch(`/api/records/${rec.id}`).send({ tags: ['线代'] });
+    expect(res.status).toBe(200);
+    expect(res.body.tags).toEqual(['线代']);
+    expect(res.body.notes).toBe('原备注');
+  });
+
+  it('PATCH 只传 notes 不影响标签', async () => {
+    const rec = (await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000, tags: ['高数'],
+    })).body;
+
+    const res = await request(app).patch(`/api/records/${rec.id}`).send({ notes: '新备注' });
+    expect(res.status).toBe(200);
+    expect(res.body.notes).toBe('新备注');
+    expect(res.body.tags).toEqual(['高数']);
+  });
+
+  it('PATCH tags 非数组返回 400', async () => {
+    const rec = (await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000,
+    })).body;
+
+    const res = await request(app).patch(`/api/records/${rec.id}`).send({ tags: 123 });
+    expect(res.status).toBe(400);
+  });
+
+  it('PATCH 休息记录带标签返回 400', async () => {
+    const rest = (await request(app).post('/api/records').send({
+      mode: 'rest', duration_ms: 600000,
+    })).body;
+
+    const res = await request(app).patch(`/api/records/${rest.id}`).send({ tags: ['高数'] });
+    expect(res.status).toBe(400);
   });
 });

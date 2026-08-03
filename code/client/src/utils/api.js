@@ -46,3 +46,16 @@ export const subjectsApi = {
   delete: (id) =>
     request(`/subjects/${id}`, { method: 'DELETE' }),
 };
+
+export const tagsApi = {
+  list: () => request('/tags'),
+
+  create: (name) =>
+    request('/tags', {
+      method: 'POST',
+      body: JSON.stringify({ name }),
+    }),
+
+  delete: (id) =>
+    request(`/tags/${id}`, { method: 'DELETE' }),
+};

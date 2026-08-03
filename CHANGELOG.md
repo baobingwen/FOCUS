@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.0] — 2026-08-03
+
+### Added
+
+- **学习标签**：科目之下的知识点二级细分，扁平全局标签库，一条学习记录可挂多个标签。解决「科目太粗，想知道今天高数/线代各学了多久」的精细统计与检索。
+  - 数据模型：`002_add_tags.sql` — 新增 `tags` 表（name 唯一）+ `record_tags` 多对多关联表（外键级联删除）
+  - `server/routes/tags.js` — 新增 `GET /api/tags`、`POST /api/tags`（幂等复用、≤12 字）、`DELETE /api/tags/:id`（级联清关联）
+  - `server/routes/records.js` — POST 接受 `tags`、GET 返回每条 `tags`、PATCH 扩展支持整组替换标签（备注与标签均可选，空 body 为无操作）
+  - `client/components/TagPicker.jsx` — 新组件，学习中与历史编辑态共用：点选/新增/删除标签（重名幂等复用）
+  - `TimerPage.jsx` — 学习中标签选择区（备注上方），结束保存时随记录提交
+  - `HistoryPage.jsx` — 查看态标签 chips（点标签即筛选）+ 列表上方筛选行 + ✏️ 编辑态可增删标签，备注与标签一起保存
+  - `TodayOverview.jsx` — 按标签分组时长（纯前端从当天记录聚算，统计仅学习记录）
+- 版本号：client `0.2.6`→`0.3.0`，server `0.2.4`→`0.3.0`，git tag `v0.3.0`
+
+### Tests
+
+- 服务端：+24 条（tags 路由 13 + records×标签联动 11）52→76 全绿
+- 客户端：+18 条（api tags 4 + useTimer 标签态 5 + TimerPage 标签 3 + HistoryPage 标签 5 + TodayOverview 分组 1）118→136 全绿
+
+### Docs
+
+- `docs/adr/0004-study-tags.md` — 新建设计文档（标签定位、扁平全局库、多对多模型、交互、边界规则）
+- `CONTEXT.md` — 新增「标签」领域概念，更新「科目」「学习时段」「Flow」
+- `README.md` — 功能列表 + 数据库表（四张表）+ API 表（tags 端点）+ 项目结构 tags.js
+- `code/ROADMAP.md` — 从「日常点子」移到「已实现」
+- `docs/INDEX.md` — 加入 ADR-0004 链接
+- `CLAUDE.md` — 组件/路由表 + 数据库 + 核心概念（移除"没有二级标签"）
+
 ## [0.2.9] — 2026-08-01
 
 ### Added

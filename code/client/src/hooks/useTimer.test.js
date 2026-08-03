@@ -331,4 +331,53 @@ describe('useTimer', () => {
     expect(result.current.elapsed).toBe(elapsedAfterFreeze);
     expect(result.current.frozen).toBe(true);
   });
+
+  // ──── 标签功能测试 ────
+
+  it('初始 tags 为空数组', () => {
+    const { result } = renderHook(() => useTimer());
+    expect(result.current.tags).toEqual([]);
+  });
+
+  it('toggleTag 添加/取消标签', () => {
+    const { result } = renderHook(() => useTimer());
+
+    act(() => { result.current.toggleTag('高数'); });
+    expect(result.current.tags).toEqual(['高数']);
+
+    act(() => { result.current.toggleTag('线代'); });
+    expect(result.current.tags).toEqual(['高数', '线代']);
+
+    // 再次 toggle 取消
+    act(() => { result.current.toggleTag('高数'); });
+    expect(result.current.tags).toEqual(['线代']);
+  });
+
+  it('startStudy 清空标签', () => {
+    const { result } = renderHook(() => useTimer());
+
+    act(() => { result.current.toggleTag('高数'); });
+    act(() => { result.current.startStudy(); });
+    expect(result.current.tags).toEqual([]);
+  });
+
+  it('skipRest 清空标签', () => {
+    const { result } = renderHook(() => useTimer());
+
+    act(() => { result.current.startStudy(); });
+    act(() => { vi.advanceTimersByTime(3000); });
+    act(() => { result.current.endStudy(); });
+    act(() => { result.current.toggleTag('高数'); });
+    act(() => { result.current.skipRest(); });
+    expect(result.current.tags).toEqual([]);
+  });
+
+  it('removeTag 从选中中移除标签', () => {
+    const { result } = renderHook(() => useTimer());
+
+    act(() => { result.current.toggleTag('高数'); });
+    act(() => { result.current.toggleTag('线代'); });
+    act(() => { result.current.removeTag('高数'); });
+    expect(result.current.tags).toEqual(['线代']);
+  });
 });

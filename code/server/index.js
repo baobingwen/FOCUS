@@ -6,6 +6,7 @@ import { fileURLToPath } from 'url';
 import { getDb } from './database.js';
 import { recordsRouter } from './routes/records.js';
 import { subjectsRouter } from './routes/subjects.js';
+import { tagsRouter } from './routes/tags.js';
 
 /**
  * @import { Server } from 'http'
@@ -37,6 +38,7 @@ app.get('/api/version', (_req, res) => {
 // API 路由
 app.use('/api/records', recordsRouter);
 app.use('/api/subjects', subjectsRouter);
+app.use('/api/tags', tagsRouter);
 
 // 生产环境：托管前端构建文件
 const clientDist = path.join(__dirname, '..', 'client', 'dist');

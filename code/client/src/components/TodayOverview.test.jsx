@@ -100,4 +100,24 @@ describe('TodayOverview', () => {
       expect(recordsApi.todayOverview).toHaveBeenCalledTimes(2);
     });
   });
+
+  it('传入 records 时按标签分组显示（仅学习记录，休息不计入）', async () => {
+    recordsApi.todayOverview.mockResolvedValueOnce(mockOverview);
+    const records = [
+      { id: 1, mode: 'study', subject: '数学', duration_ms: 3600000, tags: ['高数', '极限'] },
+      { id: 2, mode: 'study', subject: '数学', duration_ms: 1800000, tags: ['高数'] },
+      { id: 3, mode: 'rest', subject: null, duration_ms: 600000, tags: [] },
+    ];
+    render(<TodayOverview refreshKey={0} records={records} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('2小时0分')).toBeInTheDocument();
+    });
+
+    // 高数 = 1h + 30m = 1小时30分；极限 = 1h
+    expect(screen.getByText('按标签')).toBeInTheDocument();
+    expect(screen.getByText('高数')).toBeInTheDocument();
+    expect(screen.getByText('1小时30分')).toBeInTheDocument();
+    expect(screen.getByText('极限')).toBeInTheDocument();
+  });
 });

@@ -1,6 +1,7 @@
 // code/server/routes/records.js
 import { Router } from 'express';
 import { getDb } from '../database.js';
+import { parseTagNames, replaceRecordTags, getRecordTags } from './tags.js';
 
 /**
  * @import { Record, InsertRecordParams, Subject } from '../types.js'
@@ -48,19 +49,63 @@ recordsRouter.post('/', (req, res) => {
     const segmentsStr = segments ? JSON.stringify(segments) : null;
     const pausedMs = (mode === 'study' && typeof paused_ms === 'number' && paused_ms > 0) ? paused_ms : 0;
 
+    // 校验并解析标签（仅学习记录有标签概念，休息记录忽略）
+    const parsed = parseTagNames(req.body?.tags);
+    if (!parsed.ok) {
+      return res.status(400).json({ error: parsed.error });
+    }
+    const tags = mode === 'study' ? (parsed.names ?? []) : [];
+
     const result = db.prepare(`
       INSERT INTO records (mode, subject, duration_ms, notes, segments, paused_ms)
       VALUES (?, ?, ?, ?, ?, ?)
     `).run(mode, mode === 'study' ? subject : null, duration_ms, notes || '', segmentsStr, pausedMs);
 
+    const recordId = Number(result.lastInsertRowid);
+    if (tags.length > 0) {
+      replaceRecordTags(db, recordId, tags);
+    }
+
     /** @type {Record} */
-    const row = db.prepare('SELECT * FROM records WHERE id = ?').get(result.lastInsertRowid);
+    const row = db.prepare('SELECT * FROM records WHERE id = ?').get(recordId);
+    row.tags = getRecordTags(db, recordId);
     res.json(parseSegments(row));
   } catch (err) {
     console.error('保存记录失败:', err);
     res.status(500).json({ error: '保存记录失败' });
   }
 });
+
+/**
+ * 批量附加标签到记录数组（单次查询，避免 N+1）
+ * @param {Record[]} records - 记录数组（原地修改，附加 tags 字段）
+ * @returns {void}
+ */
+function attachTags(records) {
+  if (records.length === 0) return;
+  const db = getDb();
+  const ids = records.map(r => r.id);
+  const placeholders = ids.map(() => '?').join(',');
+
+  /** @type {Array<{ record_id: number, name: string }>} */
+  const tagRows = db.prepare(`
+    SELECT rt.record_id, t.name
+    FROM record_tags rt JOIN tags t ON t.id = rt.tag_id
+    WHERE rt.record_id IN (${placeholders})
+    ORDER BY rt.rowid
+  `).all(...ids);
+
+  /** @type {Map<number, string[]>} */
+  const byRecord = new Map();
+  for (const row of tagRows) {
+    const list = byRecord.get(row.record_id) || [];
+    list.push(row.name);
+    byRecord.set(row.record_id, list);
+  }
+  for (const r of records) {
+    r.tags = byRecord.get(r.id) || [];
+  }
+}
 
 /**
  * 获取指定日期的记录
@@ -91,6 +136,7 @@ recordsRouter.get('/', (req, res) => {
     }
 
     const records = rows.map(parseSegments);
+    attachTags(records);
     res.json({ records });
   } catch (err) {
     console.error('获取记录失败:', err);
@@ -122,21 +168,33 @@ recordsRouter.patch('/:id', (req, res) => {
       return res.status(404).json({ error: '记录不存在' });
     }
 
-    // 只允许修改学习记录的备注（休息记录无备注概念）
+    // 只允许修改学习记录（休息记录无备注/标签概念）
     if (row.mode !== 'study') {
-      return res.status(400).json({ error: '仅学习记录可修改备注' });
+      return res.status(400).json({ error: '仅学习记录可修改备注或标签' });
     }
 
-    // 校验 notes 为字符串；空串合法，等价于清空备注
+    // 校验 notes（选填）：提供时必须为字符串；空串合法，等价于清空备注
     const notes = req.body?.notes;
-    if (typeof notes !== 'string') {
+    if (notes !== undefined && typeof notes !== 'string') {
       return res.status(400).json({ error: '无效的 notes，必须为字符串' });
     }
 
-    db.prepare('UPDATE records SET notes = ? WHERE id = ?').run(notes.trim(), id);
+    // 校验 tags（选填）：提供时必须为字符串数组，整组替换
+    const parsed = parseTagNames(req.body?.tags);
+    if (!parsed.ok) {
+      return res.status(400).json({ error: parsed.error });
+    }
+
+    if (notes !== undefined) {
+      db.prepare('UPDATE records SET notes = ? WHERE id = ?').run(notes.trim(), id);
+    }
+    if (parsed.names !== null) {
+      replaceRecordTags(db, id, parsed.names);
+    }
 
     /** @type {Record} */
     const updated = db.prepare('SELECT * FROM records WHERE id = ?').get(id);
+    updated.tags = getRecordTags(db, id);
     res.json(parseSegments(updated));
   } catch (err) {
     console.error('修改备注失败:', err);

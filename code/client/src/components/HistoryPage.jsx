@@ -1,7 +1,8 @@
 // code/client/src/components/HistoryPage.jsx
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { recordsApi } from '../utils/api';
 import TodayOverview from './TodayOverview';
+import TagPicker from './TagPicker';
 import { fmtTime } from '../utils/fmtTime';
 import { copyText } from '../utils/clipboard';
 
@@ -62,6 +63,10 @@ export default function HistoryPage({ refreshKey }) {
   const [editError, setEditError] = useState('');
   // 复制反馈（{ id, status: 'ok' | 'fail' }），用于备注点击复制后的内联提示
   const [copyFeedback, setCopyFeedback] = useState(null);
+  // 当前按标签筛选（null = 全部）
+  const [filterTag, setFilterTag] = useState(null);
+  // 编辑态标签草稿（进入编辑时从记录复制，保存时 PATCH 提交）
+  const [draftTags, setDraftTags] = useState([]);
 
   /**
    * 加载指定日期的记录
@@ -84,13 +89,15 @@ export default function HistoryPage({ refreshKey }) {
   useEffect(() => { loadRecords(); }, [loadRecords, refreshKey, overviewRefreshKey]);
 
   /**
-   * 日期或刷新键变化时重置备注编辑状态（草稿随列表切换自然丢弃）
+   * 日期或刷新键变化时重置备注/标签编辑状态与筛选（草稿随列表切换自然丢弃）
    */
   useEffect(() => {
     setEditingId(null);
     setDraft('');
+    setDraftTags([]);
     setEditError('');
     setCopyFeedback(null);
+    setFilterTag(null);
   }, [currentDate, refreshKey]);
 
   /**
@@ -119,13 +126,14 @@ export default function HistoryPage({ refreshKey }) {
   };
 
   /**
-   * 进入某条学习记录的备注编辑
+   * 进入某条学习记录的备注/标签编辑
    * 单条互斥：editingId 指向新记录时自动收起上一条
-   * @param {{ id: number, notes?: string }} record
+   * @param {{ id: number, notes?: string, tags?: string[] }} record
    */
   const startEdit = (record) => {
     setEditingId(record.id);
     setDraft(record.notes || '');
+    setDraftTags(record.tags || []);
     setEditError('');
   };
 
@@ -135,11 +143,12 @@ export default function HistoryPage({ refreshKey }) {
   const cancelEdit = () => {
     setEditingId(null);
     setDraft('');
+    setDraftTags([]);
     setEditError('');
   };
 
   /**
-   * 保存备注
+   * 保存备注与标签
    * 成功后静默原地更新列表；失败保持编辑态并显示错误提示
    * @param {{ id: number }} record
    */
@@ -147,16 +156,35 @@ export default function HistoryPage({ refreshKey }) {
     setSavingId(record.id);
     setEditError('');
     try {
-      const updated = await recordsApi.update(record.id, { notes: draft.trim() });
+      const updated = await recordsApi.update(record.id, { notes: draft.trim(), tags: draftTags });
       setRecords((prev) => prev.map((r) => (r.id === record.id ? updated : r)));
       setEditingId(null);
       setDraft('');
+      setDraftTags([]);
     } catch (err) {
       setEditError(`保存失败: ${err.message}`);
     } finally {
       setSavingId(null);
     }
   };
+
+  /**
+   * 编辑态切换标签选中（点选/取消）
+   * @param {string} name - 标签名
+   */
+  const toggleDraftTag = useCallback((name) => {
+    setDraftTags(prev => prev.includes(name) ? prev.filter(t => t !== name) : [...prev, name]);
+  }, []);
+
+  /**
+   * 编辑态标签被从库中删除后：从草稿移除 + 重拉列表同步级联效果 + 清理筛选
+   * @param {string} name - 被删除的标签名
+   */
+  const removeDraftTag = useCallback((name) => {
+    setDraftTags(prev => prev.filter(t => t !== name));
+    loadRecords();
+    setFilterTag(prev => (prev === name ? null : prev));
+  }, [loadRecords]);
 
   /**
    * 复制备注到剪贴板并显示内联反馈（已复制✓ / 复制失败）
@@ -171,6 +199,22 @@ export default function HistoryPage({ refreshKey }) {
     }, 1500);
   };
 
+  // 当天记录中出现过的标签（用于列表上方筛选行）
+  const filterTags = useMemo(() => {
+    const set = new Set();
+    for (const r of records) {
+      if (r.mode === 'study' && Array.isArray(r.tags)) {
+        for (const t of r.tags) set.add(t);
+      }
+    }
+    return [...set];
+  }, [records]);
+
+  // 按标签筛选后的记录列表（筛选仅命中学习记录）
+  const visibleRecords = filterTag
+    ? records.filter(r => r.mode === 'study' && Array.isArray(r.tags) && r.tags.includes(filterTag))
+    : records;
+
   // 判断是否显示"后一天"按钮（当前不是今天时才显示）
   const showPrev = currentDate !== getTodayStr() || !isToday(currentDate);
 
@@ -178,9 +222,9 @@ export default function HistoryPage({ refreshKey }) {
     <div>
       <h2 className="text-lg font-bold text-gray-800 mb-4">📋 历史记录</h2>
 
-      {/* 今日概览（仅在当天显示） */}
+      {/* 今日概览（仅在当天显示）— 传入 records 供客户端按标签分组 */}
       {isToday(currentDate) && (
-        <TodayOverview refreshKey={refreshKey + '-' + overviewRefreshKey} />
+        <TodayOverview refreshKey={refreshKey + '-' + overviewRefreshKey} records={records} />
       )}
 
       {/* 日期导航 */}
@@ -214,17 +258,48 @@ export default function HistoryPage({ refreshKey }) {
         )}
       </div>
 
+      {/* 标签筛选行（当天记录中出现过标签时显示） */}
+      {filterTags.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 mb-3">
+          <button
+            onClick={() => setFilterTag(null)}
+            className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
+              filterTag === null
+                ? 'bg-blue-500 text-white shadow-sm'
+                : 'bg-white text-gray-500 border border-gray-200 hover:border-blue-300'
+            }`}
+          >
+            全部
+          </button>
+          {filterTags.map(tag => (
+            <button
+              key={tag}
+              onClick={() => setFilterTag(filterTag === tag ? null : tag)}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-all ${
+                filterTag === tag
+                  ? 'bg-blue-500 text-white shadow-sm'
+                  : 'bg-white text-gray-500 border border-gray-200 hover:border-blue-300'
+              }`}
+            >
+              {tag}
+            </button>
+          ))}
+        </div>
+      )}
+
       {/* 记录列表 */}
       {loading ? (
         <div className="text-center py-8 text-gray-400">加载中...</div>
-      ) : records.length === 0 ? (
+      ) : visibleRecords.length === 0 ? (
         <div className="text-center py-12">
           <div className="text-4xl mb-3">📭</div>
-          <p className="text-gray-400 text-sm">这天没有记录</p>
+          <p className="text-gray-400 text-sm">
+            {filterTag ? `没有含「${filterTag}」标签的记录` : '这天没有记录'}
+          </p>
         </div>
       ) : (
         <div className="space-y-2">
-          {records.map((record) => (
+          {visibleRecords.map((record) => (
             <div
               key={record.id}
               className="bg-white rounded-xl p-3 shadow-sm border border-gray-100"
@@ -252,7 +327,28 @@ export default function HistoryPage({ refreshKey }) {
                 </span>
               </div>
 
-              {/* 备注 — 仅学习记录可内联编辑；休息记录无备注概念 */}
+              {/* 标签展示 — 查看态点标签即筛选；仅学习记录 */}
+              {record.mode === 'study' && editingId !== record.id && record.tags?.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-1 ml-1">
+                  {record.tags.map(tag => (
+                    <button
+                      key={tag}
+                      data-testid="record-tag"
+                      onClick={() => setFilterTag(filterTag === tag ? null : tag)}
+                      title="点击按标签筛选"
+                      className={`px-2 py-0.5 rounded-full text-xs font-medium transition-all ${
+                        filterTag === tag
+                          ? 'bg-blue-500 text-white'
+                          : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* 备注/标签编辑 — 仅学习记录可内联编辑；休息记录无备注/标签概念 */}
               {record.mode === 'study' && (
                 editingId === record.id ? (
                   <div className="mt-1 ml-1">
@@ -265,6 +361,13 @@ export default function HistoryPage({ refreshKey }) {
                         resize-none outline-none focus:border-blue-300 focus:ring-2
                         focus:ring-blue-100 text-gray-700"
                     />
+                    <div className="mt-2">
+                      <TagPicker
+                        selected={draftTags}
+                        onToggle={toggleDraftTag}
+                        onDelete={removeDraftTag}
+                      />
+                    </div>
                     <div className="flex items-center gap-2 mt-1.5">
                       <button
                         onClick={() => saveEdit(record)}

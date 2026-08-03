@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import HistoryPage, { getTodayStr } from './HistoryPage';
-import { recordsApi } from '../utils/api';
+import { recordsApi, tagsApi } from '../utils/api';
 
 vi.mock('../utils/api');
 
@@ -18,6 +18,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(new Date('2026-07-07T12:00:00'));
+  tagsApi.list.mockResolvedValue([]);
 });
 
 afterEach(() => {
@@ -348,7 +349,7 @@ describe('HistoryPage', () => {
       expect(screen.getByText('高数第三章 反常积分')).toBeInTheDocument();
     });
     expect(screen.queryByPlaceholderText('记录一下当前的学习内容...')).not.toBeInTheDocument();
-    expect(recordsApi.update).toHaveBeenCalledWith(1, { notes: '高数第三章 反常积分' });
+    expect(recordsApi.update).toHaveBeenCalledWith(1, { notes: '高数第三章 反常积分', tags: [] });
   });
 
   it('取消编辑丢弃草稿且不调用更新接口', async () => {
@@ -503,6 +504,148 @@ describe('HistoryPage', () => {
     expect(document.execCommand).toHaveBeenCalledWith('copy');
     await waitFor(() => {
       expect(screen.getByText('复制失败')).toBeInTheDocument();
+    });
+  });
+
+  // ──── 标签展示与筛选 ────
+
+  it('查看态显示学习记录的标签 chips，并出现筛选行', async () => {
+    const withTags = {
+      records: [
+        { id: 1, mode: 'study', subject: '数学', duration_ms: 3600000, notes: '高数练习', tags: ['高数', '极限'], created_at: '2026-07-07 10:00:00' },
+      ],
+    };
+    recordsApi.list.mockResolvedValueOnce(withTags);
+    recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 3600000, total_rest_ms: 0, total_records: 1, by_subject: [] });
+
+    render(<HistoryPage refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('高数练习')).toBeInTheDocument();
+    });
+    expect(screen.getAllByTestId('record-tag')).toHaveLength(2);
+    // 筛选行出现「全部」
+    expect(screen.getByText('全部')).toBeInTheDocument();
+  });
+
+  it('点记录上的标签 chip 即按标签筛选，点「全部」恢复', async () => {
+    const records = {
+      records: [
+        { id: 1, mode: 'study', subject: '数学', duration_ms: 3600000, notes: 'A', tags: ['高数'], created_at: '2026-07-07 10:00:00' },
+        { id: 2, mode: 'study', subject: '数学', duration_ms: 1800000, notes: 'B', tags: ['线代'], created_at: '2026-07-07 11:00:00' },
+      ],
+    };
+    recordsApi.list.mockResolvedValueOnce(records);
+    recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 5400000, total_rest_ms: 0, total_records: 2, by_subject: [] });
+
+    render(<HistoryPage refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('A')).toBeInTheDocument();
+    });
+    expect(screen.getByText('B')).toBeInTheDocument();
+
+    // 点 A 记录上的「高数」chip → 只看含高数的记录
+    const gaoShuChip = screen.getAllByTestId('record-tag').find(el => el.textContent === '高数');
+    await userEvent.click(gaoShuChip);
+
+    await waitFor(() => {
+      expect(screen.queryByText('B')).not.toBeInTheDocument();
+    });
+    expect(screen.getByText('A')).toBeInTheDocument();
+
+    // 点「全部」恢复
+    await userEvent.click(screen.getByText('全部'));
+    await waitFor(() => {
+      expect(screen.getByText('B')).toBeInTheDocument();
+    });
+  });
+
+  it('休息记录不显示标签 chips', async () => {
+    const mixed = {
+      records: [
+        { id: 1, mode: 'study', subject: '数学', duration_ms: 3600000, notes: 'A', tags: ['高数'], created_at: '2026-07-07 10:00:00' },
+        { id: 2, mode: 'rest', subject: null, duration_ms: 300000, notes: '', tags: [], created_at: '2026-07-07 11:00:00' },
+      ],
+    };
+    recordsApi.list.mockResolvedValueOnce(mixed);
+    recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 3600000, total_rest_ms: 300000, total_records: 2, by_subject: [] });
+
+    render(<HistoryPage refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('休息')).toBeInTheDocument();
+    });
+    // 只有学习记录有标签 chip（高数），休息记录无
+    expect(screen.getAllByTestId('record-tag')).toHaveLength(1);
+  });
+
+  // ──── 标签编辑态 ────
+
+  it('编辑态显示标签选择器，保存时备注与标签一起提交', async () => {
+    tagsApi.list.mockResolvedValue([{ id: 1, name: '高数' }]);
+    const withTags = {
+      records: [
+        { id: 1, mode: 'study', subject: '数学', duration_ms: 3600000, notes: '高数练习', tags: ['高数'], created_at: '2026-07-07 10:00:00' },
+      ],
+    };
+    recordsApi.list.mockResolvedValueOnce(withTags);
+    recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 3600000, total_rest_ms: 0, total_records: 1, by_subject: [] });
+
+    render(<HistoryPage refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('高数练习')).toBeInTheDocument();
+    });
+
+    await userEvent.click(editButtonOf('高数练习'));
+    // 编辑态出现标签选择器
+    await waitFor(() => {
+      expect(screen.getByText('+ 标签')).toBeInTheDocument();
+    });
+
+    recordsApi.update.mockResolvedValueOnce({
+      id: 1, mode: 'study', subject: '数学', duration_ms: 3600000, tags: ['高数'], created_at: '2026-07-07 10:00:00',
+    });
+    await userEvent.click(screen.getByText('保存'));
+
+    await waitFor(() => {
+      expect(recordsApi.update).toHaveBeenCalledWith(1, { notes: '高数练习', tags: ['高数'] });
+    });
+  });
+
+  it('编辑态取消标签后保存提交空标签', async () => {
+    tagsApi.list.mockResolvedValue([{ id: 1, name: '高数' }]);
+    const withTags = {
+      records: [
+        { id: 1, mode: 'study', subject: '数学', duration_ms: 3600000, notes: '高数练习', tags: ['高数'], created_at: '2026-07-07 10:00:00' },
+      ],
+    };
+    recordsApi.list.mockResolvedValueOnce(withTags);
+    recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 3600000, total_rest_ms: 0, total_records: 1, by_subject: [] });
+
+    render(<HistoryPage refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('高数练习')).toBeInTheDocument();
+    });
+
+    await userEvent.click(editButtonOf('高数练习'));
+    await waitFor(() => {
+      expect(screen.getAllByTestId('tag-chip').length).toBeGreaterThanOrEqual(1);
+    });
+
+    // 点掉选中的「高数」chip（取消选中）
+    const chip = screen.getAllByTestId('tag-chip').find(el => el.textContent.includes('高数'));
+    await userEvent.click(chip);
+
+    recordsApi.update.mockResolvedValueOnce({
+      id: 1, mode: 'study', subject: '数学', duration_ms: 3600000, tags: [], created_at: '2026-07-07 10:00:00',
+    });
+    await userEvent.click(screen.getByText('保存'));
+
+    await waitFor(() => {
+      expect(recordsApi.update).toHaveBeenCalledWith(1, { notes: '高数练习', tags: [] });
     });
   });
 });

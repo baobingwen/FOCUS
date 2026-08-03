@@ -107,12 +107,12 @@ src/
 ├── test-setup.js              # 全局测试 setup
 ├── utils/
 │   ├── api.js
-│   ├── api.test.js            # API 层 11 条
+│   ├── api.test.js            # API 层 15 条（含 tagsApi 4 条）
 │   ├── clipboard.js
 │   └── clipboard.test.js      # 剪贴板复制工具 3 条
 ├── hooks/
 │   ├── useTimer.js
-│   ├── useTimer.test.js       # 状态机 21 条（含暂停态 6 条 + 冻结 6 条）
+│   ├── useTimer.test.js       # 状态机 26 条（含暂停态 6 条 + 冻结 6 条 + 标签态 5 条）
 │   ├── useFreezeOnLeave.js
 │   └── useFreezeOnLeave.test.js # 页面离开冻结事件 8 条
 └── components/
@@ -121,16 +121,17 @@ src/
     ├── ExamCountdown.jsx
     ├── ExamCountdown.test.jsx # 考研倒计时 3 条
     ├── TimerPage.jsx
-    ├── TimerPage.test.jsx     # 5 态渲染 + 保存 + 休息 + 暂停交互 + 弹窗确认 + 冻结 UI 26 条
+    ├── TimerPage.test.jsx     # 5 态渲染 + 保存 + 休息 + 暂停交互 + 弹窗确认 + 冻结 UI + 标签交互 29 条
     ├── SubjectSelector.jsx
     ├── SubjectSelector.test.jsx # CRUD + 休息 15 条
+    ├── TagPicker.jsx          # 标签选择器（学习中/历史编辑态共用）
     ├── HistoryPage.jsx
-    ├── HistoryPage.test.jsx   # 日期导航 + 列表 + 千层饼堆叠条 + 备注内联编辑 + 备注复制 22 条
+    ├── HistoryPage.test.jsx   # 日期导航 + 列表 + 千层饼 + 备注编辑/复制 + 标签展示/筛选/编辑 27 条
     ├── TodayOverview.jsx
-    └── TodayOverview.test.jsx  # 概览 + 条形图 6 条
+    └── TodayOverview.test.jsx  # 概览 + 条形图 + 按标签分组 7 条
 ```
 
-总计 **118 条测试用例**，10 个测试文件。
+总计 **136 条测试用例**，10 个测试文件。
 
 ## 测试模式详解
 
