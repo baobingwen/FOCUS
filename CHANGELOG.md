@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.1] — 2026-08-04
+
+### Fixed
+
+- **学习中「结束学习」大按钮偏移**：暂停/继续按钮改为绝对定位悬浮于大按钮右缘，不再占据 flex 布局空间——学习/暂停两态大按钮始终居中（此前桌面端隐形暂停按钮仍占位、手机端双按钮组居中，均导致大按钮偏左 36px）。
+  - `TimerPage.jsx` — 按钮容器加 `relative`，小按钮改 `absolute left-full ml-4 top-1/2 -translate-y-1/2`；桌面 hover 浮现保留（大按钮 hover + 小按钮自身 hover 双轨，避免鼠标移向按钮途中淡出消失）
+- **自定义科目芯片删除叉号占位**：删除 × 改为绝对定位悬浮于芯片右缘（`absolute right-1.5 top-1/2 -translate-y-1/2`），不再占据布局空间——科目名在芯片内始终居中，× 与文字保持 6px 间隙（此前未选中时 × 隐形占位 22px，科目名左偏 11px、芯片虚宽）。
+  - `SubjectSelector.jsx` — × 从 `ml-1.5` 流内改 absolute 悬浮，自定义科目芯片对称内边距 `px-4`→`px-7` 给 × 留位；hover 浮现、选中态恒显、手机上"点选→选中态删"路径均不变
+- 版本号：client `0.3.0`→`0.3.1`，server 不变 `0.3.0`，git tag `v0.3.1`（0.3 分支发布，merge 回 master）
+
+### Tests
+
+- 客户端：136 全绿（纯布局修复，无新增用例，现有断言不受影响）
+
+### Docs
+
+- `docs/adr/0002-pause-feature.md` — 暂停/继续按钮改为绝对定位悬浮，学习/暂停两态大按钮始终居中
+- `code/ROADMAP.md` — 已实现新增大按钮和科目芯片居中修复 + 版本头更新至 0.3.1
+- `CLAUDE.md` — TimerPage 描述补充大按钮居中、悬浮按钮
+
 ## [0.3.0] — 2026-08-03
 
 ### Added

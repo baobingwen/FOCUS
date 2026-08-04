@@ -13,7 +13,8 @@ This repo contains two projects:
 
 | 分支 | 说明 |
 |------|------|
-| `master` | 日常开发基线，含迁移系统、健康检查、本地部署脚本 |
+| `master` | 日常开发基线，含迁移系统、健康检查、本地部署脚本；0.3.x 发布后 merge 回 master 保持最新 |
+| `0.3` | 0.3.x 补丁版本发布线（v0.3.1 起）：0.3.x 的开发与 tag 打于此，每次发布后 merge 回 master |
 | `feat/deploy` | Fly.io 部署方案档案（Dockerfile + fly.toml + DEPLOY_FLYIO.md），因注册需外币卡暂搁置 |
 | `feat/local-deploy` | 已合入 master，本地 + Tailscale 部署方案 |
 
@@ -75,7 +76,7 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 | 文件 | 说明 |
 |------|------|
 | `App.jsx` | 主布局 + 底部导航 + useTimer 调用（计时状态托管于此，跨标签切换不丢失） |
-| `components/TimerPage.jsx` | 计时器页面，5 状态机 (idle→studying→paused→rest_prompt→resting)，从 props 接收 timer；idle 态支持直接休息；暂停态支持继续和确认结束；学习中可点选/新增标签 |
+| `components/TimerPage.jsx` | 计时器页面，5 状态机 (idle→studying→paused→rest_prompt→resting)，从 props 接收 timer；idle 态支持直接休息；暂停态支持继续和确认结束；学习中可点选/新增标签；学习/暂停态大按钮始终居中，暂停/继续按钮悬浮右缘不占布局 |
 | `components/ExamCountdown.jsx` | 考研倒计时（右上角常驻，写死 2026-12-19，过期自动隐藏） |
 | `components/SubjectSelector.jsx` | 科目选择（固定列表 + 自定义新增/删除 + 休息） |
 | `components/TagPicker.jsx` | 标签选择器（扁平全局标签库点选/新增/删除，学习中与历史编辑态共用） |

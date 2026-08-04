@@ -76,6 +76,8 @@ COALESCE(SUM(paused_ms), 0) FILTER(WHERE mode='study')
 | 桌面浏览器 | hover 大按钮时，右侧滑出 ⏸ 按钮 |
 | 移动端浏览器 | ⏸ 按钮永久显示在大按钮右侧 |
 
+> v0.3.1 修正：⏸ 按钮改为 absolute 定位悬浮于大按钮右缘（`left-full ml-4 top-1/2 -translate-y-1/2`），不再占据布局空间——学习/暂停两态大按钮始终居中。桌面 hover 用容器 group-hover + 按钮自身 hover 双轨触发，鼠标移向按钮途中不会淡出。
+
 #### 暂停态
 
 - 计时器数字变灰（灰色）
@@ -124,7 +126,7 @@ COALESCE(SUM(paused_ms), 0) FILTER(WHERE mode='study')
 | `server/routes/records.js` | POST 接收可选 `segments`/`paused_ms`；GET /today 统计含 `paused_ms` |
 | `server/__tests__/records.test.js` | 暂停相关测试用例 |
 | `client/src/hooks/useTimer.js` | 新增 `paused` phase；新增暂停段追踪逻辑；`endStudy()` 返回 segments + paused_ms |
-| `client/src/components/TimerPage.jsx` | 暂停态渲染（灰化+暂停中计时+继续按钮）；暂停态结束弹窗；hover 暂停按钮（桌面） |
+| `client/src/components/TimerPage.jsx` | 暂停态渲染（灰化+暂停中计时+继续按钮）；暂停态结束弹窗；hover 暂停按钮（桌面，absolute 悬浮不占布局） |
 | `client/src/components/HistoryPage.jsx` | 千层饼堆叠条渲染 |
 | `client/src/hooks/useTimer.test.js` | 暂停段状态机全路径测试 |
 | `client/src/components/TimerPage.test.jsx` | 暂停态 UI + 交互测试 |

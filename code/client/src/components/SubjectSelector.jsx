@@ -92,32 +92,38 @@ export default function SubjectSelector({ selected, onSelect }) {
     <div className="mb-6">
       <label className="text-sm font-medium text-gray-600 mb-2 block">选择科目</label>
       <div className="flex flex-wrap gap-2">
-        {subjects.map(subject => (
-          <button
-            key={subject.id}
-            onClick={() => onSelect(subject)}
-            className={`group relative px-4 py-2 rounded-xl text-sm font-medium transition-all ${
-              selected?.id === subject.id
-                ? 'bg-blue-500 text-white shadow-md'
-                : 'bg-white text-gray-700 border border-gray-200 hover:border-blue-300 hover:text-blue-600'
-            }`}
-          >
-            <span>{subject.name}</span>
-            {/* 只有自定义科目显示删除按钮 */}
-            {!['数学', '英语', '专业课'].includes(subject.name) && (
-              <span
-                onClick={(e) => handleDelete(e, subject)}
-                className={`ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full text-xs
-                  ${selected?.id === subject.id
-                    ? 'text-white/70 hover:text-white'
-                    : 'text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100'
-                  } transition-all`}
-              >
-                ×
-              </span>
-            )}
-          </button>
-        ))}
+        {subjects.map(subject => {
+          const isCustom = !['数学', '英语', '专业课'].includes(subject.name);
+          return (
+            <button
+              key={subject.id}
+              onClick={() => onSelect(subject)}
+              className={`group relative py-2 rounded-xl text-sm font-medium transition-all ${
+                isCustom ? 'px-7' : 'px-4'
+              } ${
+                selected?.id === subject.id
+                  ? 'bg-blue-500 text-white shadow-md'
+                  : 'bg-white text-gray-700 border border-gray-200 hover:border-blue-300 hover:text-blue-600'
+              }`}
+            >
+              <span>{subject.name}</span>
+              {/* 只有自定义科目显示删除按钮 */}
+              {isCustom && (
+                <span
+                  onClick={(e) => handleDelete(e, subject)}
+                  className={`absolute right-1.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full text-xs
+                    inline-flex items-center justify-center
+                    ${selected?.id === subject.id
+                      ? 'text-white/70 hover:text-white'
+                      : 'text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100'
+                    } transition-all`}
+                >
+                  ×
+                </span>
+              )}
+            </button>
+          );
+        })}
 
         {/* 新增科目按钮 */}
         {!showAdd ? (

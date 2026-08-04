@@ -216,7 +216,8 @@ export default function TimerPage({ timer, onRecordSaved }) {
         </div>
 
         {/* 结束 + 暂停/继续按钮 */}
-        <div className={`flex items-center justify-center ${isStudying ? 'group' : ''}`}>
+        {/* 容器 relative：暂停按钮绝对定位悬浮于大按钮右缘，不占布局，大按钮始终居中 */}
+        <div className={`relative flex items-center ${isStudying ? 'group' : ''}`}>
           {/* 结束学习按钮 */}
           <button
             onClick={isStudying ? handleEndStudy : handleEndFromPaused}
@@ -230,16 +231,17 @@ export default function TimerPage({ timer, onRecordSaved }) {
             </div>
           </button>
 
-          {/* 暂停/继续按钮 — 学习中：桌面 hover 显示；暂停中：常驻 */}
+          {/* 暂停/继续按钮 — 学习中：桌面 hover 显示（大按钮 hover 或自身 hover 均触发）；暂停中：常驻 */}
           <button
             onClick={isStudying ? timer.pauseStudy : timer.resumeStudy}
             className={`
+              absolute left-full ml-4 top-1/2 -translate-y-1/2
               ${isStudying
-                ? 'md:opacity-0 md:group-hover:opacity-100 md:group-hover:translate-x-0 md:translate-x-4'
+                ? 'md:opacity-0 md:group-hover:opacity-100 md:group-hover:translate-x-0 md:translate-x-4 md:hover:opacity-100 md:hover:translate-x-0'
                 : ''
               }
               transition-all duration-200
-              w-14 h-14 rounded-full shadow-md flex items-center justify-center text-xl ml-4 flex-shrink-0
+              w-14 h-14 rounded-full shadow-md flex items-center justify-center text-xl
               ${isStudying
                 ? 'bg-gray-200 hover:bg-gray-300 active:bg-gray-400 text-gray-600'
                 : 'bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white'
