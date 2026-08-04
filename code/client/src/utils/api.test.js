@@ -215,4 +215,18 @@ describe('tagsApi', () => {
 
     await expect(tagsApi.create('')).rejects.toThrow('标签名不能为空');
   });
+
+  it('reorder: 发送 PUT 请求提交新顺序', async () => {
+    globalThis.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true }),
+    });
+
+    await tagsApi.reorder([3, 1, 2]);
+    expect(fetch).toHaveBeenCalledWith('/api/tags/order', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ ids: [3, 1, 2] }),
+    });
+  });
 });

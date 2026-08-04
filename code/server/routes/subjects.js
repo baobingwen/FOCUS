@@ -4,7 +4,7 @@ import { getDb } from '../database.js';
 
 /**
  * @import { Subject } from '../types.js'
- * @import { Request, Response, NextFunction } from 'express'
+ * @import { Request, Response } from 'express'
  */
 
 /** @type {Router} */
@@ -17,7 +17,7 @@ export const subjectsRouter = Router();
  * @param {Response} res - Express 响应对象
  * @returns {Promise<void>}
  */
-subjectsRouter.get('/', (req, res) => {
+subjectsRouter.get('/', (_req, res) => {
   try {
     const db = getDb();
     const subjects = db.prepare('SELECT * FROM subjects ORDER BY sort_order, id').all();
@@ -45,7 +45,9 @@ subjectsRouter.post('/', (req, res) => {
     }
 
     const trimmed = name.trim();
-    const existing = db.prepare('SELECT id FROM subjects WHERE name = ?').get(trimmed);
+    const existing = /** @type {{ id: number } | undefined} */ (
+      db.prepare('SELECT id FROM subjects WHERE name = ?').get(trimmed)
+    );
     if (existing) {
       return res.status(409).json({ error: '科目已存在', id: existing.id });
     }
@@ -53,12 +55,13 @@ subjectsRouter.post('/', (req, res) => {
     /**
      * @type {{ max_order: number | null }}
      */
-    const maxOrder = db.prepare('SELECT MAX(sort_order) as max_order FROM subjects').get();
+    const maxOrder = /** @type {{ max_order: number | null }} */ (
+      db.prepare('SELECT MAX(sort_order) as max_order FROM subjects').get()
+    );
     const sortOrder = (maxOrder?.max_order ?? -1) + 1;
 
     const result = db.prepare('INSERT INTO subjects (name, sort_order) VALUES (?, ?)').run(trimmed, sortOrder);
-    /** @type {Subject} */
-    const subject = db.prepare('SELECT * FROM subjects WHERE id = ?').get(result.lastInsertRowid);
+    const subject = /** @type {Subject} */ (db.prepare('SELECT * FROM subjects WHERE id = ?').get(result.lastInsertRowid));
     res.json(subject);
   } catch (err) {
     console.error('创建科目失败:', err);
@@ -79,8 +82,9 @@ subjectsRouter.delete('/:id', (req, res) => {
     const { id } = req.params;
 
     // 不允许删除默认科目（数学、英语、专业课）
-    /** @type {Subject | undefined} */
-    const subject = db.prepare('SELECT * FROM subjects WHERE id = ?').get(id);
+    const subject = /** @type {Subject | undefined} */ (
+      db.prepare('SELECT * FROM subjects WHERE id = ?').get(id)
+    );
     if (!subject) {
       return res.status(404).json({ error: '科目不存在' });
     }
@@ -88,7 +92,7 @@ subjectsRouter.delete('/:id', (req, res) => {
       return res.status(403).json({ error: '不能删除默认科目' });
     }
 
-    const result = db.prepare('DELETE FROM subjects WHERE id = ?').run(id);
+    db.prepare('DELETE FROM subjects WHERE id = ?').run(id);
     res.json({ success: true });
   } catch (err) {
     console.error('删除科目失败:', err);

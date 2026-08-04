@@ -91,6 +91,24 @@ window.confirm = vi.fn(() => true);   // 确认删除
 window.confirm = vi.fn(() => false);  // 取消删除
 ```
 
+#### 5. 第三方库（sortablejs）
+
+拖拽排序测试用假类替换 sortablejs，测试内手动触发 `onUpdate` 模拟拖拽：
+
+```js
+vi.mock('sortablejs', () => {
+  class MockSortable {
+    constructor(el, options) { this.options = options; MockSortable.instances.push(this); }
+    destroy() { MockSortable.instances = MockSortable.instances.filter(i => i !== this); }
+  }
+  MockSortable.instances = [];
+  MockSortable.simulateUpdate = (oldIndex, newIndex) => {
+    MockSortable.instances.at(-1)?.options.onUpdate?.({ oldIndex, newIndex });
+  };
+  return { default: MockSortable };
+});
+```
+
 ### Loading 态测试
 
 将 API mock 返回永远不会 resolve 的 Promise，避免组件状态异步更新导致 `act()` 警告：
@@ -107,7 +125,7 @@ src/
 ├── test-setup.js              # 全局测试 setup
 ├── utils/
 │   ├── api.js
-│   ├── api.test.js            # API 层 15 条（含 tagsApi 4 条）
+│   ├── api.test.js            # API 层 16 条（含 tagsApi 5 条）
 │   ├── clipboard.js
 │   └── clipboard.test.js      # 剪贴板复制工具 3 条
 ├── hooks/
@@ -121,17 +139,18 @@ src/
     ├── ExamCountdown.jsx
     ├── ExamCountdown.test.jsx # 考研倒计时 3 条
     ├── TimerPage.jsx
-    ├── TimerPage.test.jsx     # 5 态渲染 + 保存 + 休息 + 暂停交互 + 弹窗确认 + 冻结 UI + 标签交互 29 条
+    ├── TimerPage.test.jsx     # 5 态渲染 + 保存 + 休息 + 暂停交互 + 弹窗确认 + 冻结 UI + 标签交互 36 条
     ├── SubjectSelector.jsx
     ├── SubjectSelector.test.jsx # CRUD + 休息 15 条
-    ├── TagPicker.jsx          # 标签选择器（学习中/历史编辑态共用）
+    ├── TagPicker.jsx          # 标签选择器（点选/新增/删除 + ⚙ 排序模式拖拽换位）
+    ├── TagPicker.test.jsx     # 排序模式 7 条（⚙ 入口禁用态/模式切换/拖拽换位/完成提交/取消恢复/失败留在模式）
     ├── HistoryPage.jsx
     ├── HistoryPage.test.jsx   # 日期导航 + 列表 + 千层饼 + 备注编辑/复制 + 标签展示/筛选/编辑 27 条
     ├── TodayOverview.jsx
     └── TodayOverview.test.jsx  # 概览 + 条形图 + 按标签分组 7 条
 ```
 
-总计 **136 条测试用例**，10 个测试文件。
+总计 **144 条测试用例**，11 个测试文件。
 
 ## 测试模式详解
 

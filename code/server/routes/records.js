@@ -4,7 +4,7 @@ import { getDb } from '../database.js';
 import { parseTagNames, replaceRecordTags, getRecordTags } from './tags.js';
 
 /**
- * @import { Record, InsertRecordParams, Subject } from '../types.js'
+ * @import { Record, InsertRecordParams } from '../types.js'
  * @import { Request, Response } from 'express'
  */
 
@@ -66,8 +66,7 @@ recordsRouter.post('/', (req, res) => {
       replaceRecordTags(db, recordId, tags);
     }
 
-    /** @type {Record} */
-    const row = db.prepare('SELECT * FROM records WHERE id = ?').get(recordId);
+    const row = /** @type {Record} */ (db.prepare('SELECT * FROM records WHERE id = ?').get(recordId));
     row.tags = getRecordTags(db, recordId);
     res.json(parseSegments(row));
   } catch (err) {
@@ -87,13 +86,12 @@ function attachTags(records) {
   const ids = records.map(r => r.id);
   const placeholders = ids.map(() => '?').join(',');
 
-  /** @type {Array<{ record_id: number, name: string }>} */
-  const tagRows = db.prepare(`
+  const tagRows = /** @type {Array<{ record_id: number, name: string }>} */ (db.prepare(`
     SELECT rt.record_id, t.name
     FROM record_tags rt JOIN tags t ON t.id = rt.tag_id
     WHERE rt.record_id IN (${placeholders})
     ORDER BY rt.rowid
-  `).all(...ids);
+  `).all(...ids));
 
   /** @type {Map<number, string[]>} */
   const byRecord = new Map();
@@ -119,20 +117,19 @@ recordsRouter.get('/', (req, res) => {
     const db = getDb();
     const { date } = req.query;
 
-    /** @type {Record[]} */
     let rows;
     if (date) {
-      rows = db.prepare(`
+      rows = /** @type {Record[]} */ (db.prepare(`
         SELECT * FROM records
         WHERE DATE(created_at) = DATE(?)
         ORDER BY created_at DESC
-      `).all(date);
+      `).all(date));
     } else {
-      rows = db.prepare(`
+      rows = /** @type {Record[]} */ (db.prepare(`
         SELECT * FROM records
         ORDER BY created_at DESC
         LIMIT 200
-      `).all();
+      `).all());
     }
 
     const records = rows.map(parseSegments);
@@ -162,8 +159,7 @@ recordsRouter.patch('/:id', (req, res) => {
     }
     const id = Number(idStr);
 
-    /** @type {Record | undefined} */
-    const row = db.prepare('SELECT * FROM records WHERE id = ?').get(id);
+    const row = /** @type {Record | undefined} */ (db.prepare('SELECT * FROM records WHERE id = ?').get(id));
     if (!row) {
       return res.status(404).json({ error: '记录不存在' });
     }
@@ -192,8 +188,7 @@ recordsRouter.patch('/:id', (req, res) => {
       replaceRecordTags(db, id, parsed.names);
     }
 
-    /** @type {Record} */
-    const updated = db.prepare('SELECT * FROM records WHERE id = ?').get(id);
+    const updated = /** @type {Record} */ (db.prepare('SELECT * FROM records WHERE id = ?').get(id));
     updated.tags = getRecordTags(db, id);
     res.json(parseSegments(updated));
   } catch (err) {
@@ -219,7 +214,7 @@ recordsRouter.patch('/:id', (req, res) => {
  * @param {Response} res - Express 响应对象
  * @returns {Promise<void>}
  */
-recordsRouter.get('/today', (req, res) => {
+recordsRouter.get('/today', (_req, res) => {
   try {
     const db = getDb();
     const now = new Date();
@@ -229,44 +224,44 @@ recordsRouter.get('/today', (req, res) => {
      * 总学习时长
      * @type {{ total_ms: number }}
      */
-    const totalStudy = db.prepare(`
+    const totalStudy = /** @type {{ total_ms: number }} */ (db.prepare(`
       SELECT COALESCE(SUM(duration_ms), 0) as total_ms
       FROM records
       WHERE DATE(created_at) = ? AND mode = 'study'
-    `).get(today);
+    `).get(today));
 
     /**
      * 按科目分组的学习时长
      * @type {Array<{ subject: string | null, total_ms: number, count: number }>}
      */
-    const bySubject = db.prepare(`
+    const bySubject = /** @type {Array<{ subject: string | null, total_ms: number, count: number }>} */ (db.prepare(`
       SELECT subject, SUM(duration_ms) as total_ms, COUNT(*) as count
       FROM records
       WHERE DATE(created_at) = ? AND mode = 'study'
       GROUP BY subject
       ORDER BY total_ms DESC
-    `).all(today);
+    `).all(today));
 
     /**
      * 今日休息总时长 = 手动 rest 记录的时长 + 学习记录中的暂停时长
      * 注意：SUM(duration_ms) 只统计 mode='rest' 的记录，避免把学习时长也算进去
      * @type {{ total_ms: number }}
      */
-    const totalRest = db.prepare(`
+    const totalRest = /** @type {{ total_ms: number }} */ (db.prepare(`
       SELECT COALESCE(SUM(CASE WHEN mode = 'rest' THEN duration_ms ELSE 0 END), 0)
            + COALESCE(SUM(paused_ms), 0) as total_ms
       FROM records
       WHERE DATE(created_at) = ? AND (mode = 'rest' OR paused_ms > 0)
-    `).get(today);
+    `).get(today));
 
     /**
      * @type {{ count: number }}
      */
-    const totalCount = db.prepare(`
+    const totalCount = /** @type {{ count: number }} */ (db.prepare(`
       SELECT COUNT(*) as count
       FROM records
       WHERE DATE(created_at) = ?
-    `).get(today);
+    `).get(today));
 
     res.json({
       date: today,

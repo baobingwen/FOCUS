@@ -3,6 +3,13 @@ import { getDb, closeDb } from '../database.js';
 import { app } from '../index.js';
 
 /**
+ * 提取标签名数组（供顺序断言）
+ * @param {Array<{ name: string }>} list - 标签数组
+ * @returns {string[]}
+ */
+const tagNames = (list) => list.map(t => t.name);
+
+/**
  * 每个测试前重置为全新的空内存数据库
  */
 beforeEach(() => {
@@ -32,7 +39,95 @@ describe('GET /api/tags', () => {
     const res = await request(app).get('/api/tags');
     expect(res.status).toBe(200);
     expect(res.body).toHaveLength(2);
-    expect(res.body.map(t => t.name)).toEqual(expect.arrayContaining(['高数', '线代']));
+    expect(tagNames(res.body)).toEqual(expect.arrayContaining(['高数', '线代']));
+  });
+
+  it('新标签排在末尾（创建顺序）', async () => {
+    await request(app).post('/api/tags').send({ name: '高数' });
+    await request(app).post('/api/tags').send({ name: '线代' });
+    await request(app).post('/api/tags').send({ name: '真题' });
+
+    const res = await request(app).get('/api/tags');
+    expect(res.status).toBe(200);
+    expect(tagNames(res.body)).toEqual(['高数', '线代', '真题']);
+  });
+
+  it('通过记录保存创建的标签也排在末尾', async () => {
+    await request(app).post('/api/tags').send({ name: '高数' });
+    await request(app).post('/api/tags').send({ name: '线代' });
+    await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000, tags: ['错题'],
+    });
+
+    const res = await request(app).get('/api/tags');
+    expect(res.status).toBe(200);
+    expect(tagNames(res.body)).toEqual(['高数', '线代', '错题']);
+  });
+});
+
+// ──────────────────────────────────────────────
+// PUT /api/tags/order
+// ──────────────────────────────────────────────
+describe('PUT /api/tags/order', () => {
+  /** 创建三个标签，返回按创建顺序的 id 数组 */
+  async function createThree() {
+    const a = (await request(app).post('/api/tags').send({ name: '高数' })).body;
+    const b = (await request(app).post('/api/tags').send({ name: '线代' })).body;
+    const c = (await request(app).post('/api/tags').send({ name: '真题' })).body;
+    return [a, b, c];
+  }
+
+  it('重排后 GET 返回新顺序', async () => {
+    const [a, b, c] = await createThree();
+
+    const res = await request(app).put('/api/tags/order').send({ ids: [c.id, a.id, b.id] });
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+
+    const list = await request(app).get('/api/tags');
+    expect(tagNames(list.body)).toEqual(['真题', '高数', '线代']);
+  });
+
+  it('缺 id（非全量）返回 400 且顺序不变', async () => {
+    const [a, , c] = await createThree();
+
+    const res = await request(app).put('/api/tags/order').send({ ids: [c.id, a.id] });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('全部');
+
+    const list = await request(app).get('/api/tags');
+    expect(tagNames(list.body)).toEqual(['高数', '线代', '真题']);
+  });
+
+  it('包含不存在的 id 返回 400', async () => {
+    const [a, , c] = await createThree();
+
+    const res = await request(app).put('/api/tags/order').send({ ids: [c.id, a.id, 999999] });
+    expect(res.status).toBe(400);
+  });
+
+  it('ids 含重复返回 400', async () => {
+    const [a, b, c] = await createThree();
+
+    const res = await request(app).put('/api/tags/order').send({ ids: [a.id, a.id, b.id, c.id] });
+    expect(res.status).toBe(400);
+  });
+
+  it('ids 非数组返回 400', async () => {
+    const res = await request(app).put('/api/tags/order').send({ ids: '高数' });
+    expect(res.status).toBe(400);
+  });
+
+  it('ids 含非正整数返回 400', async () => {
+    const [a, b] = await createThree();
+
+    const res = await request(app).put('/api/tags/order').send({ ids: [a.id, b.id, 0] });
+    expect(res.status).toBe(400);
+  });
+
+  it('空标签库提交空数组合法（幂等无操作）', async () => {
+    const res = await request(app).put('/api/tags/order').send({ ids: [] });
+    expect(res.status).toBe(200);
   });
 });
 
@@ -56,7 +151,7 @@ describe('POST /api/tags', () => {
     expect(second.body.id).toBe(first.body.id);
 
     const db = getDb();
-    const count = db.prepare('SELECT COUNT(*) as c FROM tags').get();
+    const count = /** @type {{ c: number }} */ (db.prepare('SELECT COUNT(*) as c FROM tags').get());
     expect(count.c).toBe(1);
   });
 
@@ -96,7 +191,7 @@ describe('DELETE /api/tags/:id', () => {
     expect(res.body.success).toBe(true);
 
     const db = getDb();
-    const count = db.prepare('SELECT COUNT(*) as c FROM tags').get();
+    const count = /** @type {{ c: number }} */ (db.prepare('SELECT COUNT(*) as c FROM tags').get());
     expect(count.c).toBe(0);
   });
 

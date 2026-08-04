@@ -4,11 +4,20 @@ export interface Record {
     mode: 'study' | 'rest';
     subject?: string;
     duration_ms: number;
+    paused_ms?: number;
+    segments?: Array<{ type: 'study' | 'pause'; duration_ms: number }>;
+    tags?: string[];
     notes?: string;
     created_at: string;
 }
 
 export interface Subject {
+    id: number;
+    name: string;
+    sort_order: number;
+}
+
+export interface Tag {
     id: number;
     name: string;
     sort_order: number;

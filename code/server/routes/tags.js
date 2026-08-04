@@ -42,18 +42,31 @@ export function parseTagNames(value) {
 }
 
 /**
+ * 计算下一个标签排序值（新标签排末尾）
+ * @param {import('better-sqlite3').Database} db - 数据库实例
+ * @returns {number}
+ */
+function nextTagSortOrder(db) {
+  /** @type {{ max_order: number | null }} */
+  const maxOrder = /** @type {{ max_order: number | null }} */ (
+    db.prepare('SELECT MAX(sort_order) as max_order FROM tags').get()
+  );
+  return (maxOrder?.max_order ?? -1) + 1;
+}
+
+/**
  * 幂等创建标签（重名直接返回已有），返回标签对象
  * @param {import('better-sqlite3').Database} db - 数据库实例
  * @param {string} name - 已 trim 的标签名
  * @returns {Tag}
  */
 export function findOrCreateTag(db, name) {
-  /** @type {Tag | undefined} */
-  const existing = db.prepare('SELECT * FROM tags WHERE name = ?').get(name);
+  const existing = /** @type {Tag | undefined} */ (
+    db.prepare('SELECT * FROM tags WHERE name = ?').get(name)
+  );
   if (existing) return existing;
-  const result = db.prepare('INSERT INTO tags (name) VALUES (?)').run(name);
-  /** @type {Tag} */
-  return db.prepare('SELECT * FROM tags WHERE id = ?').get(result.lastInsertRowid);
+  const result = db.prepare('INSERT INTO tags (name, sort_order) VALUES (?, ?)').run(name, nextTagSortOrder(db));
+  return /** @type {Tag} */ (db.prepare('SELECT * FROM tags WHERE id = ?').get(result.lastInsertRowid));
 }
 
 /**
@@ -79,12 +92,13 @@ export function replaceRecordTags(db, recordId, tagNames) {
  * @returns {string[]}
  */
 export function getRecordTags(db, recordId) {
-  return db.prepare(`
+  const rows = /** @type {Array<{ name: string }>} */ (db.prepare(`
     SELECT t.name FROM tags t
     JOIN record_tags rt ON rt.tag_id = t.id
     WHERE rt.record_id = ?
     ORDER BY rt.rowid
-  `).all(recordId).map(r => r.name);
+  `).all(recordId));
+  return rows.map(r => r.name);
 }
 
 /**
@@ -94,10 +108,10 @@ export function getRecordTags(db, recordId) {
  * @param {Response} res - Express 响应对象
  * @returns {Promise<void>}
  */
-tagsRouter.get('/', (req, res) => {
+tagsRouter.get('/', (_req, res) => {
   try {
     const db = getDb();
-    const tags = db.prepare('SELECT * FROM tags ORDER BY id').all();
+    const tags = db.prepare('SELECT * FROM tags ORDER BY sort_order, id').all();
     res.json(tags);
   } catch (err) {
     console.error('获取标签失败:', err);
@@ -125,15 +139,15 @@ tagsRouter.post('/', (req, res) => {
     }
 
     // 幂等复用：同名标签直接返回已有，不建重复
-    /** @type {Tag | undefined} */
-    const existing = db.prepare('SELECT * FROM tags WHERE name = ?').get(name);
+    const existing = /** @type {Tag | undefined} */ (
+      db.prepare('SELECT * FROM tags WHERE name = ?').get(name)
+    );
     if (existing) {
       return res.json(existing);
     }
 
-    const result = db.prepare('INSERT INTO tags (name) VALUES (?)').run(name);
-    /** @type {Tag} */
-    const tag = db.prepare('SELECT * FROM tags WHERE id = ?').get(result.lastInsertRowid);
+    const result = db.prepare('INSERT INTO tags (name, sort_order) VALUES (?, ?)').run(name, nextTagSortOrder(db));
+    const tag = /** @type {Tag} */ (db.prepare('SELECT * FROM tags WHERE id = ?').get(result.lastInsertRowid));
     res.status(201).json(tag);
   } catch (err) {
     console.error('创建标签失败:', err);
@@ -158,8 +172,9 @@ tagsRouter.delete('/:id', (req, res) => {
     }
     const id = Number(idStr);
 
-    /** @type {Tag | undefined} */
-    const tag = db.prepare('SELECT * FROM tags WHERE id = ?').get(id);
+    const tag = /** @type {Tag | undefined} */ (
+      db.prepare('SELECT * FROM tags WHERE id = ?').get(id)
+    );
     if (!tag) {
       return res.status(404).json({ error: '标签不存在' });
     }
@@ -170,5 +185,47 @@ tagsRouter.delete('/:id', (req, res) => {
   } catch (err) {
     console.error('删除标签失败:', err);
     res.status(500).json({ error: '删除标签失败' });
+  }
+});
+
+/**
+ * 批量重排标签顺序（全量提交）
+ * body { ids: number[] } — 必须包含全部标签 id（缺一/多一/含不存在 id 均 400）
+ * 事务内 sort_order 重编号为数组下标（0..N-1），GET 即按新顺序返回
+ * @route PUT /order
+ * @param {Request<{}, {}, { ids?: unknown }>} req - Express 请求对象
+ * @param {Response} res - Express 响应对象
+ * @returns {Promise<void>}
+ */
+tagsRouter.put('/order', (req, res) => {
+  try {
+    const db = getDb();
+    const { ids } = /** @type {{ ids?: unknown }} */ (req.body ?? {});
+
+    if (!Array.isArray(ids) || !ids.every(id => Number.isInteger(id) && id > 0)) {
+      return res.status(400).json({ error: '无效的 ids，必须为正整数数组' });
+    }
+    if (new Set(ids).size !== ids.length) {
+      return res.status(400).json({ error: 'ids 不能包含重复' });
+    }
+
+    const allIds = /** @type {Array<{ id: number }>} */ (
+      db.prepare('SELECT id FROM tags').all()
+    ).map(t => t.id);
+    // 全量校验：集合必须完全一致（空标签库 + 空数组合法，幂等无操作）
+    const isFullSet = ids.length === allIds.length && ids.every(id => allIds.includes(id));
+    if (!isFullSet) {
+      return res.status(400).json({ error: 'ids 必须包含全部标签（全量重排）' });
+    }
+
+    const update = db.prepare('UPDATE tags SET sort_order = ? WHERE id = ?');
+    db.transaction((/** @type {number[]} */ order) => {
+      order.forEach((id, index) => update.run(index, id));
+    })(ids);
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('标签排序失败:', err);
+    res.status(500).json({ error: '标签排序失败' });
   }
 });

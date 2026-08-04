@@ -1,6 +1,6 @@
 {
   "name": "focus-client",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "private": true,
   "license": "MIT",
   "type": "module",
@@ -14,7 +14,8 @@
   "dependencies": {
     "@tailwindcss/postcss": "^4.3.2",
     "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "react-dom": "^19.2.7",
+    "sortablejs": "^1.15.7"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.9.1",

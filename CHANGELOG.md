@@ -2,6 +2,29 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.2] — 2026-08-04
+
+### Added
+
+- **标签拖拽排序**：标签库顺序可自定义排列，常用标签稳定排在前面（[设计文档](docs/adr/0005-tag-reorder.md)）。
+  - 数据模型：`003_add_tag_sort_order.sql` — `tags` 表新增 `sort_order` 列，存量标签回填为创建顺序（id），现有顺序不变
+  - 接口：`PUT /api/tags/order` — 批量全量提交新顺序 id 数组，事务内重编号 `sort_order=数组下标`；缺 id/集合不匹配/含重复 → 400
+  - 前端：TagPicker 行尾新增 ⚙ 排序按钮（≥2 个标签可用），排序模式下芯片带 ≡ 手柄，sortablejs 拖拽换位（handle 限定手柄区，触屏可用）；「完成」批量提交、「取消」恢复原序；排序模式下隐藏删除/新增防误触
+  - 新标签自动排到末尾（`MAX(sort_order)+1`，与科目的 `sort_order` 模式一致）
+- 版本号：client `0.3.1`→`0.3.2`，server `0.3.0`→`0.3.1`，git tag `v0.3.2`（0.3 分支发布，merge 回 master）
+
+### Tests
+
+- 服务端：85 全绿（tags 13→22：新增 PUT /order 全量校验/重编号/顺序断言 9 条）
+- 客户端：144 全绿（新增 TagPicker 排序模式 7 条 + tagsApi.reorder 1 条）
+
+### Docs
+
+- `docs/adr/0005-tag-reorder.md` — 标签拖拽排序设计决策（排序范围/交互/持久化/实现选型）
+- `code/ROADMAP.md` — 已实现新增标签拖拽排序 + 版本头更新至 0.3.2，日常点子移除该项
+- `CLAUDE.md` — TagPicker/tags 路由/数据库表描述补充排序
+- `README.md` / `CONTEXT.md` / `docs/INDEX.md` — 功能列表、tags 表结构、API 列表、ADR 索引同步
+
 ## [0.3.1] — 2026-08-04
 
 ### Fixed

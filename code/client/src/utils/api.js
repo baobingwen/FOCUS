@@ -58,4 +58,10 @@ export const tagsApi = {
 
   delete: (id) =>
     request(`/tags/${id}`, { method: 'DELETE' }),
+
+  reorder: (ids) =>
+    request('/tags/order', {
+      method: 'PUT',
+      body: JSON.stringify({ ids }),
+    }),
 };
