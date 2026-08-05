@@ -203,9 +203,9 @@ export default function TimerPage({ timer, onRecordSaved }) {
         </div>
 
         {/* 页数（选填）— 数字输入 + 快捷累加芯片；冻结/暂停态灰化同备注 */}
-        <div className="w-full max-w-sm mb-6">
+        <div className="w-full max-w-sm mb-4">
           <label className={`text-xs mb-1 block ${isStudying ? 'text-gray-400' : 'text-gray-300'}`}>页数（选填）</label>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1.5">
             <input
               type="number"
               inputMode="numeric"
@@ -222,7 +222,7 @@ export default function TimerPage({ timer, onRecordSaved }) {
               }}
               placeholder="0"
               aria-label="复习页数"
-              className={`w-20 px-3 py-2 text-center text-base border border-gray-200 rounded-xl
+              className={`w-16 px-2 py-1.5 text-center text-sm border border-gray-200 rounded-xl
                 outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 transition-all ${
                 isStudying && !isFrozen ? 'text-gray-700 bg-white' : 'text-gray-500 bg-gray-50'
               }`}
@@ -232,7 +232,7 @@ export default function TimerPage({ timer, onRecordSaved }) {
                 key={n}
                 onClick={() => timer.addPages(n)}
                 aria-label={`页数 +${n}`}
-                className="px-3 py-2 rounded-xl text-sm font-medium bg-blue-50 text-blue-600
+                className="px-2 py-1.5 rounded-xl text-xs font-medium bg-blue-50 text-blue-600
                   hover:bg-blue-100 active:bg-blue-200 transition-all"
               >
                 +{n}
