@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TimerPage from './TimerPage';
 import { recordsApi, subjectsApi, tagsApi } from '../utils/api';
@@ -13,8 +13,11 @@ function createMockTimer(overrides = {}) {
     selectedSubject: null,
     notes: '',
     tags: [],
+    pages: null,
     selectSubject: vi.fn(),
     updateNotes: vi.fn(),
+    updatePages: vi.fn(),
+    addPages: vi.fn(),
     toggleTag: vi.fn(),
     removeTag: vi.fn(),
     startStudy: vi.fn(),
@@ -116,6 +119,7 @@ describe('TimerPage', () => {
       segments: [{ type: 'study', duration_ms: 5000 }],
       notes: '做练习',
       tags: [],
+      pages: null,
     });
     await waitFor(() => {
       expect(onRecordSaved).toHaveBeenCalled();
@@ -322,6 +326,7 @@ describe('TimerPage', () => {
       ],
       notes: '',
       tags: [],
+      pages: null,
     });
     await waitFor(() => {
       expect(onRecordSaved).toHaveBeenCalled();
@@ -464,9 +469,95 @@ describe('TimerPage', () => {
       segments: [{ type: 'study', duration_ms: 5000 }],
       notes: '',
       tags: ['高数', '极限'],
+      pages: null,
     });
     await waitFor(() => {
       expect(onRecordSaved).toHaveBeenCalled();
     });
+  });
+
+  // ──── 复习页数测试 ────
+
+  it('studying 状态显示页数输入框和 +1/+5/+10 快捷芯片', () => {
+    const timer = createMockTimer({
+      phase: 'studying',
+      elapsed: 5000,
+      selectedSubject: { id: 1, name: '数学' },
+    });
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    expect(screen.getByLabelText('复习页数')).toBeInTheDocument();
+    expect(screen.getByText('页数（选填）')).toBeInTheDocument();
+    expect(screen.getByLabelText('页数 +1')).toBeInTheDocument();
+    expect(screen.getByLabelText('页数 +5')).toBeInTheDocument();
+    expect(screen.getByLabelText('页数 +10')).toBeInTheDocument();
+  });
+
+  it('点击 +5 芯片调用 addPages(5)', async () => {
+    const addPages = vi.fn();
+    const timer = createMockTimer({
+      phase: 'studying',
+      addPages,
+    });
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    await userEvent.click(screen.getByLabelText('页数 +5'));
+    expect(addPages).toHaveBeenCalledWith(5);
+  });
+
+  it('页数输入框输入合法数字调用 updatePages', async () => {
+    const timer = createMockTimer({ phase: 'studying' });
+    // 有状态 stub：模拟受控组件回写（多位数输入依赖 value 回读）
+    timer.updatePages = (v) => { timer.pages = v; };
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    const input = screen.getByLabelText('复习页数');
+    // jsdom 对 type="number" 的 userEvent 键入支持不可靠，改用 fireEvent.change 直接设值
+    fireEvent.change(input, { target: { value: '30' } });
+    expect(timer.pages).toBe(30);
+  });
+
+  it('页数输入框清空调用 updatePages(null)', async () => {
+    const updatePages = vi.fn();
+    const timer = createMockTimer({
+      phase: 'studying',
+      pages: 12,
+      updatePages,
+    });
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    await userEvent.clear(screen.getByLabelText('复习页数'));
+    expect(updatePages).toHaveBeenCalledWith(null);
+  });
+
+  it('结束学习提交已填写的页数', async () => {
+    const endStudy = vi.fn(() => ({ duration_ms: 5000, paused_ms: 0, segments: [{ type: 'study', duration_ms: 5000 }] }));
+    const onRecordSaved = vi.fn();
+    const timer = createMockTimer({
+      phase: 'studying',
+      elapsed: 5000,
+      selectedSubject: { id: 1, name: '数学' },
+      pages: 30,
+      endStudy,
+    });
+    recordsApi.create.mockResolvedValueOnce({ id: 1 });
+
+    render(<TimerPage timer={timer} onRecordSaved={onRecordSaved} />);
+    await userEvent.click(screen.getByText('结束学习'));
+
+    expect(recordsApi.create).toHaveBeenCalledWith(expect.objectContaining({ pages: 30 }));
+  });
+
+  it('冻结态页数区块与备注同规则（仍显示输入与芯片）', () => {
+    const timer = createMockTimer({
+      phase: 'studying',
+      elapsed: 5000,
+      frozen: true,
+      selectedSubject: { id: 1, name: '数学' },
+    });
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    expect(screen.getByLabelText('复习页数')).toBeInTheDocument();
+    expect(screen.getByLabelText('页数 +1')).toBeInTheDocument();
   });
 });

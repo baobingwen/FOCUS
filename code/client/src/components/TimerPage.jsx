@@ -66,6 +66,7 @@ export default function TimerPage({ timer, onRecordSaved }) {
         segments: data.segments,
         notes: timer.notes.trim(),
         tags: timer.tags,
+        pages: timer.pages,
       });
       onRecordSaved?.(); // 通知父组件刷新数据
     } catch (err) {
@@ -199,6 +200,45 @@ export default function TimerPage({ timer, onRecordSaved }) {
             onToggle={timer.toggleTag}
             onDelete={timer.removeTag}
           />
+        </div>
+
+        {/* 页数（选填）— 数字输入 + 快捷累加芯片；冻结/暂停态灰化同备注 */}
+        <div className="w-full max-w-sm mb-6">
+          <label className={`text-xs mb-1 block ${isStudying ? 'text-gray-400' : 'text-gray-300'}`}>页数（选填）</label>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              value={timer.pages ?? ''}
+              onChange={(e) => {
+                const v = e.target.value;
+                if (v === '') {
+                  timer.updatePages(null);
+                } else {
+                  const n = Number(v);
+                  if (Number.isInteger(n) && n >= 1 && n <= 9999) timer.updatePages(n);
+                }
+              }}
+              placeholder="0"
+              aria-label="复习页数"
+              className={`w-20 px-3 py-2 text-center text-base border border-gray-200 rounded-xl
+                outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 transition-all ${
+                isStudying && !isFrozen ? 'text-gray-700 bg-white' : 'text-gray-500 bg-gray-50'
+              }`}
+            />
+            {[1, 5, 10].map(n => (
+              <button
+                key={n}
+                onClick={() => timer.addPages(n)}
+                aria-label={`页数 +${n}`}
+                className="px-3 py-2 rounded-xl text-sm font-medium bg-blue-50 text-blue-600
+                  hover:bg-blue-100 active:bg-blue-200 transition-all"
+              >
+                +{n}
+              </button>
+            ))}
+          </div>
         </div>
 
         {/* 备注输入框 */}

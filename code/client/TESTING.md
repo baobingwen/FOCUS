@@ -139,18 +139,18 @@ src/
     ├── ExamCountdown.jsx
     ├── ExamCountdown.test.jsx # 考研倒计时 3 条
     ├── TimerPage.jsx
-    ├── TimerPage.test.jsx     # 5 态渲染 + 保存 + 休息 + 暂停交互 + 弹窗确认 + 冻结 UI + 标签交互 36 条
+    ├── TimerPage.test.jsx     # 5 态渲染 + 保存 + 休息 + 暂停交互 + 弹窗确认 + 冻结 UI + 标签交互 + 页数交互 42 条
     ├── SubjectSelector.jsx
     ├── SubjectSelector.test.jsx # CRUD + 休息 15 条
     ├── TagPicker.jsx          # 标签选择器（点选/新增/删除 + ⚙ 排序模式拖拽换位）
     ├── TagPicker.test.jsx     # 排序模式 7 条（⚙ 入口禁用态/模式切换/拖拽换位/完成提交/取消恢复/失败留在模式）
     ├── HistoryPage.jsx
-    ├── HistoryPage.test.jsx   # 日期导航 + 列表 + 千层饼 + 备注编辑/复制 + 标签展示/筛选/编辑 27 条
+    ├── HistoryPage.test.jsx   # 日期导航 + 列表 + 千层饼 + 备注编辑/复制 + 标签展示/筛选/编辑 + 页数徽标/编辑 31 条
     ├── TodayOverview.jsx
-    └── TodayOverview.test.jsx  # 概览 + 条形图 + 按标签分组 7 条
+    └── TodayOverview.test.jsx  # 概览 + 条形图 + 按标签分组 + 页数汇总 10 条
 ```
 
-总计 **144 条测试用例**，11 个测试文件。
+总计 **157 条测试用例**，11 个测试文件。
 
 ## 测试模式详解
 

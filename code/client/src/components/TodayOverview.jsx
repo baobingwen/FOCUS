@@ -77,6 +77,7 @@ export default function TodayOverview({ refreshKey, records }) {
         </div>
         <div className="text-xs text-gray-400 mt-1">
           学习 {fmtTime(data.total_study_ms)} · 休息 {fmtTime(data.total_rest_ms)}
+          {data.total_pages > 0 && <span className="text-emerald-500"> · 📖 今日 {data.total_pages} 页</span>}
         </div>
       </div>
 
@@ -87,7 +88,10 @@ export default function TodayOverview({ refreshKey, records }) {
             <div key={i}>
               <div className="flex justify-between text-xs text-gray-600 mb-0.5">
                 <span>{item.subject}</span>
-                <span className="font-mono">{fmtTime(item.total_ms)}</span>
+                <span className="font-mono">
+                  {fmtTime(item.total_ms)}
+                  {item.total_pages > 0 && <span className="text-gray-400"> · {item.total_pages} 页</span>}
+                </span>
               </div>
               <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                 <div

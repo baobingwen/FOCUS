@@ -349,7 +349,7 @@ describe('HistoryPage', () => {
       expect(screen.getByText('高数第三章 反常积分')).toBeInTheDocument();
     });
     expect(screen.queryByPlaceholderText('记录一下当前的学习内容...')).not.toBeInTheDocument();
-    expect(recordsApi.update).toHaveBeenCalledWith(1, { notes: '高数第三章 反常积分', tags: [] });
+    expect(recordsApi.update).toHaveBeenCalledWith(1, { notes: '高数第三章 反常积分', tags: [], pages: null });
   });
 
   it('取消编辑丢弃草稿且不调用更新接口', async () => {
@@ -610,7 +610,7 @@ describe('HistoryPage', () => {
     await userEvent.click(screen.getByText('保存'));
 
     await waitFor(() => {
-      expect(recordsApi.update).toHaveBeenCalledWith(1, { notes: '高数练习', tags: ['高数'] });
+      expect(recordsApi.update).toHaveBeenCalledWith(1, { notes: '高数练习', tags: ['高数'], pages: null });
     });
   });
 
@@ -645,7 +645,99 @@ describe('HistoryPage', () => {
     await userEvent.click(screen.getByText('保存'));
 
     await waitFor(() => {
-      expect(recordsApi.update).toHaveBeenCalledWith(1, { notes: '高数练习', tags: [] });
+      expect(recordsApi.update).toHaveBeenCalledWith(1, { notes: '高数练习', tags: [], pages: null });
+    });
+  });
+
+  // ──── 复习页数测试 ────
+
+  it('学习记录有 pages 时显示「📖 N 页」徽标', async () => {
+    const withPages = {
+      records: [
+        { id: 1, mode: 'study', subject: '数学', duration_ms: 3600000, notes: '高数练习', pages: 30, created_at: '2026-07-07 10:00:00' },
+        { id: 2, mode: 'study', subject: '英语', duration_ms: 1800000, notes: '背单词', pages: null, created_at: '2026-07-07 11:00:00' },
+      ],
+    };
+    recordsApi.list.mockResolvedValueOnce(withPages);
+    recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 5400000, total_rest_ms: 0, total_records: 2, by_subject: [], total_pages: 30 });
+
+    render(<HistoryPage refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('📖 30 页')).toBeInTheDocument();
+    });
+    // 无 pages 的记录不显示徽标
+    expect(screen.queryByText('📖 0 页')).not.toBeInTheDocument();
+  });
+
+  it('休息记录不显示页数徽标', async () => {
+    const mixed = {
+      records: [
+        { id: 1, mode: 'study', subject: '数学', duration_ms: 3600000, notes: '', pages: 30, created_at: '2026-07-07 10:00:00' },
+        { id: 2, mode: 'rest', subject: null, duration_ms: 300000, notes: '', pages: null, created_at: '2026-07-07 11:00:00' },
+      ],
+    };
+    recordsApi.list.mockResolvedValueOnce(mixed);
+    recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 3600000, total_rest_ms: 300000, total_records: 2, by_subject: [], total_pages: 30 });
+
+    render(<HistoryPage refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('📖 30 页')).toBeInTheDocument();
+    });
+    expect(screen.getAllByText('📖 30 页')).toHaveLength(1);
+  });
+
+  it('编辑态可修改页数，保存时随备注标签一起提交', async () => {
+    recordsApi.list.mockResolvedValueOnce(mockRecords);
+    recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 3600000, total_rest_ms: 300000, total_records: 2, by_subject: [] });
+
+    render(<HistoryPage refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('高数练习')).toBeInTheDocument();
+    });
+
+    await userEvent.click(editButtonOf('高数练习'));
+    const pagesInput = screen.getByLabelText('编辑页数');
+    await userEvent.clear(pagesInput);
+    await userEvent.type(pagesInput, '45');
+
+    recordsApi.update.mockResolvedValueOnce({
+      id: 1, mode: 'study', subject: '数学', duration_ms: 3600000, notes: '高数练习', pages: 45, created_at: '2026-07-07 10:00:00',
+    });
+    await userEvent.click(screen.getByText('保存'));
+
+    await waitFor(() => {
+      expect(recordsApi.update).toHaveBeenCalledWith(1, { notes: '高数练习', tags: [], pages: 45 });
+    });
+  });
+
+  it('编辑态清空页数：保存提交 null', async () => {
+    const withPages = {
+      records: [
+        { id: 1, mode: 'study', subject: '数学', duration_ms: 3600000, notes: '高数练习', pages: 30, created_at: '2026-07-07 10:00:00' },
+      ],
+    };
+    recordsApi.list.mockResolvedValueOnce(withPages);
+    recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 3600000, total_rest_ms: 0, total_records: 1, by_subject: [], total_pages: 30 });
+
+    render(<HistoryPage refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('高数练习')).toBeInTheDocument();
+    });
+
+    await userEvent.click(editButtonOf('高数练习'));
+    await userEvent.clear(screen.getByLabelText('编辑页数'));
+
+    recordsApi.update.mockResolvedValueOnce({
+      id: 1, mode: 'study', subject: '数学', duration_ms: 3600000, notes: '高数练习', pages: null, created_at: '2026-07-07 10:00:00',
+    });
+    await userEvent.click(screen.getByText('保存'));
+
+    await waitFor(() => {
+      expect(recordsApi.update).toHaveBeenCalledWith(1, { notes: '高数练习', tags: [], pages: null });
     });
   });
 });

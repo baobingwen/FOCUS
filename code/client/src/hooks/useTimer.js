@@ -21,6 +21,7 @@ export default function useTimer() {
   const [selectedSubject, setSelectedSubject] = useState(null);
   const [notes, setNotes] = useState('');
   const [tags, setTags] = useState([]); // 当前学习时段选中的标签名数组
+  const [pages, setPages] = useState(null); // 本次学习复习的页数（null = 未填写）
   const [frozen, setFrozen] = useState(false); // 是否处于"离开冻结"态（不计入暂停记录）
 
   const segmentStartRef = useRef(null);      // 当前段的起始时间戳
@@ -75,6 +76,7 @@ export default function useTimer() {
     setElapsed(0);
     setPausedElapsed(0);
     setTags([]);
+    setPages(null);
     accumulatedStudyRef.current = 0;
     accumulatedPauseRef.current = 0;
     segmentsRef.current = [];
@@ -146,6 +148,7 @@ export default function useTimer() {
   const startRest = useCallback(() => {
     setNotes('');
     setTags([]);
+    setPages(null);
     setElapsed(0);
     setPhase('resting');
     segmentStartRef.current = Date.now();
@@ -167,6 +170,7 @@ export default function useTimer() {
     setSelectedSubject(null);
     setNotes('');
     setTags([]);
+    setPages(null);
     setPhase('idle');
     return duration;
   }, [stopTicker]);
@@ -176,6 +180,7 @@ export default function useTimer() {
     setSelectedSubject(null);
     setNotes('');
     setTags([]);
+    setPages(null);
     setPhase('idle');
   }, []);
 
@@ -220,6 +225,16 @@ export default function useTimer() {
     setTags(prev => prev.filter(t => t !== name));
   }, []);
 
+  // 直接设置页数（输入框；null = 清空）
+  const updatePages = useCallback((value) => {
+    setPages(value);
+  }, []);
+
+  // 快捷累加页数（+1/+5/+10 芯片；上限 9999 与服务端一致）
+  const addPages = useCallback((n) => {
+    setPages(prev => Math.min(9999, (prev ?? 0) + n));
+  }, []);
+
   return {
     phase,
     elapsed,
@@ -227,11 +242,14 @@ export default function useTimer() {
     selectedSubject,
     notes,
     tags,
+    pages,
     frozen,
     selectSubject,
     updateNotes,
     toggleTag,
     removeTag,
+    updatePages,
+    addPages,
     startStudy,
     pauseStudy,
     resumeStudy,

@@ -120,4 +120,56 @@ describe('TodayOverview', () => {
     expect(screen.getByText('1小时30分')).toBeInTheDocument();
     expect(screen.getByText('极限')).toBeInTheDocument();
   });
+
+  // ──── 复习页数测试 ────
+
+  it('total_pages > 0 时显示「📖 今日 N 页」', async () => {
+    recordsApi.todayOverview.mockResolvedValueOnce({
+      total_study_ms: 7200000,
+      total_rest_ms: 600000,
+      total_records: 5,
+      total_pages: 50,
+      by_subject: [
+        { subject: '数学', total_ms: 3600000, total_pages: 30 },
+        { subject: '英语', total_ms: 2400000, total_pages: 20 },
+      ],
+    });
+    render(<TodayOverview refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/📖 今日 50 页/)).toBeInTheDocument();
+    });
+  });
+
+  it('total_pages 为 0 时不显示今日页数', async () => {
+    recordsApi.todayOverview.mockResolvedValueOnce(mockOverview);
+    render(<TodayOverview refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('2小时0分')).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/今日 \d+ 页/)).not.toBeInTheDocument();
+  });
+
+  it('科目分组行附页数文字（total_pages > 0 时）', async () => {
+    recordsApi.todayOverview.mockResolvedValueOnce({
+      total_study_ms: 7200000,
+      total_rest_ms: 600000,
+      total_records: 5,
+      total_pages: 30,
+      by_subject: [
+        { subject: '数学', total_ms: 3600000, total_pages: 30 },
+        { subject: '英语', total_ms: 2400000, total_pages: 0 },
+      ],
+    });
+    render(<TodayOverview refreshKey={0} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('2小时0分')).toBeInTheDocument();
+    });
+
+    // 数学行有「· 30 页」，英语行无页数文字
+    expect(screen.getByText('· 30 页')).toBeInTheDocument();
+    expect(screen.queryByText('· 0 页')).not.toBeInTheDocument();
+  });
 });

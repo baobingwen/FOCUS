@@ -351,6 +351,7 @@ describe('GET /api/records/today', () => {
       total_study_ms: 0,
       total_rest_ms: 0,
       total_records: 0,
+      total_pages: 0,
       by_subject: [],
     });
     expect(res.body).toHaveProperty('date');
@@ -636,5 +637,197 @@ describe('records 与标签联动', () => {
 
     const res = await request(app).patch(`/api/records/${rest.id}`).send({ tags: ['高数'] });
     expect(res.status).toBe(400);
+  });
+});
+
+// ──────────────────────────────────────────────
+// records × 页数 (pages)
+// ──────────────────────────────────────────────
+describe('records × 页数', () => {
+  it('POST 学习记录带 pages：保存并返回 pages', async () => {
+    const res = await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000, pages: 30,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.pages).toBe(30);
+  });
+
+  it('POST 学习记录不传 pages：pages 为 null', async () => {
+    const res = await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.pages).toBeNull();
+  });
+
+  it('POST pages 为 0 返回 400', async () => {
+    const res = await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000, pages: 0,
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('pages');
+  });
+
+  it('POST pages 为负数返回 400', async () => {
+    const res = await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000, pages: -5,
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('pages');
+  });
+
+  it('POST pages 为小数返回 400', async () => {
+    const res = await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000, pages: 3.5,
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('pages');
+  });
+
+  it('POST pages 为字符串返回 400', async () => {
+    const res = await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000, pages: '30',
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('pages');
+  });
+
+  it('POST pages 超过 9999 返回 400', async () => {
+    const res = await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000, pages: 10000,
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('pages');
+  });
+
+  it('POST pages 为 9999 合法', async () => {
+    const res = await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000, pages: 9999,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.pages).toBe(9999);
+  });
+
+  it('POST 休息记录带 pages 被忽略（存 null）', async () => {
+    const res = await request(app).post('/api/records').send({
+      mode: 'rest', duration_ms: 600000, pages: 30,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.pages).toBeNull();
+  });
+
+  it('GET 记录返回每条的 pages', async () => {
+    await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000, pages: 30,
+    });
+    await request(app).post('/api/records').send({
+      mode: 'study', subject: '英语', duration_ms: 3600000,
+    });
+
+    const res = await request(app).get('/api/records');
+    expect(res.status).toBe(200);
+    const withPages = res.body.records.find(r => r.subject === '数学');
+    expect(withPages.pages).toBe(30);
+    const withoutPages = res.body.records.find(r => r.subject === '英语');
+    expect(withoutPages.pages).toBeNull();
+  });
+
+  it('PATCH 修改学习记录的 pages', async () => {
+    const rec = (await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000, pages: 10,
+    })).body;
+
+    const res = await request(app).patch(`/api/records/${rec.id}`).send({ pages: 25 });
+    expect(res.status).toBe(200);
+    expect(res.body.pages).toBe(25);
+  });
+
+  it('PATCH pages 为 null 清空页数', async () => {
+    const rec = (await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000, pages: 10,
+    })).body;
+
+    const res = await request(app).patch(`/api/records/${rec.id}`).send({ pages: null });
+    expect(res.status).toBe(200);
+    expect(res.body.pages).toBeNull();
+  });
+
+  it('PATCH pages 非法值返回 400', async () => {
+    const rec = (await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000,
+    })).body;
+
+    for (const bad of [0, -1, 1.5, '30', 10000]) {
+      const res = await request(app).patch(`/api/records/${rec.id}`).send({ pages: bad });
+      expect(res.status).toBe(400);
+      expect(res.body.error).toContain('pages');
+    }
+  });
+
+  it('PATCH 休息记录带 pages 返回 400', async () => {
+    const rest = (await request(app).post('/api/records').send({
+      mode: 'rest', duration_ms: 600000,
+    })).body;
+
+    const res = await request(app).patch(`/api/records/${rest.id}`).send({ pages: 30 });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('学习记录');
+  });
+
+  it('PATCH 只传 pages 不影响 notes 和 tags', async () => {
+    const rec = (await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000, notes: '原备注', tags: ['高数'],
+    })).body;
+
+    const res = await request(app).patch(`/api/records/${rec.id}`).send({ pages: 15 });
+    expect(res.status).toBe(200);
+    expect(res.body.pages).toBe(15);
+    expect(res.body.notes).toBe('原备注');
+    expect(res.body.tags).toEqual(['高数']);
+  });
+
+  it('/today 汇总今日总页数（NULL 自动忽略）', async () => {
+    const db = getDb();
+    const today = '2026-07-06';
+    const insert = db.prepare(
+      `INSERT INTO records (mode, subject, duration_ms, pages, created_at)
+       VALUES (?, ?, ?, ?, ?)`
+    );
+    insert.run('study', '数学', 3600000, 30, `${today} 10:00:00`);
+    insert.run('study', '英语', 1800000, 20, `${today} 14:00:00`);
+    // 无页数记录 + 休息记录不参与
+    insert.run('study', '专业课', 1200000, null, `${today} 16:00:00`);
+    insert.run('rest', null, 600000, null, `${today} 12:00:00`);
+
+    jest.useFakeTimers({ now: new Date(`${today}T23:00:00`) });
+    const res = await request(app).get('/api/records/today');
+    jest.useRealTimers();
+
+    expect(res.status).toBe(200);
+    expect(res.body.total_pages).toBe(50);
+  });
+
+  it('/today 按科目分组带 total_pages', async () => {
+    const db = getDb();
+    const today = '2026-07-06';
+    const insert = db.prepare(
+      `INSERT INTO records (mode, subject, duration_ms, pages, created_at)
+       VALUES (?, ?, ?, ?, ?)`
+    );
+    insert.run('study', '数学', 3600000, 30, `${today} 10:00:00`);
+    insert.run('study', '数学', 1200000, 15, `${today} 14:00:00`);
+    insert.run('study', '英语', 1800000, 20, `${today} 11:00:00`);
+    // 无页数记录计入科目分组但 pages 为 0
+    insert.run('study', '英语', 600000, null, `${today} 15:00:00`);
+
+    jest.useFakeTimers({ now: new Date(`${today}T23:00:00`) });
+    const res = await request(app).get('/api/records/today');
+    jest.useRealTimers();
+
+    expect(res.status).toBe(200);
+    const math = res.body.by_subject.find(s => s.subject === '数学');
+    expect(math.total_pages).toBe(45);
+    const english = res.body.by_subject.find(s => s.subject === '英语');
+    expect(english.total_pages).toBe(20);
   });
 });

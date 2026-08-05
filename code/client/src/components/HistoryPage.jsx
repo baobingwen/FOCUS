@@ -67,6 +67,8 @@ export default function HistoryPage({ refreshKey }) {
   const [filterTag, setFilterTag] = useState(null);
   // 编辑态标签草稿（进入编辑时从记录复制，保存时 PATCH 提交）
   const [draftTags, setDraftTags] = useState([]);
+  // 编辑态页数草稿（null = 未填写，保存时 PATCH 提交，可清空）
+  const [draftPages, setDraftPages] = useState(null);
 
   /**
    * 加载指定日期的记录
@@ -95,6 +97,7 @@ export default function HistoryPage({ refreshKey }) {
     setEditingId(null);
     setDraft('');
     setDraftTags([]);
+    setDraftPages(null);
     setEditError('');
     setCopyFeedback(null);
     setFilterTag(null);
@@ -134,6 +137,7 @@ export default function HistoryPage({ refreshKey }) {
     setEditingId(record.id);
     setDraft(record.notes || '');
     setDraftTags(record.tags || []);
+    setDraftPages(record.pages ?? null);
     setEditError('');
   };
 
@@ -144,6 +148,7 @@ export default function HistoryPage({ refreshKey }) {
     setEditingId(null);
     setDraft('');
     setDraftTags([]);
+    setDraftPages(null);
     setEditError('');
   };
 
@@ -156,11 +161,12 @@ export default function HistoryPage({ refreshKey }) {
     setSavingId(record.id);
     setEditError('');
     try {
-      const updated = await recordsApi.update(record.id, { notes: draft.trim(), tags: draftTags });
+      const updated = await recordsApi.update(record.id, { notes: draft.trim(), tags: draftTags, pages: draftPages });
       setRecords((prev) => prev.map((r) => (r.id === record.id ? updated : r)));
       setEditingId(null);
       setDraft('');
       setDraftTags([]);
+      setDraftPages(null);
     } catch (err) {
       setEditError(`保存失败: ${err.message}`);
     } finally {
@@ -321,6 +327,13 @@ export default function HistoryPage({ refreshKey }) {
                   </span>
                 )}
 
+                {/* 复习页数 — 有值才显示，仅学习记录 */}
+                {record.mode === 'study' && record.pages > 0 && (
+                  <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
+                    📖 {record.pages} 页
+                  </span>
+                )}
+
                 {/* 时长 */}
                 <span className="text-sm font-mono text-gray-700 ml-auto">
                   {fmtShortTime(record.duration_ms)}
@@ -361,6 +374,29 @@ export default function HistoryPage({ refreshKey }) {
                         resize-none outline-none focus:border-blue-300 focus:ring-2
                         focus:ring-blue-100 text-gray-700"
                     />
+                    {/* 页数编辑（null = 清空） */}
+                    <div className="mt-2 flex items-center gap-2">
+                      <label className="text-xs text-gray-400">页数</label>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min={1}
+                        value={draftPages ?? ''}
+                        onChange={(e) => {
+                          const v = e.target.value;
+                          if (v === '') {
+                            setDraftPages(null);
+                          } else {
+                            const n = Number(v);
+                            if (Number.isInteger(n) && n >= 1 && n <= 9999) setDraftPages(n);
+                          }
+                        }}
+                        placeholder="未填写"
+                        aria-label="编辑页数"
+                        className="w-20 px-2 py-1 text-xs text-center border border-gray-200 rounded-lg
+                          outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 text-gray-700"
+                      />
+                    </div>
                     <div className="mt-2">
                       <TagPicker
                         selected={draftTags}

@@ -56,10 +56,17 @@ recordsRouter.post('/', (req, res) => {
     }
     const tags = mode === 'study' ? (parsed.names ?? []) : [];
 
+    // 校验页数（选填）：必须为 1~9999 的整数，仅学习记录有效，休息记录无条件忽略
+    const pages = req.body?.pages;
+    if (mode === 'study' && pages !== undefined && pages !== null && (!Number.isInteger(pages) || pages < 1 || pages > 9999)) {
+      return res.status(400).json({ error: '无效的 pages，必须为 1~9999 的整数' });
+    }
+    const recordPages = (mode === 'study' && Number.isInteger(pages) && pages > 0) ? pages : null;
+
     const result = db.prepare(`
-      INSERT INTO records (mode, subject, duration_ms, notes, segments, paused_ms)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(mode, mode === 'study' ? subject : null, duration_ms, notes || '', segmentsStr, pausedMs);
+      INSERT INTO records (mode, subject, duration_ms, notes, segments, paused_ms, pages)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(mode, mode === 'study' ? subject : null, duration_ms, notes || '', segmentsStr, pausedMs, recordPages);
 
     const recordId = Number(result.lastInsertRowid);
     if (tags.length > 0) {
@@ -181,11 +188,20 @@ recordsRouter.patch('/:id', (req, res) => {
       return res.status(400).json({ error: parsed.error });
     }
 
+    // 校验 pages（选填）：提供时必须为 1~9999 整数，或 null 表示清空
+    const pages = req.body?.pages;
+    if (pages !== undefined && pages !== null && (!Number.isInteger(pages) || pages < 1 || pages > 9999)) {
+      return res.status(400).json({ error: '无效的 pages，必须为 1~9999 的整数' });
+    }
+
     if (notes !== undefined) {
       db.prepare('UPDATE records SET notes = ? WHERE id = ?').run(notes.trim(), id);
     }
     if (parsed.names !== null) {
       replaceRecordTags(db, id, parsed.names);
+    }
+    if (pages !== undefined) {
+      db.prepare('UPDATE records SET pages = ? WHERE id = ?').run(pages, id);
     }
 
     const updated = /** @type {Record} */ (db.prepare('SELECT * FROM records WHERE id = ?').get(id));
@@ -231,11 +247,21 @@ recordsRouter.get('/today', (_req, res) => {
     `).get(today));
 
     /**
-     * 按科目分组的学习时长
-     * @type {Array<{ subject: string | null, total_ms: number, count: number }>}
+     * 今日总页数（仅学习记录有 pages，SUM 自动忽略 NULL）
+     * @type {{ total_pages: number }}
      */
-    const bySubject = /** @type {Array<{ subject: string | null, total_ms: number, count: number }>} */ (db.prepare(`
-      SELECT subject, SUM(duration_ms) as total_ms, COUNT(*) as count
+    const totalPages = /** @type {{ total_pages: number }} */ (db.prepare(`
+      SELECT COALESCE(SUM(pages), 0) as total_pages
+      FROM records
+      WHERE DATE(created_at) = ? AND mode = 'study'
+    `).get(today));
+
+    /**
+     * 按科目分组的学习时长
+     * @type {Array<{ subject: string | null, total_ms: number, count: number, total_pages: number }>}
+     */
+    const bySubject = /** @type {Array<{ subject: string | null, total_ms: number, count: number, total_pages: number }>} */ (db.prepare(`
+      SELECT subject, SUM(duration_ms) as total_ms, COUNT(*) as count, COALESCE(SUM(pages), 0) as total_pages
       FROM records
       WHERE DATE(created_at) = ? AND mode = 'study'
       GROUP BY subject
@@ -268,6 +294,7 @@ recordsRouter.get('/today', (_req, res) => {
       total_study_ms: totalStudy.total_ms,
       total_rest_ms: totalRest.total_ms,
       total_records: totalCount.count,
+      total_pages: totalPages.total_pages,
       by_subject: bySubject,
     });
   } catch (err) {

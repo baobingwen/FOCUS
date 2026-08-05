@@ -39,7 +39,7 @@ npm run test:watch
 
 ```
 ├── __tests__/
-│   ├── records.test.js     # 记录路由（50 条用例，含暂停/segments + PATCH 备注/标签 + records×标签联动）
+│   ├── records.test.js     # 记录路由（67 条用例，含暂停/segments + PATCH 备注/标签/页数 + records×标签/页数联动）
 │   ├── subjects.test.js    # 科目路由（13 条用例）
 │   └── tags.test.js        # 标签路由（22 条用例，GET 排序/POST 幂等复用/DELETE 级联/PUT 全量重排）
 ├── jest.setup.cjs          # 环境变量初始化（CJS，在 ESM 加载前执行）
@@ -174,7 +174,8 @@ app.get('/{*path}', handler);
 | `notes` | 不传（默认空字符串）、传空字符串、传普通字符串 |
 | `created_at` | 23:59:59（算当天）、00:00:00（算当天）、凌晨 0~8 点本地 vs UTC 日期分歧（算当天）、昨日（不算当天）、无效日期 |
 | `id` (DELETE) | 数字有效、非数字（abc）、超大数字（不存在） |
-| `PATCH /:id` 备注/标签 | id 非数字（404）、不存在（404）、notes 非字符串（400）、tags 非数组（400）、休息记录（400）、空串清空备注（200）、tags 空数组清空（200）、整组替换（200） |
+| `PATCH /:id` 备注/标签/页数 | id 非数字（404）、不存在（404）、notes 非字符串（400）、tags 非数组（400）、pages 非法值（400，0/负/小数/字符串/超 9999）、休息记录（400）、空串清空备注（200）、tags 空数组清空（200）、pages null 清空（200）、整组替换（200） |
+| `pages` | 1~9999 整数（合法）、0/负数/小数/字符串/10000（400）、休息记录无条件忽略（200，存 null）、GET 返回每条 pages、PATCH 改/清空、`/today` total_pages 与 by_subject 汇总（NULL 忽略） |
 | `tags` | 重名幂等复用（200）、新建（201）、trim（200）、空名（400）、超 12 字（400）、DELETE 级联清关联（200）、标签不存在（404）、id 非数字（404） |
 | `PUT /tags/order` | 重排后 GET 顺序更新（200）、缺 id 非全量（400）、含不存在 id（400）、含重复（400）、ids 非数组（400）、含非正整数（400）、空库空数组幂等（200）、新标签排末尾（含经 records 创建的标签） |
 
@@ -211,7 +212,7 @@ describe('GET /api/xxx', () => {
 
 | 文件 | 说明 |
 |------|------|
-| `__tests__/records.test.js` | 50 条用例，含暂停/segments + PATCH 备注/标签 + records×标签联动 |
+| `__tests__/records.test.js` | 67 条用例，含暂停/segments + PATCH 备注/标签/页数 + records×标签/页数联动 |
 | `__tests__/subjects.test.js` | 13 条用例，默认科目保护等 |
 | `__tests__/tags.test.js` | 22 条用例，GET 排序/POST 幂等复用/DELETE 级联/PUT 全量重排 |
 | `jest.setup.cjs` | 环境变量初始化 |

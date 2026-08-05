@@ -2,6 +2,28 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.3] — 2026-08-05
+
+### Added
+
+- **每次复习的页数**：每条学习记录可记录本次复习的页数，回答「今天/这个科目复习了多少页」（[设计文档](docs/adr/0006-pages-per-review.md)）。
+  - 数据模型：`004_add_pages_to_records.sql` — `records` 表新增 `pages` 列（正整数 1~9999 选填，旧记录 NULL，休息记录无条件忽略）
+  - 接口：`POST /records` 支持 `pages`（学习模式校验 1~9999 整数，非法 → 400）；`PATCH /records/:id` 支持改/清空 pages（`null` 清空，仅学习记录）；`GET /records/today` 新增 `total_pages` 与 `by_subject[].total_pages`
+  - 前端：TimerPage 标签与备注之间新增「页数（选填）」区块（数字输入框 + 固定 +1/+5/+10 快捷累加芯片，冻结/暂停态灰化同备注）；历史页有页数显示「📖 N 页」徽标、✏️ 编辑态可改可清空；今日概览顶部「📖 今日 N 页」+ 科目分组行附「· N 页」文字（条形图仍按时长渲染）
+  - 版本号：client `0.3.2`→`0.3.3`，server `0.3.1`→`0.3.2`，git tag `v0.3.3`（0.3 分支发布，merge 回 master）
+
+### Tests
+
+- 服务端：102 全绿（records 50→67：新增 POST pages 校验 9 条 + PATCH pages 4 条 + /today 页数汇总 2 条 + 无记录零值断言补 total_pages）
+- 客户端：157 全绿（新增 TimerPage 页数交互 6 条 + HistoryPage 徽标/编辑 4 条 + TodayOverview 汇总 3 条）
+
+### Docs
+
+- `docs/adr/0006-pages-per-review.md` — 复习页数设计决策（字段形态/录入时机/输入形式/展示/统计）
+- `code/ROADMAP.md` — 已实现新增复习页数 + 版本头更新至 0.3.3，日常点子/开发中移除该项
+- `CLAUDE.md` — TimerPage/HistoryPage/TodayOverview/records 路由/数据库表描述补充页数
+- `README.md` / `CONTEXT.md` / `docs/INDEX.md` — 功能列表、records 表结构、API 列表、ADR 索引同步
+
 ## [0.3.2] — 2026-08-04
 
 ### Added
