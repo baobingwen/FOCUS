@@ -214,6 +214,37 @@ recordsRouter.patch('/:id', (req, res) => {
 });
 
 /**
+ * 删除单条记录（学习/休息均可，硬删除不可恢复）
+ * 关联的 record_tags 由外键 ON DELETE CASCADE 自动清除，标签库条目保留
+ * @route DELETE /:id
+ * @param {Request<{ id: string }>} req - Express 请求对象
+ * @param {Response} res - Express 响应对象
+ * @returns {void}
+ */
+recordsRouter.delete('/:id', (req, res) => {
+  try {
+    const db = getDb();
+
+    // id 非正整数（含非数字）视为不存在
+    const idStr = req.params.id;
+    if (!/^\d+$/.test(idStr)) {
+      return res.status(404).json({ error: '记录不存在' });
+    }
+    const id = Number(idStr);
+
+    const result = db.prepare('DELETE FROM records WHERE id = ?').run(id);
+    if (result.changes === 0) {
+      return res.status(404).json({ error: '记录不存在' });
+    }
+
+    res.json({ success: true });
+  } catch (err) {
+    console.error('删除记录失败:', err);
+    res.status(500).json({ error: '删除记录失败' });
+  }
+});
+
+/**
  * 今日概览数据结构
  * @typedef {Object} TodayOverview
  * @property {string} date - 日期

@@ -80,7 +80,7 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 | `components/ExamCountdown.jsx` | 考研倒计时（右上角常驻，写死 2026-12-19，过期自动隐藏） |
 | `components/SubjectSelector.jsx` | 科目选择（固定列表 + 自定义新增/删除 + 休息） |
 | `components/TagPicker.jsx` | 标签选择器（扁平全局标签库点选/新增/删除 + ⚙ 排序模式拖拽换位，学习中与历史编辑态共用） |
-| `components/HistoryPage.jsx` | 历史记录（按日查看 + 日期导航 + 学习记录备注内联编辑 + 备注点击复制 + 标签展示/点选筛选/✏️ 编辑态增删 + 页数「📖 N 页」徽标/编辑） |
+| `components/HistoryPage.jsx` | 历史记录（按日查看 + 日期导航 + 学习记录备注内联编辑 + 备注点击复制 + 标签展示/点选筛选/✏️ 编辑态增删 + 页数「📖 N 页」徽标/编辑 + 管理模式删除：连点 5 下标题进入、卡片右上角删除按钮、confirm 单条删除） |
 | `components/TodayOverview.jsx` | 今日概览（总时长 + 按科目分组条形图 + 按标签分组时长 + 今日总页数与科目页数） |
 | `hooks/useTimer.js` | 极简计时器，使用 Date.now() 绝对时间戳，含 freeze/thaw 冻结机制 |
 | `hooks/useFreezeOnLeave.js` | 离开页面自动冻结 — 监听 visibilitychange/blur/focus，调用 freeze/thaw |
@@ -94,7 +94,7 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 |------|------|
 | `index.js` | 入口，express + cors + 静态文件托管 + `/health` 健康检查，导出 `app` 供 supertest 调用 |
 | `database.js` | SQLite 初始化 + 幂等迁移引擎 + `closeDb()`，支持 `DB_PATH` 环境变量覆写 |
-| `routes/records.js` | POST 保存记录（可带 tags、pages），GET 按日期查询（返回每条 tags），GET /today 今日概览（含 total_pages 与按科目页数），PATCH /:id 修改备注、标签与页数（整组替换，仅学习记录） |
+| `routes/records.js` | POST 保存记录（可带 tags、pages），GET 按日期查询（返回每条 tags），GET /today 今日概览（含 total_pages 与按科目页数），PATCH /:id 修改备注、标签与页数（整组替换，仅学习记录），DELETE /:id 删除单条记录（学习/休息均可，硬删除，record_tags 级联清理） |
 | `routes/subjects.js` | 科目 CRUD（默认科目不可删） |
 | `routes/tags.js` | 标签 CRUD：GET 全量（按 sort_order）、POST 幂等复用（≤12 字，排末尾）、PUT /order 批量重排（全量校验）、DELETE 级联清关联 |
 | `migrations/` | 增量 SQL 迁移脚本目录，按文件名排序执行，仅增不删改 |

@@ -26,6 +26,9 @@ export const recordsApi = {
       body: JSON.stringify(data),
     }),
 
+  remove: (id) =>
+    request(`/records/${id}`, { method: 'DELETE' }),
+
   list: (date) => {
     const qs = date ? `?date=${encodeURIComponent(date)}` : '';
     return request(`/records${qs}`);

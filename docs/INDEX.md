@@ -45,6 +45,7 @@
 | `docs/adr/0004-study-tags.md` | `docs/adr/` | 学习标签 — 科目之下的知识点二级细分、扁平全局标签库、多对多数据模型、统计与筛选 |
 | `docs/adr/0005-tag-reorder.md` | `docs/adr/` | 标签拖拽排序 — ⚙ 排序模式 + sortablejs、tags 加 sort_order 列、PUT /tags/order 批量重排 |
 | `docs/adr/0006-pages-per-review.md` | `docs/adr/` | 复习页数 — records 加 pages 字段、学习中快捷累加、历史徽标/编辑、今日概览页数汇总 |
+| `docs/adr/0007-record-delete.md` | `docs/adr/` | 历史记录删除 — 连点 5 下标题进入隐藏管理模式、卡片删除按钮、单条硬删除（DELETE /records/:id） |
 
 ---
 

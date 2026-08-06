@@ -39,7 +39,7 @@ npm run test:watch
 
 ```
 ├── __tests__/
-│   ├── records.test.js     # 记录路由（67 条用例，含暂停/segments + PATCH 备注/标签/页数 + records×标签/页数联动）
+│   ├── records.test.js     # 记录路由（74 条用例，含暂停/segments + PATCH 备注/标签/页数 + DELETE 删除 + records×标签/页数联动）
 │   ├── subjects.test.js    # 科目路由（13 条用例）
 │   └── tags.test.js        # 标签路由（22 条用例，GET 排序/POST 幂等复用/DELETE 级联/PUT 全量重排）
 ├── jest.setup.cjs          # 环境变量初始化（CJS，在 ESM 加载前执行）
@@ -212,7 +212,7 @@ describe('GET /api/xxx', () => {
 
 | 文件 | 说明 |
 |------|------|
-| `__tests__/records.test.js` | 67 条用例，含暂停/segments + PATCH 备注/标签/页数 + records×标签/页数联动 |
+| `__tests__/records.test.js` | 74 条用例，含暂停/segments + PATCH 备注/标签/页数 + DELETE 删除 + records×标签/页数联动 |
 | `__tests__/subjects.test.js` | 13 条用例，默认科目保护等 |
 | `__tests__/tags.test.js` | 22 条用例，GET 排序/POST 幂等复用/DELETE 级联/PUT 全量重排 |
 | `jest.setup.cjs` | 环境变量初始化 |

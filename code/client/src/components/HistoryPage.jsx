@@ -1,5 +1,5 @@
 // code/client/src/components/HistoryPage.jsx
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { recordsApi } from '../utils/api';
 import TodayOverview from './TodayOverview';
 import TagPicker from './TagPicker';
@@ -69,6 +69,12 @@ export default function HistoryPage({ refreshKey }) {
   const [draftTags, setDraftTags] = useState([]);
   // 编辑态页数草稿（null = 未填写，保存时 PATCH 提交，可清空）
   const [draftPages, setDraftPages] = useState(null);
+  // 管理模式（管理员功能）：连点 5 下标题进入，正常使用无感知；不持久，切 Tab 自然复位
+  const [adminMode, setAdminMode] = useState(false);
+  // 删除失败的错误提示（内联显示，成功后清除）
+  const [deleteError, setDeleteError] = useState('');
+  // 连点计数器（{ count, last }，不触发重渲染）：间隔 ≤2s 否则重置
+  const titleClick = useRef({ count: 0, last: 0 });
 
   /**
    * 加载指定日期的记录
@@ -101,6 +107,7 @@ export default function HistoryPage({ refreshKey }) {
     setEditError('');
     setCopyFeedback(null);
     setFilterTag(null);
+    setDeleteError('');
   }, [currentDate, refreshKey]);
 
   /**
@@ -193,6 +200,39 @@ export default function HistoryPage({ refreshKey }) {
   }, [loadRecords]);
 
   /**
+   * 连续点击标题进入管理模式（管理员功能，正常使用无感知）
+   * 连点 5 下，每次间隔 ≤2s，超时重置计数；进入后横幅提示 + 卡片出现删除按钮
+   */
+  const handleTitleClick = () => {
+    const now = Date.now();
+    const t = titleClick.current;
+    if (now - t.last > 2000) t.count = 0; // 间隔超时重置
+    t.count += 1;
+    t.last = now;
+    if (t.count >= 5) {
+      t.count = 0;
+      setAdminMode(true);
+    }
+  };
+
+  /**
+   * 删除单条记录（管理模式内）：confirm 确认后调 DELETE，成功本地移除
+   * 失败保留记录并内联报错；删除前清除旧错误
+   * @param {{ id: number, mode: string }} record
+   */
+  const handleDelete = async (record) => {
+    const label = record.mode === 'study' ? '学习记录' : '休息记录';
+    if (!window.confirm(`删除这条${label}？此操作不可恢复`)) return;
+    setDeleteError('');
+    try {
+      await recordsApi.remove(record.id);
+      setRecords((prev) => prev.filter((r) => r.id !== record.id));
+    } catch (err) {
+      setDeleteError(`删除失败: ${err.message}`);
+    }
+  };
+
+  /**
    * 复制备注到剪贴板并显示内联反馈（已复制✓ / 复制失败）
    * 反馈 1.5s 后自动消失；多次点击只保留最近一次状态
    * @param {{ id: number, notes?: string }} record
@@ -226,7 +266,31 @@ export default function HistoryPage({ refreshKey }) {
 
   return (
     <div>
-      <h2 className="text-lg font-bold text-gray-800 mb-4">📋 历史记录</h2>
+      {/* 标题 = 管理模式隐藏入口：连续点击 5 下（间隔 ≤2s）进入，正常使用无感知 */}
+      <button
+        onClick={handleTitleClick}
+        className="block text-lg font-bold text-gray-800 mb-4"
+      >
+        📋 历史记录
+      </button>
+
+      {/* 管理模式横幅 — 提示已开启 + 退出入口 */}
+      {adminMode && (
+        <div className="flex items-center justify-between gap-2 mb-3 px-3 py-2 rounded-xl bg-yellow-50 border border-yellow-200">
+          <span className="text-xs text-yellow-700">管理模式已开启 — 卡片右上角出现删除按钮</span>
+          <button
+            onClick={() => setAdminMode(false)}
+            className="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded-lg hover:bg-yellow-200 transition-colors"
+          >
+            退出管理模式
+          </button>
+        </div>
+      )}
+
+      {/* 删除失败提示（管理模式下删除出错时显示） */}
+      {deleteError && (
+        <p className="text-xs text-red-500 mb-3">{deleteError}</p>
+      )}
 
       {/* 今日概览（仅在当天显示）— 传入 records 供客户端按标签分组 */}
       {isToday(currentDate) && (
@@ -335,9 +399,21 @@ export default function HistoryPage({ refreshKey }) {
                 )}
 
                 {/* 时长 */}
-                <span className="text-sm font-mono text-gray-700 ml-auto">
+                <span className={`text-sm font-mono text-gray-700 ${adminMode && editingId !== record.id ? '' : 'ml-auto'}`}>
                   {fmtShortTime(record.duration_ms)}
                 </span>
+
+                {/* 删除按钮 — 仅管理模式显示，时长左侧；编辑中的记录不显示（互斥） */}
+                {adminMode && editingId !== record.id && (
+                  <button
+                    onClick={() => handleDelete(record)}
+                    title="删除此记录"
+                    aria-label="删除记录"
+                    className="text-xs text-red-400 hover:text-red-600 ml-auto transition-colors"
+                  >
+                    删
+                  </button>
+                )}
               </div>
 
               {/* 标签展示 — 查看态点标签即筛选；仅学习记录 */}

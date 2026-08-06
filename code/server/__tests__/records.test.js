@@ -831,3 +831,102 @@ describe('records × 页数', () => {
     expect(english.total_pages).toBe(20);
   });
 });
+
+// ──────────────────────────────────────────────
+// DELETE /api/records/:id
+// ──────────────────────────────────────────────
+describe('DELETE /api/records/:id', () => {
+  it('删除学习记录成功', async () => {
+    const rec = (await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000,
+    })).body;
+
+    const res = await request(app).delete(`/api/records/${rec.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true });
+
+    // 再次查询确认已删除
+    const list = await request(app).get('/api/records');
+    expect(list.body.records).toHaveLength(0);
+  });
+
+  it('删除休息记录成功', async () => {
+    const rec = (await request(app).post('/api/records').send({
+      mode: 'rest', duration_ms: 600000,
+    })).body;
+
+    const res = await request(app).delete(`/api/records/${rec.id}`);
+    expect(res.status).toBe(200);
+    expect(res.body.success).toBe(true);
+
+    const list = await request(app).get('/api/records');
+    expect(list.body.records).toHaveLength(0);
+  });
+
+  it('删除带标签的记录级联清理 record_tags（标签库保留）', async () => {
+    const rec = (await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000, tags: ['高数', '线代'],
+    })).body;
+
+    await request(app).delete(`/api/records/${rec.id}`);
+
+    const db = getDb();
+    const links = db.prepare('SELECT COUNT(*) as count FROM record_tags').get();
+    expect(links.count).toBe(0);
+    // 只清关联，不删标签库条目
+    const tags = await request(app).get('/api/tags');
+    expect(tags.body.map(t => t.name)).toEqual(['高数', '线代']);
+  });
+
+  it('记录不存在返回 404', async () => {
+    const res = await request(app).delete('/api/records/999999');
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBeDefined();
+  });
+
+  it('id 非数字返回 404', async () => {
+    const res = await request(app).delete('/api/records/abc');
+    expect(res.status).toBe(404);
+    expect(res.body.error).toBeDefined();
+  });
+
+  it('删除不存在的记录不影响其他记录', async () => {
+    const rec = (await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000,
+    })).body;
+
+    const res = await request(app).delete('/api/records/999999');
+    expect(res.status).toBe(404);
+
+    const list = await request(app).get('/api/records');
+    expect(list.body.records).toHaveLength(1);
+    expect(list.body.records[0].id).toBe(rec.id);
+  });
+
+  it('删除后 /today 统计自动排除该记录', async () => {
+    const db = getDb();
+    const today = '2026-07-06';
+    db.prepare(
+      `INSERT INTO records (mode, subject, duration_ms, created_at)
+       VALUES (?, ?, ?, ?)`
+    ).run('study', '数学', 3600000, `${today} 10:00:00`);
+    db.prepare(
+      `INSERT INTO records (mode, subject, duration_ms, created_at)
+       VALUES (?, ?, ?, ?)`
+    ).run('study', '英语', 1800000, `${today} 14:00:00`);
+
+    jest.useFakeTimers({ now: new Date(`${today}T23:00:00`) });
+    const before = await request(app).get('/api/records/today');
+    expect(before.body.total_study_ms).toBe(5400000);
+
+    const target = db.prepare('SELECT id FROM records WHERE subject = ?').get('数学');
+    const res = await request(app).delete(`/api/records/${target.id}`);
+    expect(res.status).toBe(200);
+
+    const after = await request(app).get('/api/records/today');
+    jest.useRealTimers();
+
+    expect(after.body.total_study_ms).toBe(1800000);
+    expect(after.body.total_records).toBe(1);
+  });
+});

@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.3.4] — 2026-08-06
+
+### Added
+
+- **历史记录删除（管理模式）**：隐藏的管理员功能，正常使用无感知（[设计文档](docs/adr/0007-record-delete.md)）。
+  - 进入：连续点击历史页标题「📋 历史记录」5 下（间隔 ≤2s，超时重置）→ 黄色横幅「管理模式已开启」+ 每张卡片右上角出现红色「删」按钮（学习/休息记录都可删，编辑中的记录互斥不显示）
+  - 退出：横幅「退出管理模式」按钮；切 Tab 历史页卸载重建，状态自然复位（不持久）
+  - 删除：`window.confirm('删除这条学习记录？此操作不可恢复')` 确认 → `DELETE /records/:id` 硬删除（`record_tags` 外键级联清理，标签库条目保留）→ 成功本地移除（今日概览/标签筛选/千层饼自动同步），失败内联「删除失败: xxx」保留记录
+  - 服务端：`records.js` 新增 DELETE 路由（id 非法/不存在 404，沿用 subjects/tags delete 惯例返回 `{ success: true }`）
+  - 版本号：client `0.3.3`→`0.3.4`，server `0.3.2`→`0.3.3`，git tag `v0.3.4`（0.3 分支发布，merge 回 master）
+
+### Tests
+
+- 服务端：109 全绿（records 67→74：新增 DELETE 删除成功/404/级联清理/统计排除 7 条）
+- 客户端：166 全绿（新增 HistoryPage 管理模式 9 条：连点进入/超时重置/退出/confirm 取消与确认/失败提示/编辑态互斥/休息可删）
+
+### Docs
+
+- `docs/adr/0007-record-delete.md` — 历史记录删除设计决策（管理模式定位/进入退出/API/前端交互/备选方案）
+- `code/ROADMAP.md` — 从「日常点子」移到「已实现」+ 版本头更新至 0.3.4 + 设计文档链接
+- `CONTEXT.md` — 新增「管理模式」领域概念（含 Avoid 词）
+- `README.md` / `docs/INDEX.md` — 功能列表 + API 表（DELETE /records/:id）+ ADR 索引
+- `CLAUDE.md` — HistoryPage / records 路由描述补充管理模式与删除
+- `code/client/TESTING.md` — HistoryPage 31→40、总计数 157→166
+- `code/server/TESTING.md` — records 67→74
+
 ## [0.3.3] — 2026-08-05
 
 ### Added
