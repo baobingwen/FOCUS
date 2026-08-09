@@ -13,8 +13,9 @@ This repo contains two projects:
 
 | 分支 | 说明 |
 |------|------|
-| `master` | 日常开发基线，含迁移系统、健康检查、本地部署脚本；0.3.x 发布后 merge 回 master 保持最新 |
-| `0.3` | 0.3.x 补丁版本发布线（v0.3.1 起）：0.3.x 的开发与 tag 打于此，每次发布后 merge 回 master |
+| `master` | 日常开发基线，含迁移系统、健康检查、本地部署脚本；每次发布后 merge 回 master 保持最新 |
+| `0.3` | 0.3.x 补丁版本发布线（v0.3.1 起，v0.3.4 完结）：0.3.x 的开发与 tag 打于此，已 merge 回 master |
+| `0.4` | 0.4.x 版本发布线（v0.4.0 起，管理模式主线）：管理模式从历史页局部功能逐步清晰为全局设计；0.4.x 的开发与 tag 打于此，每次发布后 merge 回 master |
 | `feat/deploy` | Fly.io 部署方案档案（Dockerfile + fly.toml + DEPLOY_FLYIO.md），因注册需外币卡暂搁置 |
 | `feat/local-deploy` | 已合入 master，本地 + Tailscale 部署方案 |
 
