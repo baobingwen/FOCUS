@@ -13,6 +13,8 @@ const TABS = [
 export default function App() {
   const [activeTab, setActiveTab] = useState('timer');
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
+  // 全局管理模式
+  const [adminMode, setAdminMode] = useState(false);
   const timer = useTimer();
 
   // 离开页面自动冻结（仅 studying 态，不计入暂停记录，持续监听不受标签切换影响）
@@ -22,21 +24,37 @@ export default function App() {
     setHistoryRefreshKey(k => k + 1);
   }, []);
 
+  const enterAdminMode = useCallback(() => setAdminMode(true), []);
+  const exitAdminMode = useCallback(() => setAdminMode(false), []);
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col mx-auto relative overflow-hidden"
          style={{ maxWidth: '430px' }}>
 
-        {/* 考研倒计时（右上角） */}
-        <ExamCountdown />
+        {/* 考研倒计时（右上角）= 管理模式隐藏入口 */}
+        <ExamCountdown onMultiTap={enterAdminMode} />
+
+        {/* 管理模式横幅 */}
+        {adminMode && (
+          <div className="flex items-center justify-between gap-2 mt-12 mx-4 px-3 py-2 rounded-xl bg-yellow-50 border border-yellow-200 z-10">
+            <span className="text-xs text-yellow-700">管理模式已开启</span>
+            <button
+              onClick={exitAdminMode}
+              className="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded-lg hover:bg-yellow-200 transition-colors"
+            >
+              退出管理模式
+            </button>
+          </div>
+        )}
 
         {/* 主内容区 */}
       <div className="flex-1 overflow-y-auto scrollbar-hide pb-20">
         <div className="px-4 pt-6">
           {activeTab === 'timer' && (
-            <TimerPage timer={timer} onRecordSaved={handleRecordSaved} />
+            <TimerPage timer={timer} onRecordSaved={handleRecordSaved} adminMode={adminMode} onEnterAdminMode={enterAdminMode} />
           )}
           {activeTab === 'history' && (
-            <HistoryPage refreshKey={historyRefreshKey} />
+            <HistoryPage refreshKey={historyRefreshKey} adminMode={adminMode} onEnterAdminMode={enterAdminMode} />
           )}
         </div>
       </div>

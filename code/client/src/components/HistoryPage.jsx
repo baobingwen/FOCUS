@@ -1,5 +1,5 @@
 // code/client/src/components/HistoryPage.jsx
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { recordsApi } from '../utils/api';
 import TodayOverview from './TodayOverview';
 import TagPicker from './TagPicker';
@@ -43,8 +43,9 @@ function isToday(dateStr) {
  * 
  * @param {Object} props - 组件属性
  * @param {string|number} props.refreshKey - 刷新键，变化时重新加载数据
+ * @param {boolean} [props.adminMode] - 全局管理模式开关（App 层托管，跨 tab 生效）
  */
-export default function HistoryPage({ refreshKey }) {
+export default function HistoryPage({ refreshKey, adminMode = false }) {
   // 当前查看的日期（YYYY-MM-DD格式）
   const [currentDate, setCurrentDate] = useState(getTodayStr);
   // 当前日期的记录列表
@@ -69,12 +70,8 @@ export default function HistoryPage({ refreshKey }) {
   const [draftTags, setDraftTags] = useState([]);
   // 编辑态页数草稿（null = 未填写，保存时 PATCH 提交，可清空）
   const [draftPages, setDraftPages] = useState(null);
-  // 管理模式（管理员功能）：连点 5 下标题进入，正常使用无感知；不持久，切 Tab 自然复位
-  const [adminMode, setAdminMode] = useState(false);
   // 删除失败的错误提示（内联显示，成功后清除）
   const [deleteError, setDeleteError] = useState('');
-  // 连点计数器（{ count, last }，不触发重渲染）：间隔 ≤2s 否则重置
-  const titleClick = useRef({ count: 0, last: 0 });
 
   /**
    * 加载指定日期的记录
@@ -200,22 +197,6 @@ export default function HistoryPage({ refreshKey }) {
   }, [loadRecords]);
 
   /**
-   * 连续点击标题进入管理模式（管理员功能，正常使用无感知）
-   * 连点 5 下，每次间隔 ≤2s，超时重置计数；进入后横幅提示 + 卡片出现删除按钮
-   */
-  const handleTitleClick = () => {
-    const now = Date.now();
-    const t = titleClick.current;
-    if (now - t.last > 2000) t.count = 0; // 间隔超时重置
-    t.count += 1;
-    t.last = now;
-    if (t.count >= 5) {
-      t.count = 0;
-      setAdminMode(true);
-    }
-  };
-
-  /**
    * 删除单条记录（管理模式内）：confirm 确认后调 DELETE，成功本地移除
    * 失败保留记录并内联报错；删除前清除旧错误
    * @param {{ id: number, mode: string }} record
@@ -266,26 +247,8 @@ export default function HistoryPage({ refreshKey }) {
 
   return (
     <div>
-      {/* 标题 = 管理模式隐藏入口：连续点击 5 下（间隔 ≤2s）进入，正常使用无感知 */}
-      <button
-        onClick={handleTitleClick}
-        className="block text-lg font-bold text-gray-800 mb-4"
-      >
-        📋 历史记录
-      </button>
-
-      {/* 管理模式横幅 — 提示已开启 + 退出入口 */}
-      {adminMode && (
-        <div className="flex items-center justify-between gap-2 mb-3 px-3 py-2 rounded-xl bg-yellow-50 border border-yellow-200">
-          <span className="text-xs text-yellow-700">管理模式已开启 — 卡片右上角出现删除按钮</span>
-          <button
-            onClick={() => setAdminMode(false)}
-            className="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded-lg hover:bg-yellow-200 transition-colors"
-          >
-            退出管理模式
-          </button>
-        </div>
-      )}
+      {/* 标题 */}
+      <h2 className="text-lg font-bold text-gray-800 mb-4">📋 历史记录</h2>
 
       {/* 删除失败提示（管理模式下删除出错时显示） */}
       {deleteError && (
@@ -478,6 +441,7 @@ export default function HistoryPage({ refreshKey }) {
                         selected={draftTags}
                         onToggle={toggleDraftTag}
                         onDelete={removeDraftTag}
+                        admin={adminMode}
                       />
                     </div>
                     <div className="flex items-center gap-2 mt-1.5">

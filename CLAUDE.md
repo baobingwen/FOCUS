@@ -75,15 +75,16 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 
 | 文件 | 说明 |
 |------|------|
-| `App.jsx` | 主布局 + 底部导航 + useTimer 调用（计时状态托管于此，跨标签切换不丢失） |
+| `App.jsx` | 主布局 + 底部导航 + useTimer 调用（计时状态托管于此，跨标签切换不丢失）+ 全局管理模式 state/横幅（连点右上角考研倒计时进入，跨 tab 常驻） |
 | `components/TimerPage.jsx` | 计时器页面，5 状态机 (idle→studying→paused→rest_prompt→resting)，从 props 接收 timer；idle 态支持直接休息；暂停态支持继续和确认结束；学习中可点选/新增标签、累计复习页数（数字框 + +1/+5/+10 快捷芯片）；学习/暂停态大按钮始终居中，暂停/继续按钮悬浮右缘不占布局 |
-| `components/ExamCountdown.jsx` | 考研倒计时（右上角常驻，写死 2026-12-19，过期自动隐藏） |
-| `components/SubjectSelector.jsx` | 科目选择（固定列表 + 自定义新增/删除 + 休息） |
-| `components/TagPicker.jsx` | 标签选择器（扁平全局标签库点选/新增/删除 + ⚙ 排序模式拖拽换位，学习中与历史编辑态共用） |
-| `components/HistoryPage.jsx` | 历史记录（按日查看 + 日期导航 + 学习记录备注内联编辑 + 备注点击复制 + 标签展示/点选筛选/✏️ 编辑态增删 + 页数「📖 N 页」徽标/编辑 + 管理模式删除：连点 5 下标题进入、卡片右上角删除按钮、confirm 单条删除） |
+| `components/ExamCountdown.jsx` | 考研倒计时（右上角常驻，写死 2026-12-19，过期自动隐藏）+ 全局管理模式隐藏入口（连点 5 下调用 onMultiTap，任何状态可见） |
+| `components/SubjectSelector.jsx` | 科目选择（固定列表 + 自定义新增 + 休息；删除 × 仅管理模式 admin 显示，恒显） |
+| `components/TagPicker.jsx` | 标签选择器（扁平全局标签库点选/新增，删除 × 与 ⚙ 排序仅管理模式 admin 显示，学习中与历史编辑态共用） |
+| `components/HistoryPage.jsx` | 历史记录（按日查看 + 日期导航 + 学习记录备注内联编辑 + 备注点击复制 + 标签展示/点选筛选/✏️ 编辑态增删 + 页数「📖 N 页」徽标/编辑 + 管理模式删除：adminMode prop 开启时卡片右上角删除按钮、confirm 单条删除；入口在右上角考研倒计时，App 层统一） |
 | `components/TodayOverview.jsx` | 今日概览（总时长 + 按科目分组条形图 + 按标签分组时长 + 今日总页数与科目页数） |
 | `hooks/useTimer.js` | 极简计时器，使用 Date.now() 绝对时间戳，含 freeze/thaw 冻结机制 |
 | `hooks/useFreezeOnLeave.js` | 离开页面自动冻结 — 监听 visibilitychange/blur/focus，调用 freeze/thaw |
+| `hooks/useMultiTap.js` | 连点检测 — count 次点击（间隔 ≤windowMs，超时重置）触发 onComplete，管理模式隐藏入口共用 |
 | `utils/api.js` | fetch 封装 |
 | `utils/clipboard.js` | 剪贴板复制工具（navigator.clipboard + execCommand 降级） |
 | `utils/fmtTime.js` | 时长格式化工具函数 |

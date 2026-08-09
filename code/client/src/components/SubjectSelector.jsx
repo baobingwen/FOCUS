@@ -9,8 +9,9 @@ import { subjectsApi } from '../utils/api';
  * @param {Object} props - 组件属性
  * @param {Object} props.selected - 当前选中的科目对象
  * @param {Function} props.onSelect - 选中科目时的回调函数，接收科目对象作为参数
+ * @param {boolean} [props.admin] - 管理模式开关：开启时自定义科目显示删除按钮 ×（恒显），日常隐藏
  */
-export default function SubjectSelector({ selected, onSelect }) {
+export default function SubjectSelector({ selected, onSelect, admin = false }) {
   // 休息标记对象，用于表示选择了「休息」而非科目
   const REST = { id: '__rest__', name: '☕ 休息' };
   // 科目列表
@@ -107,15 +108,15 @@ export default function SubjectSelector({ selected, onSelect }) {
               }`}
             >
               <span>{subject.name}</span>
-              {/* 只有自定义科目显示删除按钮 */}
-              {isCustom && (
+              {/* 删除按钮 — 仅管理模式显示（自定义科目），恒显不随 hover */}
+              {isCustom && admin && (
                 <span
                   onClick={(e) => handleDelete(e, subject)}
                   className={`absolute right-1.5 top-1/2 -translate-y-1/2 w-4 h-4 rounded-full text-xs
                     inline-flex items-center justify-center
                     ${selected?.id === subject.id
                       ? 'text-white/70 hover:text-white'
-                      : 'text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100'
+                      : 'text-gray-300 hover:text-red-500'
                     } transition-all`}
                 >
                   ×

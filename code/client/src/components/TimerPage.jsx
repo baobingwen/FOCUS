@@ -28,8 +28,9 @@ function fmtTime(ms) {
  * @param {Object} props - 组件属性
  * @param {Object} props.timer - 计时器状态对象（来自useTimer钩子）
  * @param {Function} props.onRecordSaved - 记录保存后的回调函数
+ * @param {boolean} [props.adminMode] - 全局管理模式开关（App 层托管，跨 tab 生效）
  */
-export default function TimerPage({ timer, onRecordSaved }) {
+export default function TimerPage({ timer, onRecordSaved, adminMode = false }) {
   // 保存中状态（防止重复提交）
   const [saving, setSaving] = useState(false);
   // Toast通知状态
@@ -133,6 +134,7 @@ export default function TimerPage({ timer, onRecordSaved }) {
         <SubjectSelector
           selected={timer.selectedSubject}
           onSelect={timer.selectSubject}
+          admin={adminMode}
         />
 
         <button
@@ -199,6 +201,7 @@ export default function TimerPage({ timer, onRecordSaved }) {
             selected={timer.tags}
             onToggle={timer.toggleTag}
             onDelete={timer.removeTag}
+            admin={adminMode}
           />
         </div>
 

@@ -107,12 +107,25 @@ describe('SubjectSelector', () => {
     expect(subjectsApi.create).toHaveBeenCalledWith('历史');
   });
 
-  it('删除自定义科目（confirm=true）', async () => {
+  it('日常（非管理模式）自定义科目不显示删除按钮', async () => {
+    subjectsApi.list.mockResolvedValueOnce(mockSubjects);
+    render(<SubjectSelector selected={null} onSelect={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('政治')).toBeInTheDocument();
+    });
+
+    // 自定义科目按钮内也没有 ×
+    const politicsBtn = screen.getByText('政治').closest('button');
+    expect(politicsBtn.textContent).not.toContain('×');
+  });
+
+  it('管理模式（admin）自定义科目显示删除按钮，点击删除（confirm=true）', async () => {
     window.confirm = vi.fn(() => true);
     subjectsApi.list.mockResolvedValueOnce(mockSubjects);
     subjectsApi.delete.mockResolvedValueOnce({});
     const onSelect = vi.fn();
-    render(<SubjectSelector selected={null} onSelect={onSelect} />);
+    render(<SubjectSelector selected={null} onSelect={onSelect} admin />);
 
     await waitFor(() => {
       expect(screen.getByText('政治')).toBeInTheDocument();
@@ -126,9 +139,9 @@ describe('SubjectSelector', () => {
     expect(subjectsApi.delete).toHaveBeenCalledWith(4);
   });
 
-  it('默认科目（数学/英语/专业课）没有删除按钮', async () => {
+  it('管理模式（admin）默认科目（数学/英语/专业课）没有删除按钮', async () => {
     subjectsApi.list.mockResolvedValueOnce(defaultSubjects);
-    render(<SubjectSelector selected={null} onSelect={vi.fn()} />);
+    render(<SubjectSelector selected={null} onSelect={vi.fn()} admin />);
 
     await waitFor(() => {
       expect(screen.getByText('数学')).toBeInTheDocument();
@@ -139,12 +152,12 @@ describe('SubjectSelector', () => {
     expect(mathBtn.textContent).not.toContain('×');
   });
 
-  it('删除当前选中科目时调用 onSelect(null)', async () => {
+  it('管理模式删除当前选中科目时调用 onSelect(null)', async () => {
     window.confirm = vi.fn(() => true);
     subjectsApi.list.mockResolvedValueOnce(mockSubjects);
     subjectsApi.delete.mockResolvedValueOnce({});
     const onSelect = vi.fn();
-    render(<SubjectSelector selected={mockSubjects[3]} onSelect={onSelect} />);
+    render(<SubjectSelector selected={mockSubjects[3]} onSelect={onSelect} admin />);
 
     await waitFor(() => {
       expect(screen.getByText('政治')).toBeInTheDocument();
@@ -158,11 +171,11 @@ describe('SubjectSelector', () => {
     });
   });
 
-  it('删除时 confirm=false 不执行删除', async () => {
+  it('管理模式删除时 confirm=false 不执行删除', async () => {
     window.confirm = vi.fn(() => false);
     subjectsApi.list.mockResolvedValueOnce(mockSubjects);
     const onSelect = vi.fn();
-    render(<SubjectSelector selected={null} onSelect={onSelect} />);
+    render(<SubjectSelector selected={null} onSelect={onSelect} admin />);
 
     await waitFor(() => {
       expect(screen.getByText('政治')).toBeInTheDocument();

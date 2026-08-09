@@ -132,25 +132,27 @@ src/
 │   ├── useTimer.js
 │   ├── useTimer.test.js       # 状态机 26 条（含暂停态 6 条 + 冻结 6 条 + 标签态 5 条）
 │   ├── useFreezeOnLeave.js
-│   └── useFreezeOnLeave.test.js # 页面离开冻结事件 8 条
+│   ├── useFreezeOnLeave.test.js # 页面离开冻结事件 8 条
+│   ├── useMultiTap.js         # 连点检测 hook（管理模式隐藏入口共用：count 次点击/超时重置）
+│   └── useMultiTap.test.js    # 连点检测 5 条（达标触发/计数重置/超时重置/自定义参数/回调更新）
 └── components/
     ├── App.jsx
-    ├── App.test.jsx           # Tab 切换 3 条
-    ├── ExamCountdown.jsx
-    ├── ExamCountdown.test.jsx # 考研倒计时 3 条
+    ├── App.test.jsx           # Tab 切换 + 全局管理模式（倒计时连点入口/横幅跨 tab/退出）8 条
+    ├── ExamCountdown.jsx      # 考研倒计时（右上角常驻）+ 管理模式隐藏入口（连点 5 下）
+    ├── ExamCountdown.test.jsx # 考研倒计时 3 条 + 连点入口 2 条
     ├── TimerPage.jsx
-    ├── TimerPage.test.jsx     # 5 态渲染 + 保存 + 休息 + 暂停交互 + 弹窗确认 + 冻结 UI + 标签交互 + 页数交互 42 条
+    ├── TimerPage.test.jsx     # 5 态渲染 + 保存 + 休息 + 暂停交互 + 弹窗确认 + 冻结 UI + 标签交互 + 页数交互 + 管理模式标签门控 37 条
     ├── SubjectSelector.jsx
-    ├── SubjectSelector.test.jsx # CRUD + 休息 15 条
-    ├── TagPicker.jsx          # 标签选择器（点选/新增/删除 + ⚙ 排序模式拖拽换位）
-    ├── TagPicker.test.jsx     # 排序模式 7 条（⚙ 入口禁用态/模式切换/拖拽换位/完成提交/取消恢复/失败留在模式）
+    ├── SubjectSelector.test.jsx # CRUD + 休息 + 管理模式门控（日常无 × / admin × 恒显）16 条
+    ├── TagPicker.jsx          # 标签选择器（点选/新增 + 管理模式删除 × / ⚙ 排序模式拖拽换位）
+    ├── TagPicker.test.jsx     # 管理模式门控 2 条 + 排序模式 7 条（⚙ 入口禁用态/模式切换/拖拽换位/完成提交/取消恢复/失败留在模式）
     ├── HistoryPage.jsx
-    ├── HistoryPage.test.jsx   # 日期导航 + 列表 + 千层饼 + 备注编辑/复制 + 标签展示/筛选/编辑 + 页数徽标/编辑 + 管理模式删除 40 条
+    ├── HistoryPage.test.jsx   # 日期导航 + 列表 + 千层饼 + 备注编辑/复制 + 标签展示/筛选/编辑 + 页数徽标/编辑 + 管理模式（prop 化）39 条
     ├── TodayOverview.jsx
     └── TodayOverview.test.jsx  # 概览 + 条形图 + 按标签分组 + 页数汇总 10 条
 ```
 
-总计 **166 条测试用例**，11 个测试文件。
+总计 **182 条测试用例**，12 个测试文件。
 
 ## 测试模式详解
 

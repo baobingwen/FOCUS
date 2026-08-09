@@ -742,77 +742,43 @@ describe('HistoryPage', () => {
   });
 });
 
-// ──── 管理模式（管理员功能：连点 5 下标题进入）与删除 ────
+// ──── 管理模式（入口 = 右上角考研倒计时连点 5 下，开关由 App 层托管）与删除 ────
 
 describe('HistoryPage 管理模式删除', () => {
-  const renderWithRecords = async () => {
+  const renderWithRecords = async (props = {}) => {
     recordsApi.list.mockResolvedValueOnce(mockRecords);
     recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 3600000, total_rest_ms: 300000, total_records: 2, by_subject: [] });
-    render(<HistoryPage refreshKey={0} />);
+    const utils = render(<HistoryPage refreshKey={0} {...props} />);
     await waitFor(() => {
       expect(screen.getByText('高数练习')).toBeInTheDocument();
     });
+    return utils;
   };
 
-  const enterAdminMode = async () => {
-    for (let i = 0; i < 5; i++) {
-      await userEvent.click(screen.getByText('📋 历史记录'));
-    }
-  };
-
-  it('正常状态无管理模式横幅和删除按钮（无感知）', async () => {
+  it('正常状态（adminMode=false）无删除按钮（无感知）', async () => {
     await renderWithRecords();
 
-    expect(screen.queryByText(/管理模式已开启/)).not.toBeInTheDocument();
     expect(screen.queryByLabelText('删除记录')).not.toBeInTheDocument();
   });
 
-  it('连点 5 下标题进入管理模式：横幅出现 + 卡片出现删除按钮', async () => {
-    await renderWithRecords();
+  it('adminMode=true 时卡片出现删除按钮（学习 + 休息）', async () => {
+    await renderWithRecords({ adminMode: true });
 
-    await enterAdminMode();
-
-    expect(screen.getByText(/管理模式已开启/)).toBeInTheDocument();
-    // 学习 + 休息两条记录都有删除按钮
     expect(screen.getAllByLabelText('删除记录')).toHaveLength(2);
   });
 
-  it('连点间隔超时（>2s）计数重置，需重新凑满 5 次', async () => {
-    await renderWithRecords();
-
-    // 点 4 下：未进入
-    for (let i = 0; i < 4; i++) {
-      await userEvent.click(screen.getByText('📋 历史记录'));
-    }
-    expect(screen.queryByText(/管理模式已开启/)).not.toBeInTheDocument();
-
-    // 推进 3 秒后点第 5 下：超时重置（计数归 1），仍未进入
-    vi.setSystemTime(new Date('2026-07-07T12:00:03'));
-    await userEvent.click(screen.getByText('📋 历史记录'));
-    expect(screen.queryByText(/管理模式已开启/)).not.toBeInTheDocument();
-
-    // 再补 4 下凑满 5 次：进入
-    for (let i = 0; i < 4; i++) {
-      await userEvent.click(screen.getByText('📋 历史记录'));
-    }
-    expect(screen.getByText(/管理模式已开启/)).toBeInTheDocument();
-  });
-
-  it('点「退出管理模式」退出：横幅与删除按钮消失', async () => {
-    await renderWithRecords();
-    await enterAdminMode();
+  it('adminMode 变 false 时删除按钮消失（切回日常）', async () => {
+    const { rerender } = await renderWithRecords({ adminMode: true });
     expect(screen.getAllByLabelText('删除记录')).toHaveLength(2);
 
-    await userEvent.click(screen.getByText('退出管理模式'));
+    rerender(<HistoryPage refreshKey={0} adminMode={false} />);
 
-    expect(screen.queryByText(/管理模式已开启/)).not.toBeInTheDocument();
     expect(screen.queryByLabelText('删除记录')).not.toBeInTheDocument();
   });
 
   it('confirm 取消：不删除、不调用接口', async () => {
     window.confirm = vi.fn(() => false);
-    await renderWithRecords();
-    await enterAdminMode();
+    await renderWithRecords({ adminMode: true });
 
     await userEvent.click(screen.getAllByLabelText('删除记录')[0]);
 
@@ -823,8 +789,7 @@ describe('HistoryPage 管理模式删除', () => {
 
   it('confirm 确认：删除成功，记录本地移除', async () => {
     window.confirm = vi.fn(() => true);
-    await renderWithRecords();
-    await enterAdminMode();
+    await renderWithRecords({ adminMode: true });
 
     recordsApi.remove.mockResolvedValueOnce({ success: true });
     await userEvent.click(screen.getAllByLabelText('删除记录')[0]);
@@ -841,8 +806,7 @@ describe('HistoryPage 管理模式删除', () => {
 
   it('删除失败：保留记录并显示内联错误', async () => {
     window.confirm = vi.fn(() => true);
-    await renderWithRecords();
-    await enterAdminMode();
+    await renderWithRecords({ adminMode: true });
 
     recordsApi.remove.mockRejectedValueOnce(new Error('网络错误'));
     await userEvent.click(screen.getAllByLabelText('删除记录')[0]);
@@ -854,21 +818,18 @@ describe('HistoryPage 管理模式删除', () => {
   });
 
   it('正在编辑的记录不显示删除按钮（互斥）', async () => {
-    await renderWithRecords();
+    await renderWithRecords({ adminMode: true });
+    expect(screen.getAllByLabelText('删除记录')).toHaveLength(2);
 
-    // 先进入编辑态
+    // 进入编辑态：编辑中的学习记录删除按钮消失，休息记录保留
     await userEvent.click(editButtonOf('高数练习'));
     expect(screen.getByPlaceholderText('记录一下当前的学习内容...')).toBeInTheDocument();
-
-    // 再进入管理模式：编辑中的记录无删除按钮，休息记录有
-    await enterAdminMode();
     expect(screen.getAllByLabelText('删除记录')).toHaveLength(1);
   });
 
   it('休息记录也可删除', async () => {
     window.confirm = vi.fn(() => true);
-    await renderWithRecords();
-    await enterAdminMode();
+    await renderWithRecords({ adminMode: true });
 
     recordsApi.remove.mockResolvedValueOnce({ success: true });
     // 第二条 = 休息记录

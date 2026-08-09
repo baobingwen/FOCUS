@@ -40,13 +40,36 @@ const chipNames = () =>
 
 function setup(overrides = {}) {
   const user = userEvent.setup();
-  render(<TagPicker selected={[]} onToggle={vi.fn()} {...overrides} />);
+  // 管理模式能力（删除 × / 排序 ⚙）默认开启；测试日常态显式传 admin: false
+  render(<TagPicker selected={[]} onToggle={vi.fn()} admin {...overrides} />);
   return user;
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
   tagsApi.list.mockResolvedValue(TAGS);
+});
+
+// ──────────────────────────────────────────────
+// 管理模式门控（admin prop）
+// ──────────────────────────────────────────────
+describe('管理模式门控', () => {
+  it('admin=false（日常）：无删除 × 无排序 ⚙，只有点选与新增', async () => {
+    setup({ admin: false });
+
+    await screen.findAllByTestId('tag-chip');
+    expect(screen.queryByText('×')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sort-toggle')).not.toBeInTheDocument();
+    expect(screen.getByText('+ 标签')).toBeInTheDocument();
+  });
+
+  it('admin=true（管理模式）：显示删除 × 与排序 ⚙', async () => {
+    setup();
+
+    await screen.findAllByTestId('tag-chip');
+    expect(screen.getAllByText('×')).toHaveLength(3);
+    expect(screen.getByTestId('sort-toggle')).toBeInTheDocument();
+  });
 });
 
 // ──────────────────────────────────────────────

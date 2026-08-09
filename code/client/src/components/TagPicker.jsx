@@ -10,13 +10,15 @@ import { tagsApi } from '../utils/api';
  *
  * 排序模式：点 ⚙ 进入，芯片出现 ≡ 手柄可拖拽换位（sortablejs），
  * 「完成」批量提交 PUT /tags/order，「取消」恢复进入前顺序
+ * 删除 × 与排序 ⚙ 属管理模式能力，仅 admin=true 时显示（日常只点选/新增）
  *
  * @param {Object} props - 组件属性
  * @param {string[]} props.selected - 当前选中的标签名数组
  * @param {Function} props.onToggle - 点选/取消标签的回调，接收标签名
  * @param {Function} [props.onDelete] - 标签被删除后的回调，接收标签名（父组件用来清理选中态）
+ * @param {boolean} [props.admin] - 管理模式开关：开启时显示删除 × 与排序 ⚙ 入口
  */
-export default function TagPicker({ selected = [], onToggle, onDelete }) {
+export default function TagPicker({ selected = [], onToggle, onDelete, admin = false }) {
   // 标签库（全部标签）
   const [allTags, setAllTags] = useState([]);
   // 是否显示新增输入框
@@ -162,15 +164,15 @@ export default function TagPicker({ selected = [], onToggle, onDelete }) {
                 </span>
               )}
               <span>{tag.name}</span>
-              {/* × = 从标签库删除（级联清所有记录关联）；排序模式下隐藏防误删 */}
-              {!sortMode && (
+              {/* × = 从标签库删除（级联清所有记录关联）— 仅管理模式显示，恒显不随 hover；排序模式下隐藏防误删 */}
+              {!sortMode && admin && (
                 <span
                   onClick={(e) => handleDelete(e, tag)}
                   title="删除标签"
                   className={`ml-1 inline-flex items-center justify-center w-3.5 h-3.5 rounded-full text-xs
                     ${isSelected
                       ? 'text-white/70 hover:text-white'
-                      : 'text-gray-300 hover:text-red-500 opacity-0 group-hover:opacity-100'
+                      : 'text-gray-300 hover:text-red-500'
                     } transition-all`}
                 >
                   ×
@@ -235,20 +237,22 @@ export default function TagPicker({ selected = [], onToggle, onDelete }) {
             </span>
           )}
 
-          {/* ⚙ 排序入口：少于 2 个标签无需排序 */}
-          <button
-            onClick={enterSortMode}
-            disabled={allTags.length < 2}
-            title={allTags.length < 2 ? '至少 2 个标签才能排序' : '调整标签顺序'}
-            data-testid="sort-toggle"
-            className={`px-2 py-1 rounded-full text-xs font-medium transition-all ${
-              allTags.length < 2
-                ? 'text-gray-300 cursor-not-allowed'
-                : 'text-gray-400 border border-gray-200 hover:border-blue-300 hover:text-blue-500'
-            }`}
-          >
-            ⚙
-          </button>
+          {/* ⚙ 排序入口（管理模式能力，仅 admin 显示）：少于 2 个标签无需排序 */}
+          {admin && (
+            <button
+              onClick={enterSortMode}
+              disabled={allTags.length < 2}
+              title={allTags.length < 2 ? '至少 2 个标签才能排序' : '调整标签顺序'}
+              data-testid="sort-toggle"
+              className={`px-2 py-1 rounded-full text-xs font-medium transition-all ${
+                allTags.length < 2
+                  ? 'text-gray-300 cursor-not-allowed'
+                  : 'text-gray-400 border border-gray-200 hover:border-blue-300 hover:text-blue-500'
+              }`}
+            >
+              ⚙
+            </button>
+          )}
         </div>
       )}
     </div>

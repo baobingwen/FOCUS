@@ -52,6 +52,39 @@ describe('TimerPage', () => {
     expect(screen.getByText('请先选择一个科目或休息')).toBeInTheDocument();
   });
 
+  // ──── 管理模式 ────
+
+  it('studying 态日常（admin=false）：标签区无删除 × 和排序 ⚙', async () => {
+    tagsApi.list.mockResolvedValue([{ id: 1, name: '高数' }, { id: 2, name: '线代' }]);
+    const timer = createMockTimer({
+      phase: 'studying',
+      elapsed: 5000,
+      selectedSubject: { id: 1, name: '数学' },
+    });
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    await waitFor(() => {
+      expect(screen.getByText('高数')).toBeInTheDocument();
+    });
+    expect(screen.queryByText('×')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sort-toggle')).not.toBeInTheDocument();
+  });
+
+  it('studying 态管理模式（admin=true）：标签区出现删除 × 和排序 ⚙', async () => {
+    tagsApi.list.mockResolvedValue([{ id: 1, name: '高数' }, { id: 2, name: '线代' }]);
+    const timer = createMockTimer({
+      phase: 'studying',
+      elapsed: 5000,
+      selectedSubject: { id: 1, name: '数学' },
+    });
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} adminMode />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText('×')).toHaveLength(2);
+    });
+    expect(screen.getByTestId('sort-toggle')).toBeInTheDocument();
+  });
+
   it('idle 且已选科目时，开始按钮 enabled', () => {
     subjectsApi.list.mockImplementation(() => new Promise(() => {}));
     const timer = createMockTimer({ selectedSubject: { id: 1, name: '数学' } });

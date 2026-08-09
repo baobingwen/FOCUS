@@ -2,6 +2,30 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.0] — 2026-08-09
+
+### Added
+
+- **全局管理模式**：把删除类功能统一收进隐藏模式（日常点子①落地，[设计文档](docs/adr/0008-global-admin-mode.md)）。
+  - 定位：删除类（记录删除、科目删除、标签删除、标签排序）统一由一个 App 级开关控制；修改类（✏️ 备注/页数/标签修改）保持常态入口
+  - 入口：右上角考研倒计时连点 5 下（间隔 ≤2s，超时重置）——任何页面、任何计时状态（含学习中）都可见；共用新 hook `useMultiTap`
+  - 生效范围：历史页卡片删除按钮（v0.3.4 已有，改由 App 层 prop 驱动）；计时页自定义科目 × 删除按钮（admin 时恒显，顺带修复移动端非选中科目 × 不可见）；TagPicker 标签 × 删除与 ⚙ 排序（日常只剩点选/新增）
+  - 横幅：App 层「管理模式已开启 — 删除与管理入口已解锁」+ 退出按钮，跨 tab 常驻；刷新复位，不持久化
+  - 服务端零改动（API 均已存在），纯前端
+  - 版本号：client `0.3.4`→`0.4.0`，server 保持 `0.3.3`，git tag `v0.4.0`（0.3 分支发布，merge 回 master）
+
+### Tests
+
+- 客户端：182 全绿（新增 useMultiTap 5 条 + ExamCountdown 连点入口 2 条 + App 全局模式 5 条 + SubjectSelector/TagPicker 门控 + HistoryPage 管理模式 prop 化改造；原 HistoryPage 标题连点用例随入口迁移移除）
+
+### Docs
+
+- `docs/adr/0008-global-admin-mode.md` — 全局管理模式设计决策（定位/入口/组件改造/不做清单）
+- `code/ROADMAP.md` — 已实现新增全局管理模式 + 版本头更新至 0.4.0 + 日常点子移除「开发管理模式」「v0.4.0 整合上线」
+- `CLAUDE.md` — App/ExamCountdown/SubjectSelector/TagPicker/HistoryPage 组件描述 + 新增 `hooks/useMultiTap.js`
+- `docs/INDEX.md` — ADR 索引新增 0008
+- `code/client/TESTING.md` — 文件树新增 useMultiTap、各文件计数更新、总计 166→182
+
 ## [0.3.4] — 2026-08-06
 
 ### Added
