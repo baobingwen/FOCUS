@@ -165,128 +165,6 @@ describe('HistoryPage', () => {
     });
   });
 
-  // ──── 千层饼测试 ────
-
-  it('有 segments 的记录显示千层饼堆叠条', async () => {
-    const recordWithSegments = {
-      records: [
-        {
-          id: 10,
-          mode: 'study',
-          subject: '数学',
-          duration_ms: 600000,
-          paused_ms: 300000,
-          segments: [
-            { type: 'study', duration_ms: 600000 },
-            { type: 'pause', duration_ms: 100000 },
-            { type: 'study', duration_ms: 900000 },
-          ],
-          notes: '暂停实验',
-          created_at: '2026-07-07 10:00:00',
-        },
-      ],
-    };
-    recordsApi.list.mockResolvedValueOnce(recordWithSegments);
-    recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 600000, total_rest_ms: 300000, total_records: 1, by_subject: [] });
-
-    render(<HistoryPage refreshKey={0} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('暂停实验')).toBeInTheDocument();
-    });
-
-    // 显示千层饼段标签
-    await waitFor(() => {
-      expect(screen.getByText(/含暂停/)).toBeInTheDocument();
-    });
-  });
-
-  it('千层饼段自下而上显示（最早段在最下、最晚段在最上）', async () => {
-    const recordWithSegments = {
-      records: [
-        {
-          id: 13,
-          mode: 'study',
-          subject: '数学',
-          duration_ms: 1600000,
-          paused_ms: 100000,
-          segments: [
-            { type: 'study', duration_ms: 600000 },
-            { type: 'pause', duration_ms: 100000 },
-            { type: 'study', duration_ms: 900000 },
-          ],
-          notes: '顺序测试',
-          created_at: '2026-07-07 10:00:00',
-        },
-      ],
-    };
-    recordsApi.list.mockResolvedValueOnce(recordWithSegments);
-    recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 1600000, total_rest_ms: 0, total_records: 1, by_subject: [] });
-
-    render(<HistoryPage refreshKey={0} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('顺序测试')).toBeInTheDocument();
-    });
-
-    const rows = screen.getAllByTestId('segment-row');
-    expect(rows).toHaveLength(3);
-    // 最上 = 最晚段（study 900000 → 15:00）
-    expect(rows[0].textContent).toContain('学习');
-    expect(rows[0].textContent).toContain('15:00');
-    // 中间 = 暂停段
-    expect(rows[1].textContent).toContain('暂停');
-    expect(rows[1].textContent).toContain('01:40');
-    // 最下 = 最早段（study 600000 → 10:00）
-    expect(rows[2].textContent).toContain('学习');
-    expect(rows[2].textContent).toContain('10:00');
-  });
-
-  it('无 segments 的记录正常显示（不出现千层饼）', async () => {
-    const recordNoSegments = {
-      records: [
-        { id: 11, mode: 'study', subject: '英语', duration_ms: 1200000, notes: '背单词', created_at: '2026-07-07 11:00:00' },
-      ],
-    };
-    recordsApi.list.mockResolvedValueOnce(recordNoSegments);
-    recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 1200000, total_rest_ms: 0, total_records: 1, by_subject: [] });
-
-    render(<HistoryPage refreshKey={0} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('背单词')).toBeInTheDocument();
-    });
-
-    expect(screen.queryByText(/含暂停/)).not.toBeInTheDocument();
-  });
-
-  it('单段 segments 不显示千层饼（同老数据）', async () => {
-    const recordSingleSegment = {
-      records: [
-        {
-          id: 12,
-          mode: 'study',
-          subject: '数学',
-          duration_ms: 600000,
-          paused_ms: 0,
-          segments: [{ type: 'study', duration_ms: 600000 }],
-          notes: '只有一段',
-          created_at: '2026-07-07 09:00:00',
-        },
-      ],
-    };
-    recordsApi.list.mockResolvedValueOnce(recordSingleSegment);
-    recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 600000, total_rest_ms: 0, total_records: 1, by_subject: [] });
-
-    render(<HistoryPage refreshKey={0} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('只有一段')).toBeInTheDocument();
-    });
-
-    expect(screen.queryByText(/含暂停/)).not.toBeInTheDocument();
-  });
-
   // ──── 备注内联编辑 ────
 
   it('点击 ✏️ 进入编辑态（预填原备注）', async () => {
@@ -395,26 +273,6 @@ describe('HistoryPage', () => {
     // 编辑态保持，草稿不丢
     expect(screen.getByPlaceholderText('记录一下当前的学习内容...').value).toBe('高数练习 补充');
     expect(recordsApi.update).toHaveBeenCalledTimes(1);
-  });
-
-  it('休息记录不显示备注编辑入口', async () => {
-    const mixed = {
-      records: [
-        { id: 1, mode: 'study', subject: '英语', duration_ms: 600000, notes: '', created_at: '2026-07-07 10:00:00' },
-        { id: 2, mode: 'rest', subject: null, duration_ms: 300000, notes: '', created_at: '2026-07-07 11:00:00' },
-      ],
-    };
-    recordsApi.list.mockResolvedValueOnce(mixed);
-    recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 600000, total_rest_ms: 300000, total_records: 2, by_subject: [] });
-
-    render(<HistoryPage refreshKey={0} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('休息')).toBeInTheDocument();
-    });
-
-    // 只有学习记录有「＋ 添加备注」，休息记录没有
-    expect(screen.getAllByText('＋ 添加备注')).toHaveLength(1);
   });
 
   it('同时只能编辑一条记录（新编辑自动收起旧编辑）', async () => {
@@ -561,25 +419,6 @@ describe('HistoryPage', () => {
     });
   });
 
-  it('休息记录不显示标签 chips', async () => {
-    const mixed = {
-      records: [
-        { id: 1, mode: 'study', subject: '数学', duration_ms: 3600000, notes: 'A', tags: ['高数'], created_at: '2026-07-07 10:00:00' },
-        { id: 2, mode: 'rest', subject: null, duration_ms: 300000, notes: '', tags: [], created_at: '2026-07-07 11:00:00' },
-      ],
-    };
-    recordsApi.list.mockResolvedValueOnce(mixed);
-    recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 3600000, total_rest_ms: 300000, total_records: 2, by_subject: [] });
-
-    render(<HistoryPage refreshKey={0} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('休息')).toBeInTheDocument();
-    });
-    // 只有学习记录有标签 chip（高数），休息记录无
-    expect(screen.getAllByTestId('record-tag')).toHaveLength(1);
-  });
-
   // ──── 标签编辑态 ────
 
   it('编辑态显示标签选择器，保存时备注与标签一起提交', async () => {
@@ -649,44 +488,7 @@ describe('HistoryPage', () => {
     });
   });
 
-  // ──── 复习页数测试 ────
-
-  it('学习记录有 pages 时显示「📖 N 页」徽标', async () => {
-    const withPages = {
-      records: [
-        { id: 1, mode: 'study', subject: '数学', duration_ms: 3600000, notes: '高数练习', pages: 30, created_at: '2026-07-07 10:00:00' },
-        { id: 2, mode: 'study', subject: '英语', duration_ms: 1800000, notes: '背单词', pages: null, created_at: '2026-07-07 11:00:00' },
-      ],
-    };
-    recordsApi.list.mockResolvedValueOnce(withPages);
-    recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 5400000, total_rest_ms: 0, total_records: 2, by_subject: [], total_pages: 30 });
-
-    render(<HistoryPage refreshKey={0} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('📖 30 页')).toBeInTheDocument();
-    });
-    // 无 pages 的记录不显示徽标
-    expect(screen.queryByText('📖 0 页')).not.toBeInTheDocument();
-  });
-
-  it('休息记录不显示页数徽标', async () => {
-    const mixed = {
-      records: [
-        { id: 1, mode: 'study', subject: '数学', duration_ms: 3600000, notes: '', pages: 30, created_at: '2026-07-07 10:00:00' },
-        { id: 2, mode: 'rest', subject: null, duration_ms: 300000, notes: '', pages: null, created_at: '2026-07-07 11:00:00' },
-      ],
-    };
-    recordsApi.list.mockResolvedValueOnce(mixed);
-    recordsApi.todayOverview.mockResolvedValueOnce({ total_study_ms: 3600000, total_rest_ms: 300000, total_records: 2, by_subject: [], total_pages: 30 });
-
-    render(<HistoryPage refreshKey={0} />);
-
-    await waitFor(() => {
-      expect(screen.getByText('📖 30 页')).toBeInTheDocument();
-    });
-    expect(screen.getAllByText('📖 30 页')).toHaveLength(1);
-  });
+  // ──── 复习页数编辑 ────
 
   it('编辑态可修改页数，保存时随备注标签一起提交', async () => {
     recordsApi.list.mockResolvedValueOnce(mockRecords);
@@ -754,18 +556,6 @@ describe('HistoryPage 管理模式删除', () => {
     });
     return utils;
   };
-
-  it('正常状态（adminMode=false）无删除按钮（无感知）', async () => {
-    await renderWithRecords();
-
-    expect(screen.queryByLabelText('删除记录')).not.toBeInTheDocument();
-  });
-
-  it('adminMode=true 时卡片出现删除按钮（学习 + 休息）', async () => {
-    await renderWithRecords({ adminMode: true });
-
-    expect(screen.getAllByLabelText('删除记录')).toHaveLength(2);
-  });
 
   it('adminMode 变 false 时删除按钮消失（切回日常）', async () => {
     const { rerender } = await renderWithRecords({ adminMode: true });

@@ -3,23 +3,7 @@ import React, { useState, useCallback } from 'react';
 import SubjectSelector from './SubjectSelector';
 import TagPicker from './TagPicker';
 import { recordsApi } from '../utils/api';
-
-/**
- * 将 ms 格式化为时间显示（HH:MM:SS或MM:SS格式）
- * @param {number} ms
- * @returns {string} 格式化后的时间字符串
- */
-function fmtTime(ms) {
-  if (typeof ms !== 'number' || !isFinite(ms) || ms < 0) return '00:00';
-  const totalSeconds = ms / 1000;
-  const hours = Math.floor(totalSeconds / 3600);
-  const minutes = Math.floor((totalSeconds % 3600) / 60);
-  const seconds = Math.floor(totalSeconds % 60);
-  const pad = (n) => String(n).padStart(2, '0');
-  return hours > 0
-    ? `${pad(hours)}:${pad(minutes)}:${pad(seconds)}`
-    : `${pad(minutes)}:${pad(seconds)}`;
-}
+import { fmtClock } from '../utils/fmtTime';
 
 /**
  * 计时器页面组件
@@ -113,7 +97,7 @@ export default function TimerPage({ timer, onRecordSaved, adminMode = false }) {
         duration_ms: duration,
         notes: '',
       });
-      showToast(`休息了 ${fmtTime(duration)}，继续加油！`);
+      showToast(`休息了 ${fmtClock(duration)}，继续加油！`);
       onRecordSaved?.();
     } catch (err) {
       showToast(`保存休息失败: ${err.message}`, 'error');
@@ -183,13 +167,13 @@ export default function TimerPage({ timer, onRecordSaved, adminMode = false }) {
         <div className={`timer-font text-7xl font-light tracking-tight select-none mb-2 ${
           isStudying && !isFrozen ? 'text-gray-900' : 'text-gray-300'
         }`}>
-          {fmtTime(timer.elapsed)}
+          {fmtClock(timer.elapsed)}
         </div>
 
         {/* 暂停计时 — 仅暂停态显示 */}
         {isPaused && (
           <div className="text-sm text-gray-400 mb-8">
-            暂停中 {fmtTime(timer.pausedElapsed)}
+            暂停中 {fmtClock(timer.pausedElapsed)}
           </div>
         )}
         {isStudying && <div className="mb-8" />}
@@ -368,7 +352,7 @@ export default function TimerPage({ timer, onRecordSaved, adminMode = false }) {
         </div>
 
         <div className="timer-font text-6xl font-light tracking-tight text-gray-700 mb-12 select-none">
-          {fmtTime(timer.elapsed)}
+          {fmtClock(timer.elapsed)}
         </div>
 
         <button

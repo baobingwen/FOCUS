@@ -73,6 +73,8 @@ code/
 │   │   │   ├── ExamCountdown.jsx    # 考研倒计时
 │   │   │   ├── SubjectSelector.jsx  # 科目选择器
 │   │   │   ├── HistoryPage.jsx      # 历史记录
+│   │   │   ├── RecordCard.jsx       # 历史记录卡片
+│   │   │   ├── SegmentStack.jsx     # 千层饼堆叠条
 │   │   │   └── TodayOverview.jsx    # 今日概览
 │   │   └── utils/
 │   │       ├── api.js               # API 封装

@@ -127,7 +127,9 @@ src/
 │   ├── api.js
 │   ├── api.test.js            # API 层 16 条（含 tagsApi 5 条）
 │   ├── clipboard.js
-│   └── clipboard.test.js      # 剪贴板复制工具 3 条
+│   ├── clipboard.test.js      # 剪贴板复制工具 3 条
+│   ├── fmtTime.js             # 时长格式化（fmtTime 中文 + fmtClock + fmtShortClock）
+│   └── fmtTime.test.js        # 三个格式化函数 8 条
 ├── hooks/
 │   ├── useTimer.js
 │   ├── useTimer.test.js       # 状态机 26 条（含暂停态 6 条 + 冻结 6 条 + 标签态 5 条）
@@ -147,12 +149,16 @@ src/
     ├── TagPicker.jsx          # 标签选择器（点选/新增 + 管理模式删除 × / ⚙ 排序模式拖拽换位）
     ├── TagPicker.test.jsx     # 管理模式门控 2 条 + 排序模式 7 条（⚙ 入口禁用态/模式切换/拖拽换位/完成提交/取消恢复/失败留在模式）
     ├── HistoryPage.jsx
-    ├── HistoryPage.test.jsx   # 日期导航 + 列表 + 千层饼 + 备注编辑/复制 + 标签展示/筛选/编辑 + 页数徽标/编辑 + 管理模式（prop 化）39 条
+    ├── HistoryPage.test.jsx   # 页面级：加载 + 日期导航 + 编辑流（互斥/保存/取消/失败）+ 复制 + 标签展示/筛选/编辑 + 页数编辑 + 管理模式删除 confirm 29 条
+    ├── RecordCard.jsx         # 单条记录卡片纯展示壳（查看态 + 编辑态，v0.4.1 从 HistoryPage 拆分）
+    ├── RecordCard.test.jsx    # 卡片直测：查看态渲染/编辑态渲染 + 回调转发 + 千层饼显示条件 + 管理模式按钮 33 条
+    ├── SegmentStack.jsx       # 千层饼堆叠条（v0.4.1 从 HistoryPage 拆分）
+    ├── SegmentStack.test.jsx  # 段行渲染/自下而上顺序/汇总/空/无暂停 5 条
     ├── TodayOverview.jsx
     └── TodayOverview.test.jsx  # 概览 + 条形图 + 按标签分组 + 页数汇总 10 条
 ```
 
-总计 **182 条测试用例**，12 个测试文件。
+总计 **218 条测试用例**，15 个测试文件。
 
 ## 测试模式详解
 

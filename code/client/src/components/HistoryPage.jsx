@@ -2,22 +2,8 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { recordsApi } from '../utils/api';
 import TodayOverview from './TodayOverview';
-import TagPicker from './TagPicker';
-import { fmtTime } from '../utils/fmtTime';
+import RecordCard from './RecordCard';
 import { copyText } from '../utils/clipboard';
-
-/**
- * 将 ms 格式化为短时间显示（MM:SS格式）
- * @param {number} ms
- * @returns {string} 格式化后的时间（如 "05:30"）
- */
-function fmtShortTime(ms) {
-  if (typeof ms !== 'number' || !isFinite(ms) || ms < 0) return '00:00';
-  const totalSeconds = ms / 1000;
-  const minutes = Math.floor(totalSeconds / 60);
-  const seconds = Math.floor(totalSeconds % 60);
-  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-}
 
 /**
  * 获取今天的日期字符串（YYYY-MM-DD格式）
@@ -40,7 +26,7 @@ function isToday(dateStr) {
 /**
  * 历史记录页面组件
  * 显示指定日期的学习/休息记录，支持日期导航
- * 
+ *
  * @param {Object} props - 组件属性
  * @param {string|number} props.refreshKey - 刷新键，变化时重新加载数据
  * @param {boolean} [props.adminMode] - 全局管理模式开关（App 层托管，跨 tab 生效）
@@ -333,235 +319,32 @@ export default function HistoryPage({ refreshKey, adminMode = false }) {
       ) : (
         <div className="space-y-2">
           {visibleRecords.map((record) => (
-            <div
+            <RecordCard
               key={record.id}
-              className="bg-white rounded-xl p-3 shadow-sm border border-gray-100"
-            >
-              <div className="flex items-center gap-2 mb-1">
-                {/* 类型标签 */}
-                <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                  record.mode === 'study'
-                    ? 'bg-blue-100 text-blue-700'
-                    : 'bg-orange-100 text-orange-700'
-                }`}>
-                  {record.mode === 'study' ? '学习' : '休息'}
-                </span>
-
-                {/* 科目 */}
-                {record.subject && (
-                  <span className="text-xs text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                    {record.subject}
-                  </span>
-                )}
-
-                {/* 复习页数 — 有值才显示，仅学习记录 */}
-                {record.mode === 'study' && record.pages > 0 && (
-                  <span className="text-xs text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                    📖 {record.pages} 页
-                  </span>
-                )}
-
-                {/* 时长 */}
-                <span className={`text-sm font-mono text-gray-700 ${adminMode && editingId !== record.id ? '' : 'ml-auto'}`}>
-                  {fmtShortTime(record.duration_ms)}
-                </span>
-
-                {/* 删除按钮 — 仅管理模式显示，时长左侧；编辑中的记录不显示（互斥） */}
-                {adminMode && editingId !== record.id && (
-                  <button
-                    onClick={() => handleDelete(record)}
-                    title="删除此记录"
-                    aria-label="删除记录"
-                    className="text-xs text-red-400 hover:text-red-600 ml-auto transition-colors"
-                  >
-                    删
-                  </button>
-                )}
-              </div>
-
-              {/* 标签展示 — 查看态点标签即筛选；仅学习记录 */}
-              {record.mode === 'study' && editingId !== record.id && record.tags?.length > 0 && (
-                <div className="flex flex-wrap gap-1.5 mt-1 ml-1">
-                  {record.tags.map(tag => (
-                    <button
-                      key={tag}
-                      data-testid="record-tag"
-                      onClick={() => setFilterTag(filterTag === tag ? null : tag)}
-                      title="点击按标签筛选"
-                      className={`px-2 py-0.5 rounded-full text-xs font-medium transition-all ${
-                        filterTag === tag
-                          ? 'bg-blue-500 text-white'
-                          : 'bg-blue-50 text-blue-600 hover:bg-blue-100'
-                      }`}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* 备注/标签编辑 — 仅学习记录可内联编辑；休息记录无备注/标签概念 */}
-              {record.mode === 'study' && (
-                editingId === record.id ? (
-                  <div className="mt-1 ml-1">
-                    <textarea
-                      value={draft}
-                      onChange={(e) => setDraft(e.target.value)}
-                      placeholder="记录一下当前的学习内容..."
-                      rows={2}
-                      className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg
-                        resize-none outline-none focus:border-blue-300 focus:ring-2
-                        focus:ring-blue-100 text-gray-700"
-                    />
-                    {/* 页数编辑（null = 清空） */}
-                    <div className="mt-2 flex items-center gap-2">
-                      <label className="text-xs text-gray-400">页数</label>
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        min={1}
-                        value={draftPages ?? ''}
-                        onChange={(e) => {
-                          const v = e.target.value;
-                          if (v === '') {
-                            setDraftPages(null);
-                          } else {
-                            const n = Number(v);
-                            if (Number.isInteger(n) && n >= 1 && n <= 9999) setDraftPages(n);
-                          }
-                        }}
-                        placeholder="未填写"
-                        aria-label="编辑页数"
-                        className="w-20 px-2 py-1 text-xs text-center border border-gray-200 rounded-lg
-                          outline-none focus:border-blue-300 focus:ring-2 focus:ring-blue-100 text-gray-700"
-                      />
-                    </div>
-                    <div className="mt-2">
-                      <TagPicker
-                        selected={draftTags}
-                        onToggle={toggleDraftTag}
-                        onDelete={removeDraftTag}
-                        admin={adminMode}
-                      />
-                    </div>
-                    <div className="flex items-center gap-2 mt-1.5">
-                      <button
-                        onClick={() => saveEdit(record)}
-                        disabled={savingId === record.id}
-                        className="px-3 py-1 text-xs bg-blue-500 text-white rounded-lg
-                          hover:bg-blue-600 disabled:opacity-50 transition-colors"
-                      >
-                        {savingId === record.id ? '保存中...' : '保存'}
-                      </button>
-                      <button
-                        onClick={cancelEdit}
-                        className="px-3 py-1 text-xs bg-gray-100 text-gray-600 rounded-lg
-                          hover:bg-gray-200 transition-colors"
-                      >
-                        取消
-                      </button>
-                      {editError && (
-                        <span className="text-xs text-red-500">{editError}</span>
-                      )}
-                    </div>
-                  </div>
-                ) : record.notes ? (
-                  <div className="flex items-center gap-1 mt-1 ml-1">
-                    {/* 备注文字 = 复制入口（hover 样式与编辑入口保持一致） */}
-                    <button
-                      onClick={() => handleCopyNote(record)}
-                      title="点击复制备注"
-                      className="text-xs text-left text-gray-400 hover:text-blue-500 transition-colors"
-                    >
-                      {record.notes}
-                    </button>
-                    {copyFeedback?.id === record.id && (
-                      <span
-                        aria-live="polite"
-                        className={`text-xs ${copyFeedback.status === 'ok' ? 'text-green-500' : 'text-red-500'}`}
-                      >
-                        {copyFeedback.status === 'ok' ? '已复制✓' : '复制失败'}
-                      </span>
-                    )}
-                    {/* ✏️ = 编辑入口 */}
-                    <button
-                      onClick={() => startEdit(record)}
-                      title="编辑备注"
-                      aria-label="编辑备注"
-                      className="text-xs text-gray-300 hover:text-blue-500 transition-colors"
-                    >
-                      ✏️
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => startEdit(record)}
-                    className="text-xs text-left text-gray-300 mt-1 ml-1 hover:text-blue-500 transition-colors"
-                  >
-                    ＋ 添加备注
-                  </button>
-                )
-              )}
-
-              {/* 千层饼 — 仅学习记录有 segments 时显示 */}
-              {record.mode === 'study' && record.segments && record.segments.length > 1 && (
-                <SegmentStack segments={record.segments} />
-              )}
-
-              {/* 时间戳 */}
-              <p className="text-xs text-gray-300 mt-1">
-                {record.created_at?.slice(0, 16) || ''}
-              </p>
-            </div>
+              record={record}
+              adminMode={adminMode}
+              isEditing={editingId === record.id}
+              saving={savingId === record.id}
+              draft={draft}
+              draftTags={draftTags}
+              draftPages={draftPages}
+              editError={editError}
+              copyFeedback={copyFeedback}
+              filterTag={filterTag}
+              onStartEdit={startEdit}
+              onCancelEdit={cancelEdit}
+              onSaveEdit={saveEdit}
+              onDelete={handleDelete}
+              onCopyNote={handleCopyNote}
+              onDraftChange={setDraft}
+              onDraftPagesChange={setDraftPages}
+              onTagClick={setFilterTag}
+              onToggleDraftTag={toggleDraftTag}
+              onRemoveDraftTag={removeDraftTag}
+            />
           ))}
         </div>
       )}
-    </div>
-  );
-}
-
-/**
- * 千层饼堆叠条组件
- * 按时间比例显示学习段（蓝色）和暂停段（灰色）
- */
-function SegmentStack({ segments }) {
-  if (!segments || segments.length === 0) return null;
-
-  const maxMs = Math.max(...segments.map(s => s.duration_ms), 1);
-  const totalMs = segments.reduce((sum, s) => sum + s.duration_ms, 0);
-  const pauseMs = segments.filter(s => s.type === 'pause').reduce((sum, s) => sum + s.duration_ms, 0);
-
-  return (
-    <div className="mt-2 space-y-0.5">
-      {/* 反转渲染：自下而上 = 最早段在最下、最晚段在最上（数组仍保持时间正序） */}
-      {[...segments].reverse().map((seg, i) => {
-        const pct = seg.duration_ms / maxMs;
-        const height = Math.max(20, Math.round(pct * 48));
-        const isStudy = seg.type === 'study';
-        return (
-          <div
-            key={i}
-            data-testid="segment-row"
-            className="flex items-center gap-2 rounded-md px-2 transition-colors"
-            style={{
-              height: `${height}px`,
-              backgroundColor: isStudy ? '#dbeafe' : '#f3f4f6',
-            }}
-          >
-            <span className={`text-xs font-medium ${isStudy ? 'text-blue-700' : 'text-gray-500'}`}>
-              {isStudy ? '学习' : '暂停'}
-            </span>
-            <span className={`ml-auto text-xs font-mono ${isStudy ? 'text-blue-600' : 'text-gray-400'}`}>
-              {fmtShortTime(seg.duration_ms)}
-            </span>
-          </div>
-        );
-      })}
-      {/* 汇总信息 */}
-      <p className="text-xs text-gray-400 mt-1.5 pt-1 border-t border-gray-100">
-        总计 {fmtShortTime(totalMs)}
-        {pauseMs > 0 && <span className="text-gray-300">（含暂停 {fmtShortTime(pauseMs)}）</span>}
-      </p>
     </div>
   );
 }

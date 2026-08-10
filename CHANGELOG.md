@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.1] — 2026-08-10
+
+### 版本线：0.4.x 维护
+
+纯前端结构重构，无用户可见功能变化——「文件庞大逐步拆分」第一轮落地：把最大的 HistoryPage 拆成职责清晰的小文件，后续轮次继续拆 TimerPage/TagPicker/useTimer。
+
+### Changed
+
+- **代码结构拆分**（[改动说明](code/client/docs/adr/0001-v0.4.1-code-structure-changes.md)）：
+  - 新增 `RecordCard.jsx`：单条记录卡片纯展示壳（查看态 + ✏️ 编辑态表单渲染），9 个编辑状态仍由 HistoryPage 持有通过 props 传入——纯搬家，行为与 v0.4.0 完全一致
+  - 新增 `SegmentStack.jsx`：千层饼堆叠条独立组件
+  - 格式化函数合并：`utils/fmtTime.js` 新增 `fmtClock`（原 TimerPage 本地 HH:MM:SS 函数）+ `fmtShortClock`（原 HistoryPage 本地 MM:SS 函数），中文 `fmtTime` 不动；TimerPage/HistoryPage 本地重复定义删除，展示格式不变
+  - HistoryPage 567 → ~330 行（删除死 import）
+  - 版本号：client `0.4.0`→`0.4.1`，server 保持 `0.3.3`，git tag `v0.4.1`（0.4 分支发布，merge 回 master）
+
+### Tests
+
+- 客户端：218 全绿（原 HistoryPage.test.jsx 39 条拆为：页面级 29 条 + RecordCard 33 条 + SegmentStack 5 条 + fmtTime 8 条，用例全部转移无遗漏）
+
+### Docs
+
+- `code/client/docs/CODE_STRUCTURE.md` — 客户端代码结构总览（mermaid 依赖图 + 文件职责/状态归属 + 格式化函数分工 + 测试文件对应）
+- `code/client/docs/adr/0001-v0.4.1-code-structure-changes.md` — v0.4.1 改动说明（改动前后依赖图对比 + 文件直接映射 + 行为不变保证 + 测试迁移映射）
+- `CLAUDE.md` — 客户端结构表新增 RecordCard/SegmentStack、fmtTime 三函数分工说明
+- `code/ROADMAP.md` — 已实现新增 v0.4.1 条目 + 开发中列后续拆分轮次 + 版本头更新
+- `code/client/TESTING.md` — 文件树新增 RecordCard/SegmentStack/fmtTime、计数 182→218
+- `docs/INDEX.md` — 新增两个结构文档索引
+
 ## [0.4.0] — 2026-08-09
 
 ### 版本线：0.4.x 开启
