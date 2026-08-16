@@ -1,6 +1,6 @@
 # FOCUS 路线图
 
-> 客户端：0.4.1 · 服务端：0.3.3 · git tag: v0.4.1 — 最新：代码结构拆分（HistoryPage → RecordCard/SegmentStack）
+> 客户端：0.4.2 · 服务端：0.3.4 · git tag: v0.4.2 — 最新：复习方法和提醒区（学习中提醒条 + 15 分钟轮换 + 管理模式管理）
 
 ## 已实现
 
@@ -28,6 +28,7 @@
 - ✅ 历史记录删除（管理模式）：连点 5 下「历史记录」标题进入隐藏管理模式（正常使用无感知），卡片右上角删除按钮 + confirm 确认单条删除，学习/休息都可删，硬删除不可恢复（[设计文档](docs/adr/0007-record-delete.md)）
 - ✅ 全局管理模式：删除类功能统一收进隐藏模式——记录删除（已有）、科目删除、标签删除、标签排序；右上角考研倒计时连点 5 下进入（任何页面任何计时状态都可见），App 层横幅跨 tab 常驻，退出按钮关闭，刷新复位；修改类（备注/页数/标签 ✏️）保持常态入口（[设计文档](docs/adr/0008-global-admin-mode.md)）
 - ✅ v0.4.1 代码结构拆分：HistoryPage 拆出 RecordCard（单条记录卡片纯展示壳）+ SegmentStack（千层饼）独立组件；格式化函数合并入 utils/fmtTime.js（fmtClock/fmtShortClock，中文 fmtTime 不动）；纯搬家行为不变，测试通过（[结构总览](code/client/docs/CODE_STRUCTURE.md) · [改动说明](code/client/docs/adr/0001-v0.4.1-code-structure-changes.md)）
+- ✅ 复习方法和提醒区：用户自维护的提醒语句库（后端新表 `reminder_items` + `/api/reminders` CRUD），学习中「结束学习」大按钮下方小字提醒条展示一条（💡 浅灰不抢眼），每 15 分钟按插入顺序自动轮换（1→2→3→1…）；学习中提醒条旁点 ＋ 弹框新增（随时记录）；管理模式内「管理」按钮 → 弹窗列表编辑/删除全部条目；数据存后端跨设备可见，仅学习中显示
 
 ## 推荐方向（按优先级）
 

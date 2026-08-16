@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { recordsApi, subjectsApi, tagsApi } from './api';
+import { recordsApi, subjectsApi, tagsApi, remindersApi } from './api';
 
 describe('recordsApi', () => {
   beforeEach(() => {
@@ -227,6 +227,71 @@ describe('tagsApi', () => {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ids: [3, 1, 2] }),
+    });
+  });
+});
+
+describe('remindersApi', () => {
+  beforeEach(() => {
+    globalThis.fetch = vi.fn();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('list: 返回复习提醒列表', async () => {
+    const mockItems = [{ id: 1, content: '复习的关键在于反复多次和全面' }];
+    globalThis.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockItems),
+    });
+
+    const result = await remindersApi.list();
+    expect(result).toEqual(mockItems);
+    expect(fetch).toHaveBeenCalledWith('/api/reminders', expect.any(Object));
+  });
+
+  it('create: 发送 POST 并返回新提醒', async () => {
+    const mockItem = { id: 2, content: '及时回顾错题' };
+    globalThis.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockItem),
+    });
+
+    const result = await remindersApi.create('及时回顾错题');
+    expect(result).toEqual(mockItem);
+    expect(fetch).toHaveBeenCalledWith('/api/reminders', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: '及时回顾错题' }),
+    });
+  });
+
+  it('update: 发送 PATCH 请求修改内容', async () => {
+    globalThis.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ id: 2, content: '改后的内容' }),
+    });
+
+    await remindersApi.update(2, '改后的内容');
+    expect(fetch).toHaveBeenCalledWith('/api/reminders/2', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ content: '改后的内容' }),
+    });
+  });
+
+  it('delete: 发送 DELETE 请求', async () => {
+    globalThis.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ success: true }),
+    });
+
+    await remindersApi.delete(42);
+    expect(fetch).toHaveBeenCalledWith('/api/reminders/42', {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
     });
   });
 });

@@ -68,3 +68,22 @@ export const tagsApi = {
       body: JSON.stringify({ ids }),
     }),
 };
+
+export const remindersApi = {
+  list: () => request('/reminders'),
+
+  create: (content) =>
+    request('/reminders', {
+      method: 'POST',
+      body: JSON.stringify({ content }),
+    }),
+
+  update: (id, content) =>
+    request(`/reminders/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ content }),
+    }),
+
+  delete: (id) =>
+    request(`/reminders/${id}`, { method: 'DELETE' }),
+};

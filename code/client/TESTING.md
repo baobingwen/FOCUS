@@ -125,7 +125,7 @@ src/
 ├── test-setup.js              # 全局测试 setup
 ├── utils/
 │   ├── api.js
-│   ├── api.test.js            # API 层 16 条（含 tagsApi 5 条）
+│   ├── api.test.js            # API 层 20 条（含 tagsApi 5 条 + remindersApi 4 条）
 │   ├── clipboard.js
 │   ├── clipboard.test.js      # 剪贴板复制工具 3 条
 │   ├── fmtTime.js             # 时长格式化（fmtTime 中文 + fmtClock + fmtShortClock）
@@ -144,6 +144,8 @@ src/
     ├── ExamCountdown.test.jsx # 考研倒计时 3 条 + 连点入口 2 条
     ├── TimerPage.jsx
     ├── TimerPage.test.jsx     # 5 态渲染 + 保存 + 休息 + 暂停交互 + 弹窗确认 + 冻结 UI + 标签交互 + 页数交互 + 管理模式标签门控 37 条
+    ├── ReminderBar.jsx        # 复习方法和提醒条（学习中「结束学习」大按钮下方小字提醒 + 15 分钟顺序轮换 + 点＋新增弹框 + 管理模式管理弹窗）
+    ├── ReminderBar.test.jsx   # 空库/展示/轮换循环/不足 2 条不轮换/＋新增/空内容 disabled/管理模式门控/编辑/删除/confirm 拒绝/关闭 12 条
     ├── SubjectSelector.jsx
     ├── SubjectSelector.test.jsx # CRUD + 休息 + 管理模式门控（日常无 × / admin × 恒显）16 条
     ├── TagPicker.jsx          # 标签选择器（点选/新增 + 管理模式删除 × / ⚙ 排序模式拖拽换位）
@@ -158,7 +160,7 @@ src/
     └── TodayOverview.test.jsx  # 概览 + 条形图 + 按标签分组 + 页数汇总 10 条
 ```
 
-总计 **218 条测试用例**，15 个测试文件。
+总计 **234 条测试用例**，16 个测试文件。
 
 ## 测试模式详解
 

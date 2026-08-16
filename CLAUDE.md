@@ -78,6 +78,7 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 |------|------|
 | `App.jsx` | 主布局 + 底部导航 + useTimer 调用（计时状态托管于此，跨标签切换不丢失）+ 全局管理模式 state/横幅（连点右上角考研倒计时进入，跨 tab 常驻） |
 | `components/TimerPage.jsx` | 计时器页面，5 状态机 (idle→studying→paused→rest_prompt→resting)，从 props 接收 timer；idle 态支持直接休息；暂停态支持继续和确认结束；学习中可点选/新增标签、累计复习页数（数字框 + +1/+5/+10 快捷芯片）；学习/暂停态大按钮始终居中，暂停/继续按钮悬浮右缘不占布局 |
+| `components/ReminderBar.jsx` | 复习方法和提醒条：学习中「结束学习」大按钮下方小字提醒（💡 浅灰不抢眼），每 15 分钟按插入顺序轮换下一条；提醒条旁 ＋ 弹框新增（随时记录）；管理模式开启时出现「管理」按钮 → 弹窗列表编辑/删除全部条目（AddModal/ManageModal 子组件） |
 | `components/ExamCountdown.jsx` | 考研倒计时（右上角常驻，写死 2026-12-19，过期自动隐藏）+ 全局管理模式隐藏入口（连点 5 下调用 onMultiTap，任何状态可见） |
 | `components/SubjectSelector.jsx` | 科目选择（固定列表 + 自定义新增 + 休息；删除 × 仅管理模式 admin 显示，恒显） |
 | `components/TagPicker.jsx` | 标签选择器（扁平全局标签库点选/新增，删除 × 与 ⚙ 排序仅管理模式 admin 显示，学习中与历史编辑态共用） |
@@ -101,6 +102,7 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 | `routes/records.js` | POST 保存记录（可带 tags、pages），GET 按日期查询（返回每条 tags），GET /today 今日概览（含 total_pages 与按科目页数），PATCH /:id 修改备注、标签与页数（整组替换，仅学习记录），DELETE /:id 删除单条记录（学习/休息均可，硬删除，record_tags 级联清理） |
 | `routes/subjects.js` | 科目 CRUD（默认科目不可删） |
 | `routes/tags.js` | 标签 CRUD：GET 全量（按 sort_order）、POST 幂等复用（≤12 字，排末尾）、PUT /order 批量重排（全量校验）、DELETE 级联清关联 |
+| `routes/reminders.js` | 复习提醒 CRUD：GET 全量（按 sort_order）、POST 新增（≤200 字，排末尾）、PATCH /:id 改内容、DELETE /:id 删除 |
 | `migrations/` | 增量 SQL 迁移脚本目录，按文件名排序执行，仅增不删改 |
 
 ### 数据库迁移系统
@@ -146,6 +148,7 @@ CREATE INDEX IF NOT EXISTS idx_records_notes ON records(notes);
 | `hooks/useTimer.test.js` | 状态机全路径覆盖 |
 | `hooks/useFreezeOnLeave.test.js` | 页面离开冻结事件测试 |
 | `components/TimerPage.test.jsx` | 5 态渲染 + 保存 + 休息 + 暂停 + 弹窗确认 + 冻结 UI |
+| `components/ReminderBar.test.jsx` | 提醒条展示/轮换/新增/管理模式门控 + 编辑/删除 |
 | `components/SubjectSelector.test.jsx` | CRUD + confirm 弹窗 + 休息 |
 | `components/HistoryPage.test.jsx` | 日期导航 + 列表 + 千层饼 + 备注编辑/复制 |
 | `components/TodayOverview.test.jsx` | 概览 + 条形图 |
@@ -189,6 +192,7 @@ code/start-local.bat
 **subjects** — `name`, `sort_order`（默认：数学、英语、专业课）
 **tags** — `name`（唯一，≤12 字）, `sort_order`（自定义排列顺序，新标签自动排末尾）
 **record_tags** — `record_id`, `tag_id` 多对多关联（外键级联删除）
+**reminder_items** — `content`（复习提醒内容，≤200 字）, `sort_order`（插入顺序，学习中轮换按此循环）, `created_at`
 **_migrations** — 迁移追踪表，记录已执行的迁移脚本名
 
 ### 核心概念
@@ -197,4 +201,5 @@ code/start-local.bat
 - **双轨时间**: Date.now() 绝对时间戳，锁屏休眠恢复后精准咬合
 - **科目**: 一级分类，固定列表 + 用户自定义
 - **标签**: 科目之下的知识点二级细分，扁平全局库，一条记录可挂多个；统计按「科目 × 标签」交叉，重名幂等复用
+- **复习提醒**: 用户自维护的提醒语句库，学习中「结束学习」大按钮下方小字提醒条展示一条、每 15 分钟顺序轮换，点 ＋ 随时新增，管理模式内编辑/删除；存后端 `reminder_items` 表
 - **部署**: 本地 + Tailscale 优先，Fly.io 方案备选

@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.2] — 2026-08-11
+
+### 版本线：0.4.x 维护
+
+日常点子「复习方法和提醒」落地——把想到的复习方法记下来，学习中随时给自己提个醒。新增独立数据表与 CRUD 路由（前后端同步升级），是 0.4.2 的功能核心。
+
+### Added
+
+- **复习方法和提醒区**：用户自维护的提醒语句库，学习中「结束学习」大按钮下方小字提醒条（💡 浅灰不抢眼）展示一条，每 15 分钟按插入顺序自动轮换（1→2→3→1…）。
+  - 数据模型：`005_add_reminder_items.sql` — 新增 `reminder_items` 表（`content` ≤200 字、`sort_order` 插入顺序、`created_at`）
+  - 接口：`GET /api/reminders`（按 sort_order）、`POST /api/reminders`（新增排末尾，≤200 字，trim 判空）、`PATCH /api/reminders/:id`（改内容）、`DELETE /api/reminders/:id`
+  - 前端：新组件 `ReminderBar.jsx`（学习中「结束学习」大按钮下方展示 + 15 分钟轮换 + 提醒条旁 ＋ 弹框新增「随时记录」）；管理模式开启时出现「管理」按钮 → 弹窗列表编辑（✏️）/删除（confirm）全部条目；数据存后端跨设备可见
+  - 仅学习中显示，空闲/休息/暂停均不显示；无条目时只留 ＋ 入口
+  - 版本号：client `0.4.1`→`0.4.2`，server `0.3.3`→`0.3.4`，git tag `v0.4.2`（0.4 分支发布，merge 回 master）
+
+### Tests
+
+- 服务端：128 全绿（新增 reminders 路由 19 条：GET 排序/空库、POST 校验/trim/递增/超长/200 字边界、PATCH 修改/404/非数字 id/空内容/sort_order 不变、DELETE 删除/404/非数字 id/多条互不影响）
+- 客户端：234 全绿（新增 ReminderBar 12 条：空库/展示/轮换循环/不足 2 条不轮换/＋新增/空内容 disabled/管理模式门控/编辑/删除/confirm 拒绝/关闭 + remindersApi 4 条）
+
+### Docs
+
+- `CONTEXT.md` — 新增「复习提醒」领域概念（含 Avoid 词）+ 学习流程补充记录提醒
+- `README.md` — 功能列表 + 项目结构（ReminderBar.jsx、routes/reminders.js）+ 数据库五张表 + API 表 4 个端点 + 使用流程提醒条说明
+- `code/ROADMAP.md` — 已实现新增复习提醒 + 版本头更新至 0.4.2 + 日常点子/开发中移除该项
+- `CLAUDE.md` — 组件表新增 ReminderBar、服务端结构新增 reminders.js、数据库表新增 reminder_items、测试表新增 ReminderBar.test.jsx
+- `code/client/TESTING.md` — 文件树新增 ReminderBar 与 remindersApi、计数 218→234
+- `code/server/TESTING.md` — 文件树新增 reminders.test.js、边界值清单补 reminders 行、计数 109→128
+
 ## [0.4.1] — 2026-08-10
 
 ### 版本线：0.4.x 维护

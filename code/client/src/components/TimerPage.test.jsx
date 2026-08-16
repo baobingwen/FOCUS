@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TimerPage from './TimerPage';
-import { recordsApi, subjectsApi, tagsApi } from '../utils/api';
+import { recordsApi, subjectsApi, tagsApi, remindersApi } from '../utils/api';
 
 vi.mock('../utils/api');
 
@@ -39,6 +39,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   subjectsApi.list.mockResolvedValue([]);
   tagsApi.list.mockResolvedValue([]);
+  remindersApi.list.mockResolvedValue([]);
 });
 
 describe('TimerPage', () => {
