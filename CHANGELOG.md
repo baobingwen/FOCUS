@@ -2,6 +2,32 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.3] — 2026-08-27
+
+### 版本线：0.4.x 维护
+
+日常点子「逻辑移除学习中离开页面暂停的功能」落地——学习中离开页面（切标签页/最小化/锁屏）不再自动暂停计时，计时持续走时（Date.now() 绝对时间戳），回来后时长与真实时间一致。按「不删代码、不加开关」的要求实施：只注释 `App.jsx` 中 `useFreezeOnLeave` 的 import 与调用点，hook、`useTimer` 的 freeze/thaw/frozen、冻结灰化 UI 全部保留待用，无开关配置。
+
+### Changed
+
+- **移除「学习中离开页面暂停」行为**：`App.jsx` 中 `useFreezeOnLeave` 的 import 与调用注释停用（v0.4.3），恢复只需取消注释两处；`useFreezeOnLeave.js`、`useTimer.js` 的 `freeze()`/`thaw()`/`frozen`、`TimerPage.jsx` 冻结态灰化 UI 均未删
+- 行为变化：学习中离开页面计时继续，回来后时长与真实时间一致（此前为自动冻结计时、回来自动恢复，不产生暂停记录）
+- 版本号：client `0.4.2`→`0.4.3`，server 保持 `0.3.4`，git tag `v0.4.3`
+
+### Tests
+
+- 客户端：235 全绿（新增 App 冻结停用回归 1 条：渲染 App 不接入 `useFreezeOnLeave`；冻结相关既有测试——hook 8 条、useTimer 冻结 6 条、TimerPage 冻结 UI——全部保留通过）
+
+### Docs
+
+- `CONTEXT.md` — 删除「冻结」领域概念条目
+- `README.md` — 功能列表/流程图移除冻结描述，说明改为「离开页面（切标签/锁屏）时计时继续，回来后时长与真实时间一致」
+- `code/ROADMAP.md` — 已实现条目标注 v0.4.3 逻辑移除，💡 日常点子移除该项
+- `CLAUDE.md` — App.jsx/useTimer.js/useFreezeOnLeave.js 标注冻结停用（代码保留）
+- `docs/adr/0003-freeze-on-leave.md` — Status 改为 **deprecated**（v0.4.3 逻辑移除说明）
+- `docs/INDEX.md` — ADR 0003 描述同步标注已废弃
+- `code/client/TESTING.md` — 计数 234→235
+
 ## [0.4.2] — 2026-08-11
 
 ### 版本线：0.4.x 维护

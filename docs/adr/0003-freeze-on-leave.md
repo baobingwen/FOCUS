@@ -4,7 +4,7 @@
 
 ## Status
 
-**accepted**
+**deprecated**（v0.4.3 起逻辑移除：App 不再接入 `useFreezeOnLeave`（调用点注释保留），`freeze()`/`thaw()` 与冻结 UI 代码未删待用。本记录保留作为历史档案，详见 [CHANGELOG v0.4.3](../CHANGELOG.md)）
 
 ## Design
 

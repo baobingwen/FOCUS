@@ -47,7 +47,7 @@
 |------|------|------|
 | `docs/adr/0001-timer-state-lift.md` | `docs/adr/` | 计时状态上提到 App 组件（解决标签切换状态丢失） |
 | `docs/adr/0002-pause-feature.md` | `docs/adr/` | 暂停功能 — 学习中的暂停/继续、千层饼可视化、暂停段计入休息统计 |
-| `docs/adr/0003-freeze-on-leave.md` | `docs/adr/` | 离开页面自动冻结 — 学习中离开时自动冻结/恢复计时，不产生暂停记录 |
+| `docs/adr/0003-freeze-on-leave.md` | `docs/adr/` | 离开页面自动冻结 — 学习中离开时自动冻结/恢复计时，不产生暂停记录（v0.4.3 已废弃：逻辑移除，代码保留） |
 | `docs/adr/0004-study-tags.md` | `docs/adr/` | 学习标签 — 科目之下的知识点二级细分、扁平全局标签库、多对多数据模型、统计与筛选 |
 | `docs/adr/0005-tag-reorder.md` | `docs/adr/` | 标签拖拽排序 — ⚙ 排序模式 + sortablejs、tags 加 sort_order 列、PUT /tags/order 批量重排 |
 | `docs/adr/0006-pages-per-review.md` | `docs/adr/` | 复习页数 — records 加 pages 字段、学习中快捷累加、历史徽标/编辑、今日概览页数汇总 |

@@ -139,7 +139,7 @@ src/
 │   └── useMultiTap.test.js    # 连点检测 5 条（达标触发/计数重置/超时重置/自定义参数/回调更新）
 └── components/
     ├── App.jsx
-    ├── App.test.jsx           # Tab 切换 + 全局管理模式（倒计时连点入口/横幅跨 tab/退出）8 条
+    ├── App.test.jsx           # Tab 切换 + 全局管理模式（倒计时连点入口/横幅跨 tab/退出）+ 冻结停用回归（v0.4.3 不接入 useFreezeOnLeave）9 条
     ├── ExamCountdown.jsx      # 考研倒计时（右上角常驻）+ 管理模式隐藏入口（连点 5 下）
     ├── ExamCountdown.test.jsx # 考研倒计时 3 条 + 连点入口 2 条
     ├── TimerPage.jsx
@@ -160,7 +160,7 @@ src/
     └── TodayOverview.test.jsx  # 概览 + 条形图 + 按标签分组 + 页数汇总 10 条
 ```
 
-总计 **234 条测试用例**，16 个测试文件。
+总计 **235 条测试用例**，16 个测试文件。
 
 ## 测试模式详解
 

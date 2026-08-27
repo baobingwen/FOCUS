@@ -3,8 +3,10 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
 import { subjectsApi, recordsApi } from './utils/api';
+import useFreezeOnLeave from './hooks/useFreezeOnLeave';
 
 vi.mock('./utils/api');
+vi.mock('./hooks/useFreezeOnLeave');
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -49,6 +51,17 @@ describe('App', () => {
     await waitFor(() => {
       expect(screen.getByText('🎯 FOCUS')).toBeInTheDocument();
     });
+  });
+
+  it('渲染 App 不接入 useFreezeOnLeave（离开页面冻结已停用，v0.4.3）', async () => {
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText('🎯 FOCUS')).toBeInTheDocument();
+    });
+
+    // 回归守卫：调用点已注释停用
+    expect(useFreezeOnLeave).not.toHaveBeenCalled();
   });
 
   // ──── 全局管理模式测试（入口 = 右上角考研倒计时连点 5 下）────
