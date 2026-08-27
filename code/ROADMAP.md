@@ -1,6 +1,6 @@
 # FOCUS 路线图
 
-> 客户端：0.4.3 · 服务端：0.3.4 · git tag: v0.4.3 — 最新：逻辑移除学习中离开页面暂停（冻结代码保留未接入）
+> 客户端：0.4.4 · 服务端：0.3.5 · git tag: v0.4.4 — 最新：数据导出（管理模式横幅按钮，全量 JSON 下载）
 
 ## 已实现
 
@@ -29,6 +29,7 @@
 - ✅ 全局管理模式：删除类功能统一收进隐藏模式——记录删除（已有）、科目删除、标签删除、标签排序；右上角考研倒计时连点 5 下进入（任何页面任何计时状态都可见），App 层横幅跨 tab 常驻，退出按钮关闭，刷新复位；修改类（备注/页数/标签 ✏️）保持常态入口（[设计文档](docs/adr/0008-global-admin-mode.md)）
 - ✅ v0.4.1 代码结构拆分：HistoryPage 拆出 RecordCard（单条记录卡片纯展示壳）+ SegmentStack（千层饼）独立组件；格式化函数合并入 utils/fmtTime.js（fmtClock/fmtShortClock，中文 fmtTime 不动）；纯搬家行为不变，测试通过（[结构总览](code/client/docs/CODE_STRUCTURE.md) · [改动说明](code/client/docs/adr/0001-v0.4.1-code-structure-changes.md)）
 - ✅ 复习方法和提醒区：用户自维护的提醒语句库（后端新表 `reminder_items` + `/api/reminders` CRUD），学习中「结束学习」大按钮下方小字提醒条展示一条（💡 浅灰不抢眼），每 15 分钟按插入顺序自动轮换（1→2→3→1…）；学习中提醒条旁点 ＋ 弹框新增（随时记录）；管理模式内「管理」按钮 → 弹窗列表编辑/删除全部条目；数据存后端跨设备可见，仅学习中显示
+- ✅ 数据导出（管理模式）：管理模式横幅「导出数据」按钮一键全量导出五张业务表（records/subjects/tags/record_tags/reminder_items）为 JSON 文件下载（`GET /api/export`，文件名 `focus-export-YYYYMMDD-HHMMSS.json`）；导出物含 `app`/`version`/`exported_at` 元数据，records 的 `segments` 解析为数组，不含 `_migrations` 内部表；点击后按钮禁用显示「导出中…」，失败 alert 提示；仅导出，导入留待后续评估
 
 ## 推荐方向（按优先级）
 
@@ -74,7 +75,7 @@ Docker 多阶段构建 + 香港节点 + 持久卷方案 已就绪。
 
 ## 💡 日常点子
 
-- 数据库导出功能
+- 设计一套无后端方案，逐步转向无后端
 - 标签+页数+备注把整个页面的重心压到下侧了，也就是中央按钮偏下（页数区块行高已压缩过一次）
 - 默认科目硬编码去重：subjects 加 is_default 字段，服务端/客户端不再按名字判断「默认科目不可删」
 - 学习备注模板

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { recordsApi, subjectsApi, tagsApi, remindersApi } from './api';
+import { recordsApi, subjectsApi, tagsApi, remindersApi, exportApi } from './api';
 
 describe('recordsApi', () => {
   beforeEach(() => {
@@ -293,5 +293,52 @@ describe('remindersApi', () => {
       method: 'DELETE',
       headers: { 'Content-Type': 'application/json' },
     });
+  });
+});
+
+describe('exportApi', () => {
+  beforeEach(() => {
+    globalThis.fetch = vi.fn();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('download: 返回 blob 并解析 Content-Disposition 文件名', async () => {
+    const blob = new Blob(['{}'], { type: 'application/json' });
+    globalThis.fetch.mockResolvedValue({
+      ok: true,
+      blob: () => Promise.resolve(blob),
+      headers: new Headers({
+        'Content-Disposition': 'attachment; filename="focus-export-20260706-123456.json"',
+      }),
+    });
+
+    const result = await exportApi.download();
+    expect(fetch).toHaveBeenCalledWith('/api/export');
+    expect(result.blob).toBe(blob);
+    expect(result.filename).toBe('focus-export-20260706-123456.json');
+  });
+
+  it('download: 无 Content-Disposition 时回退默认文件名', async () => {
+    globalThis.fetch.mockResolvedValue({
+      ok: true,
+      blob: () => Promise.resolve(new Blob(['{}'])),
+      headers: new Headers(),
+    });
+
+    const result = await exportApi.download();
+    expect(result.filename).toMatch(/^focus-export-\d{4}-\d{2}-\d{2}\.json$/);
+  });
+
+  it('download: HTTP 错误时抛出 Error', async () => {
+    globalThis.fetch.mockResolvedValue({
+      ok: false,
+      status: 500,
+      json: () => Promise.resolve({ error: '导出数据失败' }),
+    });
+
+    await expect(exportApi.download()).rejects.toThrow('导出数据失败');
   });
 });

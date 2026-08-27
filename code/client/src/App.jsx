@@ -3,6 +3,7 @@ import TimerPage from './components/TimerPage';
 import HistoryPage from './components/HistoryPage';
 import ExamCountdown from './components/ExamCountdown';
 import useTimer from './hooks/useTimer';
+import { exportApi } from './utils/api';
 // 停用（v0.4.3）：逻辑移除「学习中离开页面暂停」功能
 // import useFreezeOnLeave from './hooks/useFreezeOnLeave';
 
@@ -16,6 +17,8 @@ export default function App() {
   const [historyRefreshKey, setHistoryRefreshKey] = useState(0);
   // 全局管理模式
   const [adminMode, setAdminMode] = useState(false);
+  // 数据导出中状态（管理模式横幅按钮）
+  const [exporting, setExporting] = useState(false);
   const timer = useTimer();
 
   // 停用（v0.4.3）：逻辑移除「学习中离开页面暂停」功能
@@ -28,6 +31,29 @@ export default function App() {
   const enterAdminMode = useCallback(() => setAdminMode(true), []);
   const exitAdminMode = useCallback(() => setAdminMode(false), []);
 
+  /**
+   * 导出全部数据为 JSON 文件下载（管理模式横幅按钮）
+   * @returns {Promise<void>}
+   */
+  const handleExport = useCallback(async () => {
+    setExporting(true);
+    try {
+      const { blob, filename } = await exportApi.download();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert(`导出失败：${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setExporting(false);
+    }
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col mx-auto relative overflow-hidden"
          style={{ maxWidth: '430px' }}>
@@ -39,12 +65,21 @@ export default function App() {
         {adminMode && (
           <div className="flex items-center justify-between gap-2 mt-12 mx-4 px-3 py-2 rounded-xl bg-yellow-50 border border-yellow-200 z-10">
             <span className="text-xs text-yellow-700">管理模式已开启</span>
-            <button
-              onClick={exitAdminMode}
-              className="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded-lg hover:bg-yellow-200 transition-colors"
-            >
-              退出管理模式
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleExport}
+                disabled={exporting}
+                className="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded-lg hover:bg-yellow-200 transition-colors disabled:opacity-50"
+              >
+                {exporting ? '导出中…' : '导出数据'}
+              </button>
+              <button
+                onClick={exitAdminMode}
+                className="text-xs text-yellow-700 bg-yellow-100 px-2 py-1 rounded-lg hover:bg-yellow-200 transition-colors"
+              >
+                退出管理模式
+              </button>
+            </div>
           </div>
         )}
 

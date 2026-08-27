@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.4] — 2026-08-27
+
+### 版本线：0.4.x 维护
+
+日常点子「数据库导出功能」落地——管理模式内一键把全部数据导出为 JSON 文件下载，备份留存。纯后端数据读取 + 管理模式横幅按钮，无新增依赖。
+
+### Added
+
+- **数据导出（管理模式）**：管理模式横幅「导出数据」按钮 → `GET /api/export` 全量导出五张业务表（records / subjects / tags / record_tags / reminder_items）为 JSON 文件下载（`focus-export-YYYYMMDD-HHMMSS.json`）。
+  - 导出结构：顶层 `app` / `version` / `exported_at` 元数据，`data` 下按表名分组；records 的 `segments` 从 JSON 文本解析为数组（导出物更友好）；不含 `_migrations` 内部表
+  - 交互：点击后按钮禁用显示「导出中…」，失败 alert 提示错误；仅导出，导入留待后续评估
+  - 版本号：client `0.4.3`→`0.4.4`，server `0.3.4`→`0.3.5`，git tag `v0.4.4`（0.4 分支发布，merge 回 master）
+
+### Tests
+
+- 服务端：133 全绿（新增 export 路由 5 条：空库含默认科目 + 元数据/exported_at 格式、Content-Disposition 附件文件名、全量导出各表 + segments 解析、无 segments 保持 null、不含 _migrations）
+- 客户端：242 全绿（新增 exportApi 3 条：blob + Content-Disposition 文件名解析 / 无响应头回退默认名 / HTTP 错误抛出；App 导出 4 条：按钮管理模式门控 / 点击触发下载 / 导出中禁用态 / 失败 alert）
+
+### Docs
+
+- `CONTEXT.md` — 新增「数据导出」领域概念（含 Avoid 词：导入恢复、按日期范围过滤、CSV/原始 .db、包含内部表）
+- `README.md` — 功能列表新增数据导出条目 + API 表 `GET /api/export` + 项目结构 `routes/export.js`
+- `code/ROADMAP.md` — 💡 日常点子「数据库导出功能」移入已实现 + 版本头更新至 0.4.4
+- `CLAUDE.md` — 客户端结构表 App.jsx 补导出按钮、服务端结构表新增 export.js、测试表更新 api/App 描述
+- `code/client/TESTING.md` — 计数 235→242
+- `code/server/TESTING.md` — 计数 128→133，边界值清单补 export 行
+- `code/client/docs/CODE_STRUCTURE.md` — 依赖图新增 `App → exportApi → api`、App.jsx/exportApi 职责表
+
 ## [0.4.3] — 2026-08-27
 
 ### 版本线：0.4.x 维护

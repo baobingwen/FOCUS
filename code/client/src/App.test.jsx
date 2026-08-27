@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import App from './App';
-import { subjectsApi, recordsApi } from './utils/api';
+import { subjectsApi, recordsApi, exportApi } from './utils/api';
 import useFreezeOnLeave from './hooks/useFreezeOnLeave';
 
 vi.mock('./utils/api');
@@ -18,6 +18,13 @@ beforeEach(() => {
     total_study_ms: 0, total_rest_ms: 0, total_records: 0, by_subject: [],
   });
   recordsApi.list.mockResolvedValue({ records: [] });
+  exportApi.download.mockResolvedValue({
+    blob: new Blob(['{}'], { type: 'application/json' }),
+    filename: 'focus-export-20260706-123456.json',
+  });
+  // jsdom 不实现 URL.createObjectURL / revokeObjectURL，测试中 stub
+  URL.createObjectURL = vi.fn(() => 'blob:mock');
+  URL.revokeObjectURL = vi.fn();
 });
 
 describe('App', () => {
@@ -154,5 +161,74 @@ describe('App', () => {
 
     expect(screen.queryByText(/管理模式已开启/)).not.toBeInTheDocument();
     expect(screen.getByText('政治').closest('button').textContent).not.toContain('×');
+  });
+
+  // ──── 数据导出（管理模式横幅按钮）────
+
+  it('「导出数据」按钮仅在管理模式开启时显示', async () => {
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByText('🎯 FOCUS')).toBeInTheDocument();
+    });
+
+    // 日常：无导出按钮
+    expect(screen.queryByText('导出数据')).not.toBeInTheDocument();
+
+    // 管理模式：横幅出现导出按钮
+    await multiTapCountdown();
+    expect(screen.getByText('导出数据')).toBeInTheDocument();
+  });
+
+  it('点击「导出数据」调用 exportApi.download 并触发浏览器下载', async () => {
+    const clickSpy = vi.spyOn(HTMLAnchorElement.prototype, 'click')
+      .mockImplementation(() => {});
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByText('🎯 FOCUS')).toBeInTheDocument();
+    });
+    await multiTapCountdown();
+
+    await userEvent.click(screen.getByText('导出数据'));
+
+    await waitFor(() => {
+      expect(exportApi.download).toHaveBeenCalledTimes(1);
+      // 触发 <a download> 点击下载
+      expect(clickSpy).toHaveBeenCalledTimes(1);
+    });
+    expect(URL.createObjectURL).toHaveBeenCalled();
+    expect(URL.revokeObjectURL).toHaveBeenCalled();
+  });
+
+  it('导出中：按钮禁用并显示「导出中…」', async () => {
+    // Loading 态：保持 pending 不 resolve，避免 act 告警
+    exportApi.download.mockReturnValueOnce(new Promise(() => {}));
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByText('🎯 FOCUS')).toBeInTheDocument();
+    });
+    await multiTapCountdown();
+
+    await userEvent.click(screen.getByText('导出数据'));
+
+    await waitFor(() => {
+      expect(screen.getByText('导出中…')).toBeInTheDocument();
+    });
+    expect(screen.getByText('导出中…').closest('button')).toBeDisabled();
+  });
+
+  it('导出失败：alert 提示错误信息', async () => {
+    const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+    exportApi.download.mockRejectedValueOnce(new Error('导出数据失败'));
+    render(<App />);
+    await waitFor(() => {
+      expect(screen.getByText('🎯 FOCUS')).toBeInTheDocument();
+    });
+    await multiTapCountdown();
+
+    await userEvent.click(screen.getByText('导出数据'));
+
+    await waitFor(() => {
+      expect(alertSpy).toHaveBeenCalledWith('导出失败：导出数据失败');
+    });
   });
 });

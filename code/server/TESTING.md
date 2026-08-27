@@ -42,7 +42,8 @@ npm run test:watch
 │   ├── records.test.js     # 记录路由（74 条用例，含暂停/segments + PATCH 备注/标签/页数 + DELETE 删除 + records×标签/页数联动）
 │   ├── subjects.test.js    # 科目路由（13 条用例）
 │   ├── tags.test.js        # 标签路由（22 条用例，GET 排序/POST 幂等复用/DELETE 级联/PUT 全量重排）
-│   └── reminders.test.js   # 复习提醒路由（19 条用例，GET 排序/POST 校验递增/PATCH 修改/DELETE 删除）
+│   ├── reminders.test.js   # 复习提醒路由（19 条用例，GET 排序/POST 校验递增/PATCH 修改/DELETE 删除）
+│   └── export.test.js      # 数据导出路由（5 条用例，全量 JSON + 元数据/默认科目 + segments 解析 + 附件文件名 + 不含内部表）
 ├── jest.setup.cjs          # 环境变量初始化（CJS，在 ESM 加载前执行）
 └── package.json            # Jest 配置内联于此
 ```
@@ -180,6 +181,7 @@ app.get('/{*path}', handler);
 | `tags` | 重名幂等复用（200）、新建（201）、trim（200）、空名（400）、超 12 字（400）、DELETE 级联清关联（200）、标签不存在（404）、id 非数字（404） |
 | `PUT /tags/order` | 重排后 GET 顺序更新（200）、缺 id 非全量（400）、含不存在 id（400）、含重复（400）、ids 非数组（400）、含非正整数（400）、空库空数组幂等（200）、新标签排末尾（含经 records 创建的标签） |
 | `reminders` | GET 空库空数组（200）、按 sort_order 排序、POST 新增（201）/trim（201）/sort_order 递增（201）、内容为空/空白/缺失（400）、超 200 字（400）、恰好 200 字（201）、PATCH 修改（200）/不存在（404）/id 非数字（404）/空内容（400）/sort_order 不变、DELETE 删除（200）/不存在（404）/id 非数字（404）/多条互不影响 |
+| `GET /api/export` | 空库含默认科目（数学/英语/专业课）、exported_at 格式（YYYY-MM-DD HH:MM:SS）、附件文件名（focus-export-YYYYMMDD-HHMMSS.json）、全量导出各表 + segments JSON 文本解析为数组、无 segments 保持 null、不含 _migrations |
 
 ## 添加新测试
 
@@ -218,6 +220,7 @@ describe('GET /api/xxx', () => {
 | `__tests__/subjects.test.js` | 13 条用例，默认科目保护等 |
 | `__tests__/tags.test.js` | 22 条用例，GET 排序/POST 幂等复用/DELETE 级联/PUT 全量重排 |
 | `__tests__/reminders.test.js` | 19 条用例，GET 排序/POST 校验递增/PATCH 修改/DELETE 删除 |
+| `__tests__/export.test.js` | 5 条用例，全量 JSON 导出 + 元数据 + segments 解析 + 附件文件名 |
 | `jest.setup.cjs` | 环境变量初始化 |
 | `../database.js` | 支持 `DB_PATH` 环境变量和 `closeDb()` |
 | `../index.js` | 导出 `app`，测试环境不监听端口 |

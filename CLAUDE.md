@@ -76,7 +76,7 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 
 | 文件 | 说明 |
 |------|------|
-| `App.jsx` | 主布局 + 底部导航 + useTimer 调用（计时状态托管于此，跨标签切换不丢失）+ 全局管理模式 state/横幅（连点右上角考研倒计时进入，跨 tab 常驻）；`useFreezeOnLeave` 调用点已注释停用（v0.4.3，代码保留） |
+| `App.jsx` | 主布局 + 底部导航 + useTimer 调用（计时状态托管于此，跨标签切换不丢失）+ 全局管理模式 state/横幅（连点右上角考研倒计时进入，跨 tab 常驻；横幅内含「导出数据」按钮，点击全量导出 JSON 下载）；`useFreezeOnLeave` 调用点已注释停用（v0.4.3，代码保留） |
 | `components/TimerPage.jsx` | 计时器页面，5 状态机 (idle→studying→paused→rest_prompt→resting)，从 props 接收 timer；idle 态支持直接休息；暂停态支持继续和确认结束；学习中可点选/新增标签、累计复习页数（数字框 + +1/+5/+10 快捷芯片）；学习/暂停态大按钮始终居中，暂停/继续按钮悬浮右缘不占布局 |
 | `components/ReminderBar.jsx` | 复习方法和提醒条：学习中「结束学习」大按钮下方小字提醒（💡 浅灰不抢眼），每 15 分钟按插入顺序轮换下一条；提醒条旁 ＋ 弹框新增（随时记录）；管理模式开启时出现「管理」按钮 → 弹窗列表编辑/删除全部条目（AddModal/ManageModal 子组件） |
 | `components/ExamCountdown.jsx` | 考研倒计时（右上角常驻，写死 2026-12-19，过期自动隐藏）+ 全局管理模式隐藏入口（连点 5 下调用 onMultiTap，任何状态可见） |
@@ -103,6 +103,7 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 | `routes/subjects.js` | 科目 CRUD（默认科目不可删） |
 | `routes/tags.js` | 标签 CRUD：GET 全量（按 sort_order）、POST 幂等复用（≤12 字，排末尾）、PUT /order 批量重排（全量校验）、DELETE 级联清关联 |
 | `routes/reminders.js` | 复习提醒 CRUD：GET 全量（按 sort_order）、POST 新增（≤200 字，排末尾）、PATCH /:id 改内容、DELETE /:id 删除 |
+| `routes/export.js` | 数据导出：GET /api/export 全量导出五张业务表为 JSON 下载（含 app/version/exported_at 元数据，records 的 segments 解析为数组，不含 _migrations） |
 | `migrations/` | 增量 SQL 迁移脚本目录，按文件名排序执行，仅增不删改 |
 
 ### 数据库迁移系统
@@ -143,7 +144,7 @@ CREATE INDEX IF NOT EXISTS idx_records_notes ON records(notes);
 
 | 测试文件 | 说明 |
 |----------|------|
-| `utils/api.test.js` | fetch 封装测试 |
+| `utils/api.test.js` | fetch 封装测试（含 exportApi 下载/文件名解析/错误） |
 | `utils/clipboard.test.js` | 剪贴板复制工具测试 |
 | `hooks/useTimer.test.js` | 状态机全路径覆盖 |
 | `hooks/useFreezeOnLeave.test.js` | 页面离开冻结事件测试 |
@@ -153,7 +154,7 @@ CREATE INDEX IF NOT EXISTS idx_records_notes ON records(notes);
 | `components/HistoryPage.test.jsx` | 日期导航 + 列表 + 千层饼 + 备注编辑/复制 |
 | `components/TodayOverview.test.jsx` | 概览 + 条形图 |
 | `components/ExamCountdown.test.jsx` | 考研倒计时 |
-| `App.test.jsx` | Tab 切换 |
+| `App.test.jsx` | Tab 切换 + 管理模式 + 数据导出（按钮门控/触发下载/导出中/失败 alert） |
 
 用例数及合计见 [`code/client/TESTING.md`](code/client/TESTING.md)。
 
