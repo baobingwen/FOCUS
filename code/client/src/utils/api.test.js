@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { recordsApi, subjectsApi, tagsApi, remindersApi, exportApi } from './api';
+import { recordsApi, subjectsApi, tagsApi, remindersApi, exportApi, importApi } from './api';
 
 describe('recordsApi', () => {
   beforeEach(() => {
@@ -340,5 +340,45 @@ describe('exportApi', () => {
     });
 
     await expect(exportApi.download()).rejects.toThrow('导出数据失败');
+  });
+});
+
+describe('importApi', () => {
+  beforeEach(() => {
+    globalThis.fetch = vi.fn();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it('submit: 发送 POST 请求并传完整导出 payload', async () => {
+    const mockResult = { success: true, counts: { records: 1, subjects: 3 } };
+    globalThis.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve(mockResult),
+    });
+
+    const payload = {
+      app: 'FOCUS',
+      data: { records: [], subjects: [], tags: [], record_tags: [], reminder_items: [] },
+    };
+    const result = await importApi.submit(payload);
+    expect(result).toEqual(mockResult);
+    expect(fetch).toHaveBeenCalledWith('/api/import', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+  });
+
+  it('submit: HTTP 错误时抛出 Error', async () => {
+    globalThis.fetch.mockResolvedValue({
+      ok: false,
+      status: 400,
+      json: () => Promise.resolve({ error: '导入数据失败: NOT NULL constraint failed' }),
+    });
+
+    await expect(importApi.submit({})).rejects.toThrow('导入数据失败');
   });
 });

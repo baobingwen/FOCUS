@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.4.5] — 2026-08-28
+
+### 版本线：0.4.x 维护
+
+日常点子「数据库导入功能」落地——v0.4.4 数据导出的配对恢复能力：把导出的 JSON 文件重新恢复到本地，语义 =「恢复到导出时状态」（全量替换）。
+
+### Added
+
+- **数据导入（管理模式）**：管理模式横幅「导入数据」按钮（「导出数据」旁）→ `POST /api/import` 全量替换恢复。
+  - 语义：事务内清空五张业务表（records / subjects / tags / record_tags / reminder_items）后按导入数据原样插入（保留原 id，record_tags 引用一致）；任何一行不合法（NOT NULL / UNIQUE / CHECK 约束）整个事务回滚、导入不生效
+  - 数据流：前端读文件 → 解析并校验顶层结构（`app`=FOCUS、`data` 五表均为数组）→ 确认弹窗（文件名/导出时间/来源版本/导入统计/红字风险提示「将替换当前全部数据」）→ 确认后提交；弹窗内含「先下载当前备份」入口（复用导出 API）
+  - 成功后 alert「导入完成」→ 整页刷新（数据重拉、计时器回 idle、管理模式退出）；失败 alert 错误信息、弹窗保持可重试
+  - 学习中（计时非空闲态）点击导入提示「请先结束当前学习」；不补默认科目，完全信任文件内容
+  - 服务端：新增 `routes/import.js`（records 的 segments 数组序列化回 TEXT 存储，与导出解析对称）；`express.json` limit 调大至 10mb；客户端：`importApi` + App 导入流程（下载逻辑抽 `downloadBlob` 供导出/备份共用）
+  - 版本号：client `0.4.4`→`0.4.5`，server `0.3.5`→`0.3.6`，git tag `v0.4.5`（0.4 分支发布，merge 回 master）
+
+### Tests
+
+- 服务端：140 全绿（新增 import 路由 7 条：空五表信任文件清空默认科目 / 全量替换旧数据消失保留原 id 与引用 / segments 序列化与再导出对称 / app 非 FOCUS 400 / data 缺表 400 / NOT NULL 违反整体回滚旧数据保留 / sqlite_sequence 续接）
+- 客户端：254 全绿（新增 importApi 2 条 + App 导入交互 10 条：按钮管理模式门控 / 学习中禁止 / 文件解析确认弹窗（文件名/统计/风险提示）/ 取消 / 先下载当前备份 / 确认导入整页刷新 / 导入中禁用态 / 失败 alert 可重试 / 非法 JSON / app 非 FOCUS）
+
+### Docs
+
+- `docs/adr/0010-data-export-import.md` — 新增数据导出与导入设计文档（备份/恢复配对方案）
+- `CONTEXT.md` — 新增「数据导入」领域概念（含 Avoid 词：合并/增量导入、按 id 覆盖、补默认科目、multipart 上传）
+- `README.md` — 功能列表新增数据导入条目 + API 表 `POST /api/import` + 项目结构 `routes/import.js`
+- `code/ROADMAP.md` — 💡 日常点子「数据库导入功能」移入已实现 + 版本头更新至 0.4.5
+- `CLAUDE.md` — App.jsx/importApi/routes/import.js/测试表补导入
+- `code/client/TESTING.md` — 计数 242→254
+- `code/server/TESTING.md` — 计数 133→140，边界值清单补 import 行
+- `code/client/docs/CODE_STRUCTURE.md` — 依赖图新增 `App → importApi → api`、App.jsx/importApi 职责与状态
+- `docs/INDEX.md` — ADR 0010 索引
+
 ## [0.4.4] — 2026-08-27
 
 ### 版本线：0.4.x 维护

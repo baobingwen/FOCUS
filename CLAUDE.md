@@ -76,7 +76,7 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 
 | 文件 | 说明 |
 |------|------|
-| `App.jsx` | 主布局 + 底部导航 + useTimer 调用（计时状态托管于此，跨标签切换不丢失）+ 全局管理模式 state/横幅（连点右上角考研倒计时进入，跨 tab 常驻；横幅内含「导出数据」按钮，点击全量导出 JSON 下载）；`useFreezeOnLeave` 调用点已注释停用（v0.4.3，代码保留） |
+| `App.jsx` | 主布局 + 底部导航 + useTimer 调用（计时状态托管于此，跨标签切换不丢失）+ 全局管理模式 state/横幅（连点右上角考研倒计时进入，跨 tab 常驻；横幅内含「导出数据」按钮点击全量导出 JSON 下载、「导入数据」按钮选文件 → 确认弹窗（文件信息/导入统计/风险提示/先下载当前备份）→ 提交导入成功提示后整页刷新，学习中禁止导入）；`useFreezeOnLeave` 调用点已注释停用（v0.4.3，代码保留） |
 | `components/TimerPage.jsx` | 计时器页面，5 状态机 (idle→studying→paused→rest_prompt→resting)，从 props 接收 timer；idle 态支持直接休息；暂停态支持继续和确认结束；学习中可点选/新增标签、累计复习页数（数字框 + +1/+5/+10 快捷芯片）；学习/暂停态大按钮始终居中，暂停/继续按钮悬浮右缘不占布局 |
 | `components/ReminderBar.jsx` | 复习方法和提醒条：学习中「结束学习」大按钮下方小字提醒（💡 浅灰不抢眼），每 15 分钟按插入顺序轮换下一条；提醒条旁 ＋ 弹框新增（随时记录）；管理模式开启时出现「管理」按钮 → 弹窗列表编辑/删除全部条目（AddModal/ManageModal 子组件） |
 | `components/ExamCountdown.jsx` | 考研倒计时（右上角常驻，写死 2026-12-19，过期自动隐藏）+ 全局管理模式隐藏入口（连点 5 下调用 onMultiTap，任何状态可见） |
@@ -89,7 +89,7 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 | `hooks/useTimer.js` | 极简计时器，使用 Date.now() 绝对时间戳，含 freeze/thaw 冻结机制（v0.4.3 起冻结未接入，代码保留） |
 | `hooks/useFreezeOnLeave.js` | 离开页面自动冻结 — 监听 visibilitychange/blur/focus，调用 freeze/thaw（v0.4.3 起 App 调用点注释停用，代码保留） |
 | `hooks/useMultiTap.js` | 连点检测 — count 次点击（间隔 ≤windowMs，超时重置）触发 onComplete，管理模式隐藏入口共用 |
-| `utils/api.js` | fetch 封装 |
+| `utils/api.js` | fetch 封装（recordsApi / subjectsApi / tagsApi / remindersApi / exportApi 下载 / importApi 提交导入） |
 | `utils/clipboard.js` | 剪贴板复制工具（navigator.clipboard + execCommand 降级） |
 | `utils/fmtTime.js` | 时长格式化工具：`fmtTime`（中文时长"1小时30分"）+ `fmtClock`（HH:MM:SS/MM:SS，计时页用）+ `fmtShortClock`（MM:SS，历史页/千层饼用） |
 
@@ -104,6 +104,7 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 | `routes/tags.js` | 标签 CRUD：GET 全量（按 sort_order）、POST 幂等复用（≤12 字，排末尾）、PUT /order 批量重排（全量校验）、DELETE 级联清关联 |
 | `routes/reminders.js` | 复习提醒 CRUD：GET 全量（按 sort_order）、POST 新增（≤200 字，排末尾）、PATCH /:id 改内容、DELETE /:id 删除 |
 | `routes/export.js` | 数据导出：GET /api/export 全量导出五张业务表为 JSON 下载（含 app/version/exported_at 元数据，records 的 segments 解析为数组，不含 _migrations） |
+| `routes/import.js` | 数据导入：POST /api/import 全量替换恢复（事务内清空五表后按导入数据原样插入保留原 id，顶层校验 app/data 五表，行级 SQLite 约束兜底，任何一行不合法整体回滚；records 的 segments 数组序列化回 TEXT；express.json limit 调大至 10mb） |
 | `migrations/` | 增量 SQL 迁移脚本目录，按文件名排序执行，仅增不删改 |
 
 ### 数据库迁移系统
@@ -144,7 +145,7 @@ CREATE INDEX IF NOT EXISTS idx_records_notes ON records(notes);
 
 | 测试文件 | 说明 |
 |----------|------|
-| `utils/api.test.js` | fetch 封装测试（含 exportApi 下载/文件名解析/错误） |
+| `utils/api.test.js` | fetch 封装测试（含 exportApi 下载/文件名解析/错误 + importApi 提交导入/错误） |
 | `utils/clipboard.test.js` | 剪贴板复制工具测试 |
 | `hooks/useTimer.test.js` | 状态机全路径覆盖 |
 | `hooks/useFreezeOnLeave.test.js` | 页面离开冻结事件测试 |
@@ -154,7 +155,7 @@ CREATE INDEX IF NOT EXISTS idx_records_notes ON records(notes);
 | `components/HistoryPage.test.jsx` | 日期导航 + 列表 + 千层饼 + 备注编辑/复制 |
 | `components/TodayOverview.test.jsx` | 概览 + 条形图 |
 | `components/ExamCountdown.test.jsx` | 考研倒计时 |
-| `App.test.jsx` | Tab 切换 + 管理模式 + 数据导出（按钮门控/触发下载/导出中/失败 alert） |
+| `App.test.jsx` | Tab 切换 + 管理模式 + 数据导出（按钮门控/触发下载/导出中/失败 alert）+ 数据导入（按钮门控/学习中禁止/文件解析确认弹窗/备份下载/确认导入整页刷新/失败/非法文件） |
 
 用例数及合计见 [`code/client/TESTING.md`](code/client/TESTING.md)。
 

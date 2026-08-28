@@ -49,6 +49,10 @@ _Avoid_: 删除按钮常态可见、软删除/撤销、批量删除、修改类�
 管理模式内一键把全部数据导出为 JSON 文件下载的备份功能。覆盖五张业务表（records / subjects / tags / record_tags / reminder_items），顶层带 `app` / `version` / `exported_at` 元数据，`data` 下按表名分组。records 的 `segments` 字段从数据库里的 JSON 文本解析为数组（导出物更友好），其余字段保持数据库原值。不含 `_migrations` 内部表。
 _Avoid_: 按日期范围过滤、CSV / 原始 .db 文件、包含内部表
 
+**数据导入**：
+把导出的 JSON 文件恢复到本地的功能，与数据导出配对，语义为「恢复到导出时状态」。事务内先清空五张业务表（records / subjects / tags / record_tags / reminder_items），再按导入数据原样插入——保留原 id，record_tags 的引用关系因此保持一致；不补默认科目，完全信任文件内容。管理模式横幅「导入数据」按钮进入：选文件 → 前端读取并解析、校验顶层结构（`app` = FOCUS、`data` 五表均为数组）→ 确认弹窗展示文件信息与导入统计（学习记录数/科目数/标签数/提醒数）→ POST /api/import 提交。服务端以 SQLite 约束兜底（NOT NULL / UNIQUE），任何一行数据不合法则整个事务回滚、导入不生效。确认弹窗内可先下载当前数据备份；导入成功后提示并整页刷新。学习中（计时非空闲态）不允许导入——先结束当前学习再导入。
+_Avoid_: 合并/增量导入、按 id 覆盖、导入时补默认科目、multipart 上传文件
+
 ## Flow
 
 初始状态为空闲态。

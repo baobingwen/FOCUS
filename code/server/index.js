@@ -9,6 +9,7 @@ import { subjectsRouter } from './routes/subjects.js';
 import { tagsRouter } from './routes/tags.js';
 import { remindersRouter } from './routes/reminders.js';
 import { exportRouter } from './routes/export.js';
+import { importRouter } from './routes/import.js';
 
 /**
  * @import { Server } from 'http'
@@ -24,7 +25,8 @@ getDb();
 
 // 中间件
 app.use(cors());
-app.use(express.json());
+// limit 调大：导入请求携带完整导出 JSON（个人全量数据可能超过默认 100kb）
+app.use(express.json({ limit: '10mb' }));
 
 // 健康检查 + 版本信息
 import { getVersion } from './version.js';
@@ -43,6 +45,7 @@ app.use('/api/subjects', subjectsRouter);
 app.use('/api/tags', tagsRouter);
 app.use('/api/reminders', remindersRouter);
 app.use('/api/export', exportRouter);
+app.use('/api/import', importRouter);
 
 // 生产环境：托管前端构建文件
 const clientDist = path.join(__dirname, '..', 'client', 'dist');

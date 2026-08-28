@@ -98,6 +98,19 @@ function parseFilename(disposition) {
   return match ? match[1] : null;
 }
 
+export const importApi = {
+  /**
+   * 导入全部数据（全量替换，body 为完整导出 JSON 结构）
+   * @param {object} payload - 完整导出 JSON（含 app 与 data 五表）
+   * @returns {Promise<{ success: boolean, counts: object }>}
+   */
+  submit: (payload) =>
+    request('/import', {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+};
+
 export const exportApi = {
   /**
    * 导出全部数据为 JSON 文件（管理模式横幅按钮使用）

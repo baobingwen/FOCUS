@@ -1,6 +1,6 @@
 # FOCUS 路线图
 
-> 客户端：0.4.4 · 服务端：0.3.5 · git tag: v0.4.4 — 最新：数据导出（管理模式横幅按钮，全量 JSON 下载）
+> 客户端：0.4.5 · 服务端：0.3.6 · git tag: v0.4.5 — 最新：数据导入（管理模式导入按钮，从导出 JSON 全量替换恢复）
 
 ## 已实现
 
@@ -30,6 +30,7 @@
 - ✅ v0.4.1 代码结构拆分：HistoryPage 拆出 RecordCard（单条记录卡片纯展示壳）+ SegmentStack（千层饼）独立组件；格式化函数合并入 utils/fmtTime.js（fmtClock/fmtShortClock，中文 fmtTime 不动）；纯搬家行为不变，测试通过（[结构总览](code/client/docs/CODE_STRUCTURE.md) · [改动说明](code/client/docs/adr/0001-v0.4.1-code-structure-changes.md)）
 - ✅ 复习方法和提醒区：用户自维护的提醒语句库（后端新表 `reminder_items` + `/api/reminders` CRUD），学习中「结束学习」大按钮下方小字提醒条展示一条（💡 浅灰不抢眼），每 15 分钟按插入顺序自动轮换（1→2→3→1…）；学习中提醒条旁点 ＋ 弹框新增（随时记录）；管理模式内「管理」按钮 → 弹窗列表编辑/删除全部条目；数据存后端跨设备可见，仅学习中显示
 - ✅ 数据导出（管理模式）：管理模式横幅「导出数据」按钮一键全量导出五张业务表（records/subjects/tags/record_tags/reminder_items）为 JSON 文件下载（`GET /api/export`，文件名 `focus-export-YYYYMMDD-HHMMSS.json`）；导出物含 `app`/`version`/`exported_at` 元数据，records 的 `segments` 解析为数组，不含 `_migrations` 内部表；点击后按钮禁用显示「导出中…」，失败 alert 提示；仅导出，导入留待后续评估
+- ✅ 数据导入（管理模式）：管理模式横幅「导入数据」按钮，把导出的 JSON 文件恢复到本地（`POST /api/import`），与导出配对，语义 = 恢复到导出时状态——事务内清空五张业务表后按导入数据原样插入（保留原 id，record_tags 引用一致），任何一行不合法整个事务回滚；前端读文件 → 校验顶层结构（app=FOCUS、data 五表）→ 确认弹窗展示文件信息/导入统计/风险提示 +「先下载当前备份」入口 → 确认后导入；导入成功提示后整页刷新；学习中（计时非空闲态）禁止导入；不补默认科目，完全信任文件（[设计文档](docs/adr/0010-data-export-import.md)）
 
 ## 推荐方向（按优先级）
 

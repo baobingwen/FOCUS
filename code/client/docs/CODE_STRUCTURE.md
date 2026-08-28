@@ -33,6 +33,7 @@ graph TD
     App --> HistoryPage
     App --> ExamCountdown
     App -->|exportApi| api
+    App -->|importApi| api
 
     TimerPage --> SubjectSelector
     TimerPage --> TagPicker
@@ -66,7 +67,7 @@ graph TD
 
 | 文件                             | 职责                                                                               | 持有状态                                                                                                       |
 | -------------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `App.jsx`                        | 主布局 + 底部导航 + 计时状态托管（useTimer）+ 全局管理模式 state/横幅（含「导出数据」按钮，导出中/失败提示） | 是（timer、adminMode、exporting）                                                                              |
+| `App.jsx`                        | 主布局 + 底部导航 + 计时状态托管（useTimer）+ 全局管理模式 state/横幅（含「导出数据」按钮导出中/失败提示、「导入数据」按钮文件解析/确认弹窗/备份下载/导入中/整页刷新） | 是（timer、adminMode、exporting、importing、importPreview）                                                                              |
 | `components/TimerPage.jsx`       | 计时器 5 状态机渲染（idle→studying→paused→rest_prompt→resting）+ 保存学习/休息记录 | 是（saving/toast/结束确认弹窗）                                                                                |
 | `components/HistoryPage.jsx`     | 历史记录页面：日期导航 + 列表加载 + 全部编辑/删除/复制/筛选逻辑                    | 是（9 个编辑状态：editingId/draft/draftTags/draftPages/savingId/editError/copyFeedback/deleteError/filterTag） |
 | `components/RecordCard.jsx`      | 单条记录卡片渲染（查看态 + ✏️ 编辑态表单 + 删除按钮 + 千层饼 + 时间戳）            | 否（纯展示壳，所有状态与回调由 HistoryPage 通过 props 传入）                                                   |
@@ -78,7 +79,7 @@ graph TD
 | `hooks/useTimer.js`              | 计时状态机 + freeze/thaw 冻结机制                                                  | 是（计时核心）                                                                                                 |
 | `hooks/useFreezeOnLeave.js`      | 页面离开自动冻结                                                                   | 否（调用传入的 freeze/thaw）                                                                                   |
 | `hooks/useMultiTap.js`           | 连点检测                                                                           | 否                                                                                                             |
-| `utils/api.js`                   | fetch 封装（recordsApi / subjectsApi / tagsApi / exportApi）                       | 否                                                                                                             |
+| `utils/api.js`                   | fetch 封装（recordsApi / subjectsApi / tagsApi / remindersApi / exportApi / importApi）             | 否                                                                                                             |
 | `utils/clipboard.js`             | 剪贴板复制（navigator.clipboard + execCommand 降级）                               | 否                                                                                                             |
 | `utils/fmtTime.js`               | 时长格式化纯函数（fmtTime / fmtClock / fmtShortClock）                             | 否                                                                                                             |
 
@@ -94,7 +95,7 @@ graph TD
 
 | 测试文件                              | 被测单元                                                                | 层级                   |
 | ------------------------------------- | ----------------------------------------------------------------------- | ---------------------- |
-| `App.test.jsx`                        | App 布局与 Tab 切换 + 管理模式 + 数据导出                                 | 集成                   |
+| `App.test.jsx`                        | App 布局与 Tab 切换 + 管理模式 + 数据导出 + 数据导入                              | 集成                   |
 | `components/TimerPage.test.jsx`       | TimerPage 5 态 + 保存/休息/暂停/冻结 UI                                 | 组件                   |
 | `components/HistoryPage.test.jsx`     | HistoryPage 页面级逻辑（加载/日期导航/编辑流/复制/筛选/删除 confirm）   | 组件（页面）           |
 | `components/RecordCard.test.jsx`      | RecordCard 查看态/编辑态渲染 + 回调转发 + 千层饼显示条件 + 管理模式按钮 | 组件（卡片直测 props） |
@@ -106,7 +107,7 @@ graph TD
 | `hooks/useTimer.test.js`              | 计时状态机全路径                                                        | 单元                   |
 | `hooks/useFreezeOnLeave.test.js`      | 页面离开冻结事件                                                        | 单元                   |
 | `hooks/useMultiTap.test.js`           | 连点检测                                                                | 单元                   |
-| `utils/api.test.js`                   | fetch 封装                                                              | 单元                   |
+| `utils/api.test.js`                   | fetch 封装（含 exportApi / importApi）                                    | 单元                   |
 | `utils/clipboard.test.js`             | 剪贴板工具                                                              | 单元                   |
 | `utils/fmtTime.test.js`               | 三个格式化函数                                                          | 单元                   |
 

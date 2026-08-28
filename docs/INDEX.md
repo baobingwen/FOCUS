@@ -54,6 +54,7 @@
 | `docs/adr/0007-record-delete.md` | `docs/adr/` | 历史记录删除 — 连点 5 下标题进入隐藏管理模式、卡片删除按钮、单条硬删除（DELETE /records/:id） |
 | `docs/adr/0008-global-admin-mode.md` | `docs/adr/` | 全局管理模式 — 删除类功能（记录/科目/标签删除 + 排序）统一收进隐藏模式、App 级开关跨 tab 常驻、useMultiTap hook |
 | `docs/adr/0009-review-reminders.md` | `docs/adr/` | 复习方法和提醒区 — 用户自维护提醒语句库、学习中提醒条 15 分钟顺序轮换、点＋新增、管理模式弹窗管理、后端新表存储 |
+| `docs/adr/0010-data-export-import.md` | `docs/adr/` | 数据导出与导入 — 备份/恢复配对方案：导出 JSON 下载（v0.4.4）、导入全量替换恢复（事务内清空五表原样插入、确认弹窗、学习中禁止、整页刷新） |
 | `code/client/docs/CODE_STRUCTURE.md` | `code/client/docs/` | 客户端代码结构关系 — 源码依赖图（mermaid）、文件职责与状态归属、格式化函数分工、测试文件对应关系 |
 | `code/client/docs/adr/0001-v0.4.1-code-structure-changes.md` | `code/client/docs/adr/` | v0.4.1 结构拆分改动说明 — HistoryPage 拆出 RecordCard/SegmentStack、格式化函数并入 utils/fmtTime.js，前后依赖图对比 + 文件直接映射 + 行为不变保证 |
 
