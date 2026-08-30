@@ -16,6 +16,7 @@ This repo contains two projects:
 | `master` | 日常开发基线，含迁移系统、健康检查、本地部署脚本；每次发布后 merge 回 master 保持最新 |
 | `0.3` | 0.3.x 补丁版本发布线（v0.3.1 起，v0.3.4 完结）：0.3.x 的开发与 tag 打于此，已 merge 回 master |
 | `0.4` | 0.4.x 版本发布线（v0.4.0 起，管理模式主线）：管理模式从历史页局部功能逐步清晰为全局设计；0.4.x 的开发与 tag 打于此，每次发布后 merge 回 master |
+| `0.5` | 0.5.x 版本发布线（v0.5.0 起，无后端 Local-First 主线）：无后端方案的开发与 tag 打于此，每次发布后 merge 回 master |
 | `feat/deploy` | Fly.io 部署方案档案（Dockerfile + fly.toml + DEPLOY_FLYIO.md），因注册需外币卡暂搁置 |
 | `feat/local-deploy` | 已合入 master，本地 + Tailscale 部署方案 |
 
@@ -24,6 +25,8 @@ This repo contains two projects:
 ### FOCUS (主项目)
 
 ```bash
+# === 服务端版（默认形态，数据存后端 SQLite）===
+
 # Start backend (Express + SQLite, port 3001)
 cd code/server && npm run dev
 
@@ -40,16 +43,26 @@ cd code/server && npm start
 cd code && pwsh -File build-client.ps1
 # 或 Windows 资源管理器双击 code/build-client.ps1
 
-# Run server tests (Jest 30 + supertest, 内存 SQLite)
-cd code/server && npm test
+# === 纯静态版（无后端，数据存浏览器 IndexedDB）===
 
-# Watch mode
+# 开发（无需后端）
+cd code/client && npm run dev:static
+
+# 构建（产物 dist-static/）+ 预览
+cd code/client && npm run build:static
+npx vite preview --outDir dist-static
+
+# 手动构建脚本
+cd code && pwsh -File build-client-static.ps1
+
+# === 测试 ===
+
+# Server tests (Jest 30 + supertest, 内存 SQLite) / watch
+cd code/server && npm test
 cd code/server && npm run test:watch
 
-# Run client tests (Vitest + React Testing Library)
+# Client tests (Vitest + React Testing Library) / watch
 cd code/client && npm test
-
-# Watch mode
 cd code/client && npm run test:watch
 ```
 
@@ -69,8 +82,10 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 
 ### 技术栈
 - **客户端**: React 18 + Vite 6 + Tailwind CSS 3
-- **服务端**: Express 5 (ESM) + better-sqlite3 (WAL 模式)
-- **数据库**: SQLite 单文件，开发用 `server/data/focus.db`，手机访问用 `/data/focus.db`（Tailscale）
+- **服务端**（服务端版）: Express 5 (ESM) + better-sqlite3 (WAL 模式)
+- **数据存储**:
+  - 服务端版: SQLite 单文件，开发用 `server/data/focus.db`，手机访问用 `/data/focus.db`（Tailscale）
+  - 纯静态版: 浏览器 IndexedDB（`focus-db` 库，五个对象仓库 1:1 对应五张表）
 
 ### 客户端结构 (`code/client/src/`)
 
@@ -89,7 +104,9 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 | `hooks/useTimer.js` | 极简计时器，使用 Date.now() 绝对时间戳，含 freeze/thaw 冻结机制（v0.4.3 起冻结未接入，代码保留） |
 | `hooks/useFreezeOnLeave.js` | 离开页面自动冻结 — 监听 visibilitychange/blur/focus，调用 freeze/thaw（v0.4.3 起 App 调用点注释停用，代码保留） |
 | `hooks/useMultiTap.js` | 连点检测 — count 次点击（间隔 ≤windowMs，超时重置）触发 onComplete，管理模式隐藏入口共用 |
-| `utils/api.js` | fetch 封装（recordsApi / subjectsApi / tagsApi / remindersApi / exportApi 下载 / importApi 提交导入） |
+| `utils/api.js` | 数据访问入口——按构建开关 `VITE_DATA_LAYER`（rest/local）分发到 apiRest/apiLocal，组件只 import 此入口 |
+| `utils/apiRest.js` | 服务端版使用，REST 数据层实现，fetch 封装：recordsApi / subjectsApi / tagsApi / remindersApi / exportApi 下载 / importApi 提交导入 |
+| `utils/apiLocal.js` | 纯静态版本使用，IndexedDB 数据层实现，`focus-db` 库五仓库 1:1 模拟五表，含 CRUD/排序/幂等/级联/种子数据/今日概览/导出导入本地实现 |
 | `utils/clipboard.js` | 剪贴板复制工具（navigator.clipboard + execCommand 降级） |
 | `utils/fmtTime.js` | 时长格式化工具：`fmtTime`（中文时长"1小时30分"）+ `fmtClock`（HH:MM:SS/MM:SS，计时页用）+ `fmtShortClock`（MM:SS，历史页/千层饼用） |
 
@@ -145,7 +162,9 @@ CREATE INDEX IF NOT EXISTS idx_records_notes ON records(notes);
 
 | 测试文件 | 说明 |
 |----------|------|
-| `utils/api.test.js` | fetch 封装测试（含 exportApi 下载/文件名解析/错误 + importApi 提交导入/错误） |
+| `utils/api.test.js` | 数据访问入口分发测试 |
+| `utils/apiRest.test.js` | REST 数据层测试（含 exportApi 下载/文件名解析/错误 + importApi 提交导入/错误） |
+| `utils/apiLocal.test.js` | 本地数据层测试（fake-indexeddb 直测：CRUD/排序/标签幂等/级联删除/种子数据/今日概览/导出结构/导入事务回滚与校验） |
 | `utils/clipboard.test.js` | 剪贴板复制工具测试 |
 | `hooks/useTimer.test.js` | 状态机全路径覆盖 |
 | `hooks/useFreezeOnLeave.test.js` | 页面离开冻结事件测试 |
@@ -203,5 +222,7 @@ code/start-local.bat
 - **双轨时间**: Date.now() 绝对时间戳，锁屏休眠恢复后精准咬合
 - **科目**: 一级分类，固定列表 + 用户自定义
 - **标签**: 科目之下的知识点二级细分，扁平全局库，一条记录可挂多个；统计按「科目 × 标签」交叉，重名幂等复用
+- **数据层**: 组件依赖统一数据访问入口（utils/api.js），构建开关 `VITE_DATA_LAYER` 分发到 REST（apiRest.js，服务端版）或 IndexedDB（apiLocal.js，纯静态版）
+- **双版本**: 同一代码库产出服务端版（默认构建，REST + SQLite）与纯静态版（build:static，IndexedDB 五仓库）；功能/界面一致，导出文件互通
 - **复习提醒**: 用户自维护的提醒语句库，学习中「结束学习」大按钮下方小字提醒条展示一条、每 15 分钟顺序轮换，点 ＋ 随时新增，管理模式内编辑/删除；存后端 `reminder_items` 表
-- **部署**: 本地 + Tailscale 优先，Fly.io 方案备选
+- **部署**: 本地 + Tailscale 优先，纯静态版可部署静态托管（GitHub Pages 方案见路线图迭代 B），Fly.io 方案备选

@@ -1,6 +1,6 @@
 # FOCUS 客户端代码结构关系
 
-> 当前版本：v0.4.1（结构变动见 [adr/0001-v0.4.1-code-structure-changes.md](adr/0001-v0.4.1-code-structure-changes.md)）
+> 当前版本：v0.5.0（数据层双实现结构变动见 [docs/adr/0011-no-backend-local-first.md](../../../docs/adr/0011-no-backend-local-first.md)；v0.4.1 结构拆分见 [adr/0001-v0.4.1-code-structure-changes.md](adr/0001-v0.4.1-code-structure-changes.md)）
 
 ## 源码依赖图
 
@@ -24,6 +24,8 @@ graph TD
     useMultiTap[hooks/useMultiTap.js]
     %% utils
     api[utils/api.js]
+    apiRest[utils/apiRest.js]
+    apiLocal[utils/apiLocal.js]
     clipboard[utils/clipboard.js]
     fmtTime[utils/fmtTime.js]
 
@@ -59,6 +61,10 @@ graph TD
     TagPicker --> Sortable
 
     ExamCountdown --> useMultiTap
+
+    %% 数据层分发：组件只依赖 api 统一入口
+    api -->|VITE_DATA_LAYER=rest| apiRest
+    api -->|VITE_DATA_LAYER=local| apiLocal
 ```
 
 > 说明：`useFreezeOnLeave` 不 import `useTimer`，通过 App 层把 timer 的 freeze/thaw 作为参数传入（运行时依赖）；`useTimer`/`useMultiTap`/`utils/*` 不 import 任何项目内模块。
@@ -79,7 +85,9 @@ graph TD
 | `hooks/useTimer.js`              | 计时状态机 + freeze/thaw 冻结机制                                                  | 是（计时核心）                                                                                                 |
 | `hooks/useFreezeOnLeave.js`      | 页面离开自动冻结                                                                   | 否（调用传入的 freeze/thaw）                                                                                   |
 | `hooks/useMultiTap.js`           | 连点检测                                                                           | 否                                                                                                             |
-| `utils/api.js`                   | fetch 封装（recordsApi / subjectsApi / tagsApi / remindersApi / exportApi / importApi）             | 否                                                                                                             |
+| `utils/api.js`                   | 数据访问统一入口——按构建开关 `VITE_DATA_LAYER`（rest/local）分发到 apiRest/apiLocal，组件只依赖此入口 | 否                                                                                                             |
+| `utils/apiRest.js`               | REST 数据层实现（fetch 封装：recordsApi / subjectsApi / tagsApi / remindersApi / exportApi / importApi），服务端版使用 | 否                                                                                                             |
+| `utils/apiLocal.js`              | IndexedDB 数据层实现（`focus-db` 库五仓库 1:1 模拟五表，CRUD/排序/幂等/级联/种子/今日概览/导出导入本地实现），纯静态版使用 | 否（数据在浏览器）                                                                                             |
 | `utils/clipboard.js`             | 剪贴板复制（navigator.clipboard + execCommand 降级）                               | 否                                                                                                             |
 | `utils/fmtTime.js`               | 时长格式化纯函数（fmtTime / fmtClock / fmtShortClock）                             | 否                                                                                                             |
 
@@ -107,7 +115,9 @@ graph TD
 | `hooks/useTimer.test.js`              | 计时状态机全路径                                                        | 单元                   |
 | `hooks/useFreezeOnLeave.test.js`      | 页面离开冻结事件                                                        | 单元                   |
 | `hooks/useMultiTap.test.js`           | 连点检测                                                                | 单元                   |
-| `utils/api.test.js`                   | fetch 封装（含 exportApi / importApi）                                    | 单元                   |
+| `utils/api.test.js`                   | 数据访问入口分发（VITE_DATA_LAYER 不同值导出不同实现）                  | 单元                   |
+| `utils/apiRest.test.js`               | REST 数据层（fetch 封装，含 exportApi / importApi）                     | 单元                   |
+| `utils/apiLocal.test.js`              | 本地数据层（fake-indexeddb 直测：CRUD/排序/幂等/级联/种子/统计/导出/导入事务） | 单元                |
 | `utils/clipboard.test.js`             | 剪贴板工具                                                              | 单元                   |
 | `utils/fmtTime.test.js`               | 三个格式化函数                                                          | 单元                   |
 

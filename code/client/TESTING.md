@@ -18,6 +18,7 @@ npm run test:watch   # 监听模式
 | **@testing-library/jest-dom** | — | 自定义 DOM 匹配器 (toBeInTheDocument 等) |
 | **@testing-library/user-event** | — | 用户交互模拟（更贴近浏览器行为） |
 | **jsdom** | — | 浏览器环境模拟 |
+| **fake-indexeddb** | — | 内存 IndexedDB 实现（本地数据层测试） |
 
 依赖已在 `package.json#devDependencies` 中，`vitest.config.js` 配置在项目根。
 
@@ -109,6 +110,25 @@ vi.mock('sortablejs', () => {
 });
 ```
 
+#### 6. IndexedDB（本地数据层测试）
+
+`utils/apiLocal.test.js` 用 `fake-indexeddb` 的 `auto` 入口在 jsdom 注入内存 IndexedDB，**直接驱动真实 IndexedDB API** 测试本地数据层（不 mock 数据层本身）；每个测试前 `__closeLocalDb()` 关闭连接 + `indexedDB.deleteDatabase('focus-db')` 重置——重建库会再次触发建库并写入默认科目种子：
+
+```js
+import 'fake-indexeddb/auto';
+import { __closeLocalDb } from './apiLocal';
+
+beforeEach(async () => {
+  __closeLocalDb();
+  await new Promise((resolve) => {
+    const req = indexedDB.deleteDatabase('focus-db');
+    req.onsuccess = () => resolve();
+    req.onerror = () => resolve();
+    req.onblocked = () => resolve();
+  });
+});
+```
+
 ### Loading 态测试
 
 将 API mock 返回永远不会 resolve 的 Promise，避免组件状态异步更新导致 `act()` 警告：
@@ -124,8 +144,12 @@ recordsApi.todayOverview.mockReturnValueOnce(new Promise(() => {}));
 src/
 ├── test-setup.js              # 全局测试 setup
 ├── utils/
-│   ├── api.js
-│   ├── api.test.js            # API 层 25 条（含 tagsApi 5 条 + remindersApi 4 条 + exportApi 3 条 + importApi 2 条）
+│   ├── api.js                 # 数据访问统一入口（按构建开关 VITE_DATA_LAYER 分发数据层）
+│   ├── api.test.js            # 分发入口 2 条（默认走 REST / local 走本地实现）
+│   ├── apiRest.js             # REST 数据层实现（服务端版）
+│   ├── apiRest.test.js        # REST 层 25 条（含 tagsApi 5 条 + remindersApi 4 条 + exportApi 3 条 + importApi 2 条）
+│   ├── apiLocal.js            # IndexedDB 数据层实现（纯静态版，五仓库 1:1 模拟五表）
+│   ├── apiLocal.test.js       # 本地数据层 41 条（fake-indexeddb 直测：种子/CRUD/排序/幂等/级联/统计/导出结构/导入事务）
 │   ├── clipboard.js
 │   ├── clipboard.test.js      # 剪贴板复制工具 3 条
 │   ├── fmtTime.js             # 时长格式化（fmtTime 中文 + fmtClock + fmtShortClock）
@@ -160,14 +184,15 @@ src/
     └── TodayOverview.test.jsx  # 概览 + 条形图 + 按标签分组 + 页数汇总 10 条
 ```
 
-总计 **254 条测试用例**，16 个测试文件。
+总计 **297 条测试用例**，18 个测试文件。
 
 ## 测试模式详解
 
-### 1. API 层测试 (`api.test.js`)
+### 1. 数据层测试 (`utils/api*.test.js`)
 
-- mock `globalThis.fetch`
-- 验证：成功路径返回 JSON、HTTP 错误抛 Error、非 JSON 响应 fallback、参数编码
+- `apiRest.test.js`：mock `globalThis.fetch`，验证成功路径返回 JSON、HTTP 错误抛 Error、非 JSON 响应 fallback、参数编码
+- `apiLocal.test.js`：`fake-indexeddb` 直测本地数据层——默认科目种子、五仓库 CRUD、排序、标签幂等、级联删除、今日概览统计、导出 JSON 结构、导入全量替换与坏行回滚
+- `api.test.js`：分发入口——`vi.stubEnv('VITE_DATA_LAYER', ...)` + `vi.resetModules()` + 动态 import，验证不同构建开关导出不同实现，默认走 REST 调用 fetch / local 不触碰 fetch
 
 ### 2. useTimer 测试 (`useTimer.test.js`)
 

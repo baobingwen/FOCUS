@@ -2,6 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.0] — 2026-08-30
+
+### 版本线：0.5.x 起点（无后端 Local-First 主线）
+
+日常点子「设计一套无后端方案，逐步转向无后端」迭代 A 落地——同一代码库 + 构建开关 `VITE_DATA_LAYER` 产出双版本：服务端版（默认，REST + SQLite）与纯静态版（数据存浏览器 IndexedDB）。
+
+### Added
+
+- **数据层双实现**：`utils/api.js` 改为统一入口（按构建开关分发），新增 `apiRest.js`（REST，服务端版）与 `apiLocal.js`（IndexedDB 五仓库 1:1 模拟五表，纯静态版）；接口契约不变，组件零改动
+- **构建形态**：`npm run build:static`（纯静态版，产物 `dist-static/`）、`npm run dev:static`（纯静态版开发）；默认构建仍为服务端版，现有部署脚本不变；新增手动构建脚本 `code/build-client-static.ps1`（与 `build-client.ps1` 对应，改完代码后构建纯静态版）
+- **导出/导入本地化**：纯静态版在浏览器端直接生成导出 JSON（格式与后端完全一致）与事务式导入（坏行整体回滚），双版本导出文件互通
+- **种子数据**：首次建库写入默认科目（数学、英语、专业课）；默认科目按名字禁删、导入不补默认科目——与后端行为一致
+
+### Tests
+
+- 客户端：新增 `apiLocal.test.js`（fake-indexeddb 直测本地数据层：CRUD/排序/幂等/级联/种子/统计/导出/导入事务）+ `apiRest.test.js`（REST 数据层迁移）+ `api.test.js`（分发入口）；组件测试零改动
+
+### Docs
+
+- `docs/adr/0011-no-backend-local-first.md` — 无后端方案设计文档（双版本数据层、迭代拆分 A/B/C）
+- `CONTEXT.md` — 新增「数据层」「纯静态版/服务端版」概念，导出/导入/复习提醒条目兼容双版本
+- `README.md` — 快速开始按形态重组、构建形态速查表、迁移小节、技术栈/项目结构/数据存储更新
+- `CLAUDE.md` — Commands 按形态分组、技术栈/客户端结构/测试表/核心概念补数据层
+- `code/client/docs/CODE_STRUCTURE.md` — 依赖图/文件职责表/测试对应表更新
+- `code/ROADMAP.md` — 无后端条目标记设计已确定（引用 ADR 0011）
+- `docs/INDEX.md` — ADR 0011 索引
+
 ## [0.4.5] — 2026-08-28
 
 ### 版本线：0.4.x 维护
