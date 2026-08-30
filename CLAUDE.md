@@ -85,7 +85,7 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 ## FOCUS 项目架构
 
 ### 技术栈
-- **客户端**: React 18 + Vite 6 + Tailwind CSS 3
+- **客户端**: React 19 + Vite 8 + Tailwind CSS 4
 - **服务端**（服务端版）: Express 5 (ESM) + better-sqlite3 (WAL 模式)
 - **数据存储**:
   - 服务端版: SQLite 单文件，开发用 `server/data/focus.db`，手机访问用 `/data/focus.db`（Tailscale）
@@ -95,17 +95,18 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 
 | 文件 | 说明 |
 |------|------|
-| `App.jsx` | 主布局 + 底部导航 + useTimer 调用（计时状态托管于此，跨标签切换不丢失）+ 全局管理模式 state/横幅（连点右上角考研倒计时进入，跨 tab 常驻；横幅内含「导出数据」按钮点击全量导出 JSON 下载、「导入数据」按钮选文件 → 确认弹窗（文件信息/导入统计/风险提示/先下载当前备份）→ 提交导入成功提示后整页刷新，学习中禁止导入）；`useFreezeOnLeave` 调用点已注释停用（v0.4.3，代码保留） |
+| `App.jsx` | 主布局 + 底部导航 + useTimer 调用（计时状态托管于此，跨标签切换不丢失）+ 计时快照恢复（挂载时从 localStorage 读快照水合 useTimer，恢复时渲染 TimerRestoreBar 提示条）+ 全局管理模式 state/横幅（连点右上角考研倒计时进入，跨 tab 常驻；横幅内含「导出数据」按钮点击全量导出 JSON 下载、「导入数据」按钮选文件 → 确认弹窗（文件信息/导入统计/风险提示/先下载当前备份）→ 提交导入成功提示后整页刷新，学习中禁止导入）；`useFreezeOnLeave` 调用点已注释停用（v0.4.3，代码保留） |
 | `components/TimerPage.jsx` | 计时器页面，5 状态机 (idle→studying→paused→rest_prompt→resting)，从 props 接收 timer；idle 态支持直接休息；暂停态支持继续和确认结束；学习中可点选/新增标签、累计复习页数（数字框 + +1/+5/+10 快捷芯片）；学习/暂停态大按钮始终居中，暂停/继续按钮悬浮右缘不占布局 |
 | `components/ReminderBar.jsx` | 复习方法和提醒条：学习中「结束学习」大按钮下方小字提醒（💡 浅灰不抢眼），每 15 分钟按插入顺序轮换下一条；提醒条旁 ＋ 弹框新增（随时记录）；管理模式开启时出现「管理」按钮 → 弹窗列表编辑/删除全部条目（AddModal/ManageModal 子组件） |
 | `components/ExamCountdown.jsx` | 考研倒计时（右上角常驻，写死 2026-12-19，过期自动隐藏）+ 全局管理模式隐藏入口（连点 5 下调用 onMultiTap，任何状态可见） |
+| `components/TimerRestoreBar.jsx` | 计时快照恢复提示条（App 层，计时/历史 tab 都可见）：「已恢复上次学习：科目 · 已学时长 · 离开时长」+ 计入/忽略离开时间切换按钮 + 「放弃本次学习」按钮 + ✕ 关闭（仅隐藏，快照保留）（调 useTimer 的 ignoreAwayTime/countAwayTime/discardRestore/dismissRestore） |
 | `components/SubjectSelector.jsx` | 科目选择（固定列表 + 自定义新增 + 休息；删除 × 仅管理模式 admin 显示，恒显） |
 | `components/TagPicker.jsx` | 标签选择器（扁平全局标签库点选/新增，删除 × 与 ⚙ 排序仅管理模式 admin 显示，学习中与历史编辑态共用） |
 | `components/HistoryPage.jsx` | 历史记录（按日查看 + 日期导航 + 学习记录备注内联编辑 + 备注点击复制 + 标签展示/点选筛选/✏️ 编辑态增删 + 页数「📖 N 页」徽标/编辑 + 管理模式删除：adminMode prop 开启时卡片右上角删除按钮、confirm 单条删除；入口在右上角考研倒计时，App 层统一；记录卡片渲染与编辑态状态拆分至 RecordCard） |
 | `components/RecordCard.jsx` | 单条记录卡片纯展示壳（查看态 + ✏️ 编辑态表单渲染），所有编辑状态由 HistoryPage 持有通过 props 传入，不持有状态（v0.4.1 从 HistoryPage 拆分） |
 | `components/SegmentStack.jsx` | 千层饼堆叠条（学习/暂停段按时间比例显示 + 总计/含暂停汇总），独立组件（v0.4.1 从 HistoryPage 拆分） |
 | `components/TodayOverview.jsx` | 今日概览（总时长 + 按科目分组条形图 + 按标签分组时长 + 今日总页数与科目页数） |
-| `hooks/useTimer.js` | 极简计时器，使用 Date.now() 绝对时间戳，含 freeze/thaw 冻结机制（v0.4.3 起冻结未接入，代码保留） |
+| `hooks/useTimer.js` | 极简计时器，使用 Date.now() 绝对时间戳；接受初始快照水合（计时状态持久化恢复）+ 内部持久化写入（localStorage，见 utils/timerStorage.js）+ 忽略/计入离开时间、放弃/关闭恢复提示条；含 freeze/thaw 冻结机制（v0.4.3 起冻结未接入，代码保留） |
 | `hooks/useFreezeOnLeave.js` | 离开页面自动冻结 — 监听 visibilitychange/blur/focus，调用 freeze/thaw（v0.4.3 起 App 调用点注释停用，代码保留） |
 | `hooks/useMultiTap.js` | 连点检测 — count 次点击（间隔 ≤windowMs，超时重置）触发 onComplete，管理模式隐藏入口共用 |
 | `utils/api.js` | 数据访问入口——按构建开关 `VITE_DATA_LAYER`（rest/local）分发到 apiRest/apiLocal，组件只 import 此入口 |
@@ -113,6 +114,7 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 | `utils/apiLocal.js` | 纯静态版本使用，IndexedDB 数据层实现，`focus-db` 库五仓库 1:1 模拟五表，含 CRUD/排序/幂等/级联/种子数据/今日概览/导出导入本地实现 |
 | `utils/clipboard.js` | 剪贴板复制工具（navigator.clipboard + execCommand 降级） |
 | `utils/fmtTime.js` | 时长格式化工具：`fmtTime`（中文时长"1小时30分"）+ `fmtClock`（HH:MM:SS/MM:SS，计时页用）+ `fmtShortClock`（MM:SS，历史页/千层饼用） |
+| `utils/timerStorage.js` | 计时快照存取：save / load / clear + 校验（localStorage 键 `focus:timer:snapshot`，带 version），计时状态持久化专用 |
 
 ### 服务端结构 (`code/server/`)
 
@@ -170,15 +172,16 @@ CREATE INDEX IF NOT EXISTS idx_records_notes ON records(notes);
 | `utils/apiRest.test.js` | REST 数据层测试（含 exportApi 下载/文件名解析/错误 + importApi 提交导入/错误） |
 | `utils/apiLocal.test.js` | 本地数据层测试（fake-indexeddb 直测：CRUD/排序/标签幂等/级联删除/种子数据/今日概览/导出结构/导入事务回滚与校验） |
 | `utils/clipboard.test.js` | 剪贴板复制工具测试 |
-| `hooks/useTimer.test.js` | 状态机全路径覆盖 |
+| `hooks/useTimer.test.js` | 状态机全路径覆盖 + 计时快照持久化/水合恢复/忽略离开/放弃/关闭提示条 |
 | `hooks/useFreezeOnLeave.test.js` | 页面离开冻结事件测试 |
 | `components/TimerPage.test.jsx` | 5 态渲染 + 保存 + 休息 + 暂停 + 弹窗确认 + 冻结 UI |
+| `components/TimerRestoreBar.test.jsx` | 恢复提示条（null 不渲染/学习/休息展示/计入忽略切换/放弃/✕ 关闭） |
 | `components/ReminderBar.test.jsx` | 提醒条展示/轮换/新增/管理模式门控 + 编辑/删除 |
 | `components/SubjectSelector.test.jsx` | CRUD + confirm 弹窗 + 休息 |
 | `components/HistoryPage.test.jsx` | 日期导航 + 列表 + 千层饼 + 备注编辑/复制 |
 | `components/TodayOverview.test.jsx` | 概览 + 条形图 |
 | `components/ExamCountdown.test.jsx` | 考研倒计时 |
-| `App.test.jsx` | Tab 切换 + 管理模式 + 数据导出（按钮门控/触发下载/导出中/失败 alert）+ 数据导入（按钮门控/学习中禁止/文件解析确认弹窗/备份下载/确认导入整页刷新/失败/非法文件） |
+| `App.test.jsx` | Tab 切换 + 管理模式 + 数据导出（按钮门控/触发下载/导出中/失败 alert）+ 数据导入（按钮门控/学习中禁止/文件解析确认弹窗/备份下载/确认导入整页刷新/失败/非法文件）+ 计时快照恢复（自动恢复/放弃/忽略切换/✕ 关闭/无快照） |
 
 用例数及合计见 [`code/client/TESTING.md`](code/client/TESTING.md)。
 
@@ -233,4 +236,5 @@ code/start-local.bat
 - **数据层**: 组件依赖统一数据访问入口（utils/api.js），构建开关 `VITE_DATA_LAYER` 分发到 REST（apiRest.js，服务端版）或 IndexedDB（apiLocal.js，纯静态版）
 - **双版本**: 同一代码库产出服务端版（默认构建，REST + SQLite）与纯静态版（build:static，IndexedDB 五仓库）；功能/界面一致，导出文件互通
 - **复习提醒**: 用户自维护的提醒语句库，学习中「结束学习」大按钮下方小字提醒条展示一条、每 15 分钟顺序轮换，点 ＋ 随时新增，管理模式内编辑/删除；存后端 `reminder_items` 表
+- **计时快照**: 进行中的学习/休息计时（studying/paused/resting 三态）关键状态定时写入 localStorage（`focus:timer:snapshot`，带 version），刷新/误关标签/崩溃后自动恢复 + App 顶部提示条（默认计入离开时间，可忽略离开时间/放弃本次学习）；elapsed 不落盘（绝对时间戳推导）；rest_prompt 不持久化；会话正常结束清空
 - **部署**: 本地 + Tailscale 优先，纯静态版可部署 GitHub Pages（`https://baobingwen.github.io/FOCUS/`，脚本 `code/deploy-static.ps1`，详见 `code/DEPLOY_STATIC.md`），Fly.io 方案备选

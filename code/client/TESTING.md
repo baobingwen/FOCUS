@@ -156,16 +156,18 @@ src/
 │   └── fmtTime.test.js        # 三个格式化函数 8 条
 ├── hooks/
 │   ├── useTimer.js
-│   ├── useTimer.test.js       # 状态机 26 条（含暂停态 6 条 + 冻结 6 条 + 标签态 5 条）
+│   ├── useTimer.test.js       # 状态机 37 条（含暂停态 6 条 + 冻结 6 条 + 标签态 5 条 + 计时快照持久化/恢复 11 条）
 │   ├── useFreezeOnLeave.js
 │   ├── useFreezeOnLeave.test.js # 页面离开冻结事件 8 条
 │   ├── useMultiTap.js         # 连点检测 hook（管理模式隐藏入口共用：count 次点击/超时重置）
 │   └── useMultiTap.test.js    # 连点检测 5 条（达标触发/计数重置/超时重置/自定义参数/回调更新）
 └── components/
     ├── App.jsx
-    ├── App.test.jsx           # Tab 切换 + 全局管理模式（倒计时连点入口/横幅跨 tab/退出）+ 冻结停用回归 + 数据导出（按钮门控/触发下载/导出中/失败 alert）+ 数据导入（按钮门控/学习中禁止/文件解析确认弹窗/取消/备份下载/确认导入整页刷新/导入中/失败/非法文件）23 条
+    ├── App.test.jsx           # Tab 切换 + 全局管理模式（倒计时连点入口/横幅跨 tab/退出）+ 冻结停用回归 + 数据导出（按钮门控/触发下载/导出中/失败 alert）+ 数据导入（按钮门控/学习中禁止/文件解析确认弹窗/取消/备份下载/确认导入整页刷新/导入中/失败/非法文件）+ 计时快照恢复（自动恢复显示/放弃/忽略切换/✕ 关闭/无快照不显示）28 条
     ├── ExamCountdown.jsx      # 考研倒计时（右上角常驻）+ 管理模式隐藏入口（连点 5 下）
     ├── ExamCountdown.test.jsx # 考研倒计时 3 条 + 连点入口 2 条
+    ├── TimerRestoreBar.jsx    # 计时快照恢复提示条（App 层：科目/已学/离开展示 + 计入/忽略切换 + 放弃本次学习 + ✕ 关闭）
+    ├── TimerRestoreBar.test.jsx # 恢复提示条 7 条（null 不渲染/学习中展示/休息中展示/忽略调用/计入调用/放弃调用/✕ 关闭调用）
     ├── TimerPage.jsx
     ├── TimerPage.test.jsx     # 5 态渲染 + 保存 + 休息 + 暂停交互 + 弹窗确认 + 冻结 UI + 标签交互 + 页数交互 + 管理模式标签门控 37 条
     ├── ReminderBar.jsx        # 复习方法和提醒条（学习中「结束学习」大按钮下方小字提醒 + 15 分钟顺序轮换 + 点＋新增弹框 + 管理模式管理弹窗）
@@ -184,7 +186,7 @@ src/
     └── TodayOverview.test.jsx  # 概览 + 条形图 + 按标签分组 + 页数汇总 10 条
 ```
 
-总计 **297 条测试用例**，18 个测试文件。
+总计 **320 条测试用例**，19 个测试文件。
 
 ## 测试模式详解
 
@@ -199,6 +201,7 @@ src/
 - `renderHook` + `act` 包裹状态变更
 - `vi.useFakeTimers()` (全量 fake) + `vi.advanceTimersByTime()` 模拟时间流逝
 - 状态机全路径覆盖：正常流程、跳过休息、duration=0 边界、状态隔离
+- 计时快照持久化/恢复：`beforeEach` 中 `localStorage.clear()` 隔离快照；水合测试用相对当前 fake 时钟的已知时间戳构造快照（`segmentStart = now − 5000` 等），断言 `elapsed = accumulated + (now − segmentStart)` 咬合；`pagehide` 用 `window.dispatchEvent(new Event('pagehide'))` 触发
 
 ### 3. 组件测试（JSX 文件）
 

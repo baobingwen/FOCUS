@@ -61,6 +61,14 @@ _Avoid_: 组件直接操作 IndexedDB、多端实时同步、冲突合并
 同一套代码库按构建时开关 `VITE_DATA_LAYER`（`local` / `rest`）产出的两种形态：纯静态版（`dist-static`，纯前端，数据存浏览器 IndexedDB）与服务端版（`dist`，沿用现有 Node 服务 + Tailscale 部署）。功能、界面、交互完全一致，仅数据存储位置不同。日常目前默认构建为服务端版，纯静态版作为无后端形态显式 opt-in，两版长期共存、各自演进。纯静态版部署到 GitHub Pages：FOCUS 仓库 `gh-pages` 分支、`https://baobingwen.github.io/FOCUS/` 子路径（`focus` 名字已被源码仓库占用、根地址被其他站占用，故用项目页子路径；GitHub Pages URL 大小写不敏感，小写 `/focus/` 亦可访问），构建时 `vite base` 为 `/FOCUS/`（仅 static 模式）。IndexedDB 按浏览器 origin 隔离：新地址部署后数据为全新起点，旧数据通过导出/导入 JSON 迁移（见 `code/DEPLOY_STATIC.md`）。
 _Avoid_: 两套独立代码副本、运行时切换数据层
 
+**计时快照**：
+进行中的学习/休息计时（studying / paused / resting 三态）的关键状态定时写入浏览器 localStorage（键 `focus:timer:snapshot`，带 `version` 字段），用于页面刷新、误关标签页、浏览器崩溃后自动恢复，避免「计时直接丢失」。快照内容是运行状态而非业务数据：阶段、当前段绝对时间戳、已累计学习/暂停时长、段列表、科目、备注、标签、页数、最后写入时刻。页面打开时自动恢复计时并显示顶部提示条「已恢复上次学习：科目 · 已学时长 · 离开时长」：默认按绝对时间戳继续计入离开期间的时间（与锁屏休眠恢复一致，elapsed 由 `累计 + (now − 段起点)` 推导、不落盘）；可一键「忽略离开时间」（当前段起点前移离开时长，缺口不计入，恢复到关页面前的瞬间状态）；可「放弃本次学习」（清快照回空闲）；提示条可点 ✕ 仅关闭显示（快照保留、计时继续，下次刷新仍可恢复）。会话正常结束（结束学习/不休息/结束休息）即清空快照。陈旧快照不设上限，由提示条醒目展示离开时长、当场决定。
+_Avoid_: 快照存进业务数据层（IndexedDB 五仓库/五表）、快照纳入导出/导入文件、rest_prompt 阶段持久化、陈旧快照自动作废
+
+**计时器状态持久化**：
+计时器的运行状态（phase、elapsed、selectedSubject、notes、tags）由 App 组件持有，而非 TimerPage。切换「计时/历史」标签时 TimerPage 卸载重挂，状态因托管在父级而不丢失。跨页面生命周期（刷新/误关标签/崩溃）的恢复由「计时快照」承担。
+_Avoid_: 计时状态放在 TimerPage 内
+
 ## Flow
 
 初始状态为空闲态。
@@ -81,14 +89,16 @@ _Avoid_: 两套独立代码副本、运行时切换数据层
 2. 休息计时走起
 3. 按「结束休息」→ 一条休息记录保存 → 回到空闲
 
+### 恢复流程（刷新 / 崩溃后重新打开）
+
+1. 读取 localStorage 计时快照：存在且合法（studying / paused / resting）→ 自动恢复计时，顶部提示条「已恢复上次学习：科目 · 已学时长 · 离开时长」
+2. 默认计入离开时间（绝对时间戳继续累计）；或点「忽略离开时间」把离开缺口不计入（恢复到关页面前的瞬间状态）；或点「放弃本次学习」清快照回空闲
+3. 会话正常结束（结束学习 / 不休息 / 结束休息）→ 清空快照
+
 ## 技术栈
 
-- 客户端：React 18 + Vite 6 + Tailwind CSS
+- 客户端：React 19 + Vite 8 + Tailwind CSS 4
 - 服务端：Express 5 + better-sqlite3（仅服务端版）
 - 数据存储：
   - 服务端版：SQLite，单文件 focus.db（位于 `server/data/`）
   - 纯静态版：IndexedDB，`focus-db` 库，五个对象仓库 1:1 对应五张业务表
-
-**计时器状态持久化**：
-计时器的运行状态（phase、elapsed、selectedSubject、notes、tags）由 App 组件持有，而非 TimerPage。切换「计时/历史」标签时 TimerPage 卸载重挂，但状态因托管在父级而不丢失。
-_Avoid_: 计时状态放在 TimerPage 内

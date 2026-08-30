@@ -1,6 +1,6 @@
 # FOCUS 客户端代码结构关系
 
-> 当前版本：v0.5.1（数据层双实现结构变动见 [docs/adr/0011-no-backend-local-first.md](../../../docs/adr/0011-no-backend-local-first.md)；v0.4.1 结构拆分见 [adr/0001-v0.4.1-code-structure-changes.md](adr/0001-v0.4.1-code-structure-changes.md)）
+> 当前版本：v0.5.2（计时快照持久化见 [docs/adr/0012-timer-persistence.md](../../../docs/adr/0012-timer-persistence.md)；数据层双实现结构变动见 [docs/adr/0011-no-backend-local-first.md](../../../docs/adr/0011-no-backend-local-first.md)；v0.4.1 结构拆分见 [adr/0001-v0.4.1-code-structure-changes.md](adr/0001-v0.4.1-code-structure-changes.md)）
 
 ## 源码依赖图
 
@@ -18,6 +18,7 @@ graph TD
     TagPicker[TagPicker.jsx]
     TodayOverview[TodayOverview.jsx]
     ExamCountdown[ExamCountdown.jsx]
+    TimerRestoreBar[TimerRestoreBar.jsx]
     %% hooks
     useTimer[hooks/useTimer.js]
     useFreeze[hooks/useFreezeOnLeave.js]
@@ -28,14 +29,18 @@ graph TD
     apiLocal[utils/apiLocal.js]
     clipboard[utils/clipboard.js]
     fmtTime[utils/fmtTime.js]
+    timerStorage[utils/timerStorage.js]
 
     App -->|useTimer| useTimer
     App -->|freeze/thaw 运行时传入| useFreeze
     App --> TimerPage
     App --> HistoryPage
     App --> ExamCountdown
+    App -->|timer.restored 时渲染| TimerRestoreBar
     App -->|exportApi| api
     App -->|importApi| api
+
+    useTimer -->|save/load/clear| timerStorage
 
     TimerPage --> SubjectSelector
     TimerPage --> TagPicker
@@ -67,13 +72,13 @@ graph TD
     api -->|VITE_DATA_LAYER=local| apiLocal
 ```
 
-> 说明：`useFreezeOnLeave` 不 import `useTimer`，通过 App 层把 timer 的 freeze/thaw 作为参数传入（运行时依赖）；`useTimer`/`useMultiTap`/`utils/*` 不 import 任何项目内模块。
+> 说明：`useFreezeOnLeave` 不 import `useTimer`，通过 App 层把 timer 的 freeze/thaw 作为参数传入（运行时依赖）；`useTimer`/`useMultiTap`/`utils/*` 除 `useTimer → utils/timerStorage`（计时快照存取）外不 import 任何项目内模块。
 
 ## 文件职责与状态归属
 
 | 文件                             | 职责                                                                               | 持有状态                                                                                                       |
 | -------------------------------- | ---------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
-| `App.jsx`                        | 主布局 + 底部导航 + 计时状态托管（useTimer）+ 全局管理模式 state/横幅（含「导出数据」按钮导出中/失败提示、「导入数据」按钮文件解析/确认弹窗/备份下载/导入中/整页刷新） | 是（timer、adminMode、exporting、importing、importPreview）                                                                              |
+| `App.jsx`                        | 主布局 + 底部导航 + 计时状态托管（useTimer）+ 计时快照恢复（挂载时读快照水合 useTimer，恢复时渲染 TimerRestoreBar）+ 全局管理模式 state/横幅（含「导出数据」按钮导出中/失败提示、「导入数据」按钮文件解析/确认弹窗/备份下载/导入中/整页刷新） | 是（timer、adminMode、exporting、importing、importPreview）                                                                              |
 | `components/TimerPage.jsx`       | 计时器 5 状态机渲染（idle→studying→paused→rest_prompt→resting）+ 保存学习/休息记录 | 是（saving/toast/结束确认弹窗）                                                                                |
 | `components/HistoryPage.jsx`     | 历史记录页面：日期导航 + 列表加载 + 全部编辑/删除/复制/筛选逻辑                    | 是（9 个编辑状态：editingId/draft/draftTags/draftPages/savingId/editError/copyFeedback/deleteError/filterTag） |
 | `components/RecordCard.jsx`      | 单条记录卡片渲染（查看态 + ✏️ 编辑态表单 + 删除按钮 + 千层饼 + 时间戳）            | 否（纯展示壳，所有状态与回调由 HistoryPage 通过 props 传入）                                                   |
@@ -82,7 +87,8 @@ graph TD
 | `components/SubjectSelector.jsx` | 科目选择（固定列表 + 自定义 + 休息）                                               | 是（自身 CRUD 表单态）                                                                                         |
 | `components/TagPicker.jsx`       | 标签选择器（点选/新增/删除/拖拽排序）                                              | 是（标签库 + 排序模式）                                                                                        |
 | `components/ExamCountdown.jsx`   | 考研倒计时 + 全局管理模式隐藏入口（连点 5 下）                                     | 否（数据写死）                                                                                                 |
-| `hooks/useTimer.js`              | 计时状态机 + freeze/thaw 冻结机制                                                  | 是（计时核心）                                                                                                 |
+| `components/TimerRestoreBar.jsx` | 计时快照恢复提示条（科目/已学/离开时长展示 + 计入/忽略切换 + 放弃按钮 + ✕ 关闭） | 否（timer 由 App 传入）                                                                                       |
+| `hooks/useTimer.js`              | 计时状态机 + 快照水合/持久化（utils/timerStorage）+ 忽略离开时间 + freeze/thaw 冻结机制 | 是（计时核心）                                                                                                 |
 | `hooks/useFreezeOnLeave.js`      | 页面离开自动冻结                                                                   | 否（调用传入的 freeze/thaw）                                                                                   |
 | `hooks/useMultiTap.js`           | 连点检测                                                                           | 否                                                                                                             |
 | `utils/api.js`                   | 数据访问统一入口——按构建开关 `VITE_DATA_LAYER`（rest/local）分发到 apiRest/apiLocal，组件只依赖此入口 | 否                                                                                                             |
@@ -90,6 +96,7 @@ graph TD
 | `utils/apiLocal.js`              | IndexedDB 数据层实现（`focus-db` 库五仓库 1:1 模拟五表，CRUD/排序/幂等/级联/种子/今日概览/导出导入本地实现），纯静态版使用 | 否（数据在浏览器）                                                                                             |
 | `utils/clipboard.js`             | 剪贴板复制（navigator.clipboard + execCommand 降级）                               | 否                                                                                                             |
 | `utils/fmtTime.js`               | 时长格式化纯函数（fmtTime / fmtClock / fmtShortClock）                             | 否                                                                                                             |
+| `utils/timerStorage.js`          | 计时快照存取（save / load / clear + 校验，localStorage 键 `focus:timer:snapshot`） | 否                                                                                                             |
 
 ## 格式化函数分工（utils/fmtTime.js）
 
@@ -103,7 +110,7 @@ graph TD
 
 | 测试文件                              | 被测单元                                                                | 层级                   |
 | ------------------------------------- | ----------------------------------------------------------------------- | ---------------------- |
-| `App.test.jsx`                        | App 布局与 Tab 切换 + 管理模式 + 数据导出 + 数据导入                              | 集成                   |
+| `App.test.jsx`                        | App 布局与 Tab 切换 + 管理模式 + 数据导出 + 数据导入 + 计时快照恢复提示条                  | 集成                   |
 | `components/TimerPage.test.jsx`       | TimerPage 5 态 + 保存/休息/暂停/冻结 UI                                 | 组件                   |
 | `components/HistoryPage.test.jsx`     | HistoryPage 页面级逻辑（加载/日期导航/编辑流/复制/筛选/删除 confirm）   | 组件（页面）           |
 | `components/RecordCard.test.jsx`      | RecordCard 查看态/编辑态渲染 + 回调转发 + 千层饼显示条件 + 管理模式按钮 | 组件（卡片直测 props） |
@@ -112,7 +119,8 @@ graph TD
 | `components/SubjectSelector.test.jsx` | 科目 CRUD + confirm + 休息                                              | 组件                   |
 | `components/TagPicker.test.jsx`       | 标签选择器                                                              | 组件                   |
 | `components/ExamCountdown.test.jsx`   | 考研倒计时                                                              | 组件                   |
-| `hooks/useTimer.test.js`              | 计时状态机全路径                                                        | 单元                   |
+| `components/TimerRestoreBar.test.jsx` | 恢复提示条（展示/计入忽略切换/放弃/✕ 关闭）                                     | 组件                   |
+| `hooks/useTimer.test.js`              | 计时状态机全路径 + 快照持久化/水合恢复/忽略离开/放弃/关闭                           | 单元                   |
 | `hooks/useFreezeOnLeave.test.js`      | 页面离开冻结事件                                                        | 单元                   |
 | `hooks/useMultiTap.test.js`           | 连点检测                                                                | 单元                   |
 | `utils/api.test.js`                   | 数据访问入口分发（VITE_DATA_LAYER 不同值导出不同实现）                  | 单元                   |

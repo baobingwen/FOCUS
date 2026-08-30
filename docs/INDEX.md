@@ -59,6 +59,7 @@
 | `docs/adr/0009-review-reminders.md` | `docs/adr/` | 复习方法和提醒区 — 用户自维护提醒语句库、学习中提醒条 15 分钟顺序轮换、点＋新增、管理模式弹窗管理、后端新表存储 |
 | `docs/adr/0010-data-export-import.md` | `docs/adr/` | 数据导出与导入 — 备份/恢复配对方案：导出 JSON 下载（v0.4.4）、导入全量替换恢复（事务内清空五表原样插入、确认弹窗、学习中禁止、整页刷新） |
 | `docs/adr/0011-no-backend-local-first.md` | `docs/adr/` | 无后端方案 — Local-First 双版本数据层：同一代码库 + 构建开关 `VITE_DATA_LAYER` 产出服务端版/纯静态版、IndexedDB 五仓库 1:1 模拟五表、接口契约不变组件零改动、导出/导入双版本互通、迭代拆分 A/B/C |
+| `docs/adr/0012-timer-persistence.md` | `docs/adr/` | 计时器状态持久化 — 学习中/暂停中/休息中三态快照定时写入 localStorage、刷新/误关标签/崩溃后自动恢复 + 顶部提示条（计入/忽略离开时间、放弃本次学习）、elapsed 不落盘绝对时间戳推导、rest_prompt 不持久化、会话结束清空 |
 | `code/client/docs/CODE_STRUCTURE.md` | `code/client/docs/` | 客户端代码结构关系 — 源码依赖图（mermaid）、文件职责与状态归属、格式化函数分工、测试文件对应关系 |
 | `code/client/docs/adr/0001-v0.4.1-code-structure-changes.md` | `code/client/docs/adr/` | v0.4.1 结构拆分改动说明 — HistoryPage 拆出 RecordCard/SegmentStack、格式化函数并入 utils/fmtTime.js，前后依赖图对比 + 文件直接映射 + 行为不变保证 |
 

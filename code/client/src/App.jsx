@@ -3,7 +3,9 @@ import TimerPage from './components/TimerPage';
 import HistoryPage from './components/HistoryPage';
 import ExamCountdown from './components/ExamCountdown';
 import useTimer from './hooks/useTimer';
+import TimerRestoreBar from './components/TimerRestoreBar';
 import { exportApi, importApi } from './utils/api';
+import { loadTimerSnapshot } from './utils/timerStorage';
 // 停用（v0.4.3）：逻辑移除「学习中离开页面暂停」功能
 // import useFreezeOnLeave from './hooks/useFreezeOnLeave';
 
@@ -24,7 +26,9 @@ export default function App() {
   const [importPreview, setImportPreview] = useState(null);
   // 隐藏的文件选择框（导入入口）
   const fileInputRef = useRef(null);
-  const timer = useTimer();
+  // 计时快照：挂载时从 localStorage 读取（无快照/非法 → null），水合 useTimer 恢复计时
+  const [initialTimerSnapshot] = useState(() => loadTimerSnapshot());
+  const timer = useTimer(initialTimerSnapshot);
 
   // 停用（v0.4.3）：逻辑移除「学习中离开页面暂停」功能
   // useFreezeOnLeave(timer);
@@ -153,6 +157,9 @@ export default function App() {
 
         {/* 考研倒计时（右上角）= 管理模式隐藏入口 */}
         <ExamCountdown onMultiTap={enterAdminMode} />
+
+        {/* 计时快照恢复提示条（自动恢复计时时显示，跨 tab 常驻） */}
+        {timer.restored && <TimerRestoreBar timer={timer} />}
 
         {/* 管理模式横幅 */}
         {adminMode && (

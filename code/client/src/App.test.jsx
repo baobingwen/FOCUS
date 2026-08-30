@@ -4,12 +4,14 @@ import userEvent from '@testing-library/user-event';
 import App from './App';
 import { subjectsApi, recordsApi, exportApi, importApi, tagsApi, remindersApi } from './utils/api';
 import useFreezeOnLeave from './hooks/useFreezeOnLeave';
+import { saveTimerSnapshot } from './utils/timerStorage';
 
 vi.mock('./utils/api');
 vi.mock('./hooks/useFreezeOnLeave');
 
 beforeEach(() => {
   vi.clearAllMocks();
+  localStorage.clear(); // 计时快照隔离：避免上个用例的学习态污染下个用例
   subjectsApi.list.mockResolvedValue([
     { id: 1, name: '数学', sort_order: 0 },
     { id: 2, name: '英语', sort_order: 1 },
@@ -462,5 +464,95 @@ describe('App', () => {
     await waitFor(() => {
       expect(alertSpy).toHaveBeenCalledWith('不是有效的 FOCUS 导出文件');
     });
+  });
+
+  // ──── 计时快照恢复（刷新/崩溃后自动恢复）────
+
+  /** 播种一份合法 studying 快照：已学 12:34 · 离开 5 分钟前最后写入 */
+  function seedTimerSnapshot() {
+    const fiveMinAgo = Date.now() - 5 * 60 * 1000;
+    saveTimerSnapshot({
+      version: 1,
+      phase: 'studying',
+      segmentStart: fiveMinAgo,
+      accumulatedStudy: 754000, // 12:34
+      accumulatedPause: 0,
+      segments: [{ type: 'study', duration_ms: 754000 }],
+      subject: { id: 1, name: '数学' },
+      notes: '',
+      tags: [],
+      pages: null,
+      updatedAt: fiveMinAgo,
+    });
+  }
+
+  it('存在合法快照：打开页面自动恢复计时并显示提示条', async () => {
+    seedTimerSnapshot();
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/已恢复上次学习：数学/)).toBeInTheDocument();
+    });
+    expect(screen.getByText(/已学 12:34/)).toBeInTheDocument();
+    expect(screen.getByText(/离开 5分/)).toBeInTheDocument();
+    // 计时器已恢复为学习中状态
+    expect(screen.getByText('结束学习')).toBeInTheDocument();
+  });
+
+  it('点「放弃本次学习」：清快照回空闲，提示条消失', async () => {
+    seedTimerSnapshot();
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/已恢复上次学习/)).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByText('放弃本次学习'));
+
+    await waitFor(() => {
+      expect(screen.getByText('🎯 FOCUS')).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/已恢复上次学习/)).not.toBeInTheDocument();
+    expect(localStorage.getItem('focus:timer:snapshot')).toBeNull();
+  });
+
+  it('点「忽略离开时间」：按钮切换为「计入离开时间」', async () => {
+    seedTimerSnapshot();
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/已恢复上次学习/)).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByText('忽略离开时间'));
+
+    expect(screen.getByText('计入离开时间')).toBeInTheDocument();
+    expect(screen.queryByText('忽略离开时间')).not.toBeInTheDocument();
+  });
+
+  it('点 ✕ 关闭提示条：计时继续、快照保留', async () => {
+    seedTimerSnapshot();
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText(/已恢复上次学习/)).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByRole('button', { name: '关闭恢复提示条' }));
+
+    expect(screen.queryByText(/已恢复上次学习/)).not.toBeInTheDocument();
+    // 计时继续（学习中状态仍在）
+    expect(screen.getByText('结束学习')).toBeInTheDocument();
+    // 快照保留（下次刷新仍可恢复）
+    expect(localStorage.getItem('focus:timer:snapshot')).not.toBeNull();
+  });
+
+  it('无快照时不显示恢复提示条', async () => {
+    render(<App />);
+
+    await waitFor(() => {
+      expect(screen.getByText('🎯 FOCUS')).toBeInTheDocument();
+    });
+    expect(screen.queryByText(/已恢复上次学习/)).not.toBeInTheDocument();
   });
 });

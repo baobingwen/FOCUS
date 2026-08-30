@@ -2,6 +2,36 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.2] — 2026-08-30
+
+### 版本线：0.5.x 维护（无后端 Local-First 主线）
+
+日常点子「计时器状态不持久化，刷新即丢失」落地——进行中的学习/休息计时快照写入 localStorage，页面刷新、误关标签页、浏览器崩溃后重新打开自动恢复计时。
+
+### Added
+
+- **计时状态持久化**：学习中/暂停中/休息中三态的关键状态（阶段、当前段绝对时间戳、累计学习/暂停时长、段列表、科目、备注、标签、页数）定时写入浏览器 localStorage（键 `focus:timer:snapshot`，带 `version` 字段），刷新/误关标签/崩溃后重新打开自动恢复——科目/备注/标签/页数/已学时长原样还原，第一帧即恢复态（新增 `utils/timerStorage.js` 存取 + `useTimer` 快照水合/持久化）
+- **恢复提示条（TimerRestoreBar）**：App 顶部提示条「已恢复上次学习：科目 · 已学时长 · 离开时长」（计时/历史 tab 都可见）——默认计入离开时间（绝对时间戳继续累计，与锁屏休眠恢复一致）；可「忽略离开时间」（当前段起点前移离开时长，缺口不计入、恢复到关页面前的瞬间状态，可再点切回计入）；可「放弃本次学习」（清快照回空闲）；可 ✕ 关闭提示条（仅隐藏，快照保留、计时继续，下次刷新仍可恢复）；陈旧快照不设上限，提示条醒目展示离开时长、当场决定
+- **写时机与边界**：状态切换/输入即写 + pagehide/beforeunload 最后补写 + 活跃态每 10 秒周期兜底（防浏览器崩溃）；elapsed 不落盘（由绝对时间戳推导，tick 不写）；只持久化 studying/paused/resting，rest_prompt 不持久化（endStudy/skipRest/endRest 清空快照）；快照是 UI 运行态而非业务数据——不进五表/五仓库、不参与导出/导入，双版本（服务端版/纯静态版）共用 useTimer 天然生效
+
+### Changed
+
+- 文档一致性修复：CONTEXT/README/CLAUDE 技术栈修正为 React 19 + Vite 8 + Tailwind CSS 4（原写 React 18 + Vite 6 + Tailwind CSS 3，与 client/package.json 实际不符——日常点子「文档/工程一致性问题」随之解决）
+- CONTEXT.md「计时器状态持久化」概念移入 Language 概念区（原挂在技术栈之后，位置错误）
+
+### Tests
+
+- 客户端 297 → 320 全绿：useTimer.test.js +11（快照写入/输入同步/会话结束清空/水合恢复/忽略计入离开/放弃/关闭提示条/pagehide/非法快照忽略）、TimerRestoreBar.test.jsx 新增 7 条、App.test.jsx +5（自动恢复显示/放弃/忽略切换/✕ 关闭/无快照不显示）；服务端 140 全绿（零改动）
+
+### Docs
+
+- `docs/adr/0012-timer-persistence.md` — 计时器状态持久化设计文档（快照结构/写时机/恢复交互/阶段边界/组件改造/不做的）
+- `CONTEXT.md` / `README.md` / `CLAUDE.md` — 计时快照概念、恢复流程、功能条目、结构表/测试表同步
+- `code/ROADMAP.md` — 事项从日常点子移入已实现（v0.5.2）
+- `code/client/docs/CODE_STRUCTURE.md` — 版本头 v0.5.2 + 依赖图/文件职责表/测试对应表同步
+- `code/client/TESTING.md` — 317 条 / 19 个测试文件
+- `docs/INDEX.md` — 登记 ADR 0012
+
 ## [0.5.1] — 2026-08-30
 
 ### 版本线：0.5.x 维护（无后端 Local-First 主线）

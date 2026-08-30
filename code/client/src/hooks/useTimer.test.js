@@ -1,10 +1,12 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { renderHook, act } from '@testing-library/react';
 import useTimer from './useTimer';
+import { loadTimerSnapshot } from '../utils/timerStorage';
 
 describe('useTimer', () => {
   beforeEach(() => {
     vi.useFakeTimers();
+    localStorage.clear();
   });
 
   afterEach(() => {
@@ -379,5 +381,213 @@ describe('useTimer', () => {
     act(() => { result.current.toggleTag('线代'); });
     act(() => { result.current.removeTag('高数'); });
     expect(result.current.tags).toEqual(['线代']);
+  });
+
+  // ──── 计时快照持久化/恢复测试 ────
+
+  const SNAPSHOT_KEY = 'focus:timer:snapshot';
+
+  /** 构造一份合法 studying 快照（相对当前 fake 时钟时刻） */
+  function makeStudySnapshot() {
+    const base = Date.now();
+    return {
+      version: 1,
+      phase: 'studying',
+      segmentStart: base - 5000,
+      accumulatedStudy: 10000,
+      accumulatedPause: 0,
+      segments: [{ type: 'study', duration_ms: 10000 }],
+      subject: { id: 1, name: '数学' },
+      notes: '复习笔记',
+      tags: ['高数'],
+      pages: 3,
+      updatedAt: base - 1000,
+    };
+  }
+
+  it('startStudy 写入计时快照（phase=studying）', () => {
+    const { result } = renderHook(() => useTimer());
+
+    act(() => { result.current.startStudy(); });
+
+    const snap = JSON.parse(localStorage.getItem(SNAPSHOT_KEY));
+    expect(snap.phase).toBe('studying');
+    expect(snap.accumulatedStudy).toBe(0);
+    expect(typeof snap.segmentStart).toBe('number');
+    expect(typeof snap.updatedAt).toBe('number');
+  });
+
+  it('updateNotes / toggleTag / addPages 时同步更新快照', () => {
+    const { result } = renderHook(() => useTimer());
+
+    act(() => { result.current.startStudy(); });
+    act(() => { result.current.updateNotes('背单词'); });
+    act(() => { result.current.toggleTag('高数'); });
+    act(() => { result.current.addPages(5); });
+
+    const snap = JSON.parse(localStorage.getItem(SNAPSHOT_KEY));
+    expect(snap.notes).toBe('背单词');
+    expect(snap.tags).toEqual(['高数']);
+    expect(snap.pages).toBe(5);
+  });
+
+  it('endStudy / skipRest / endRest 清空快照（rest_prompt 不持久化）', () => {
+    const { result } = renderHook(() => useTimer());
+
+    // endStudy → 清空
+    act(() => { result.current.startStudy(); });
+    act(() => { vi.advanceTimersByTime(3000); });
+    expect(localStorage.getItem(SNAPSHOT_KEY)).not.toBeNull();
+    act(() => { result.current.endStudy(); });
+    expect(result.current.phase).toBe('rest_prompt');
+    expect(localStorage.getItem(SNAPSHOT_KEY)).toBeNull();
+
+    // skipRest → 清空
+    act(() => { result.current.startStudy(); });
+    act(() => { vi.advanceTimersByTime(3000); });
+    act(() => { result.current.endStudy(); });
+    act(() => { result.current.skipRest(); });
+    expect(localStorage.getItem(SNAPSHOT_KEY)).toBeNull();
+
+    // endRest → 清空
+    act(() => { result.current.startStudy(); });
+    act(() => { vi.advanceTimersByTime(3000); });
+    act(() => { result.current.endStudy(); });
+    act(() => { result.current.startRest(); });
+    expect(localStorage.getItem(SNAPSHOT_KEY)).not.toBeNull();
+    act(() => { result.current.endRest(); });
+    expect(localStorage.getItem(SNAPSHOT_KEY)).toBeNull();
+  });
+
+  it('从快照水合恢复 studying：第一帧即恢复态，计时继续累计', () => {
+    const { result } = renderHook(() => useTimer(makeStudySnapshot()));
+
+    expect(result.current.restored).toBe(true);
+    expect(result.current.phase).toBe('studying');
+    expect(result.current.selectedSubject).toEqual({ id: 1, name: '数学' });
+    expect(result.current.notes).toBe('复习笔记');
+    expect(result.current.tags).toEqual(['高数']);
+    expect(result.current.pages).toBe(3);
+    // 恢复瞬间 elapsed = 10000 + (now − segmentStart) = 10000 + 5000
+    expect(result.current.elapsed).toBe(15000);
+    expect(result.current.restoreInfo).toEqual({
+      phase: 'studying',
+      subjectName: '数学',
+      elapsedAtClose: 14000, // 关页面前已学 = 10000 + (updatedAt − segmentStart)
+      awayMs: 1000,          // 离开 = now − updatedAt
+    });
+
+    // 计时继续累计（绝对时间戳咬合）
+    act(() => { vi.advanceTimersByTime(2000); });
+    expect(result.current.elapsed).toBe(17000);
+  });
+
+  it('ignoreAwayTime 忽略离开时间：elapsed 回到关页面前的瞬间值；countAwayTime 切回计入', () => {
+    const { result } = renderHook(() => useTimer(makeStudySnapshot()));
+    expect(result.current.elapsed).toBe(15000); // 含 1s 离开缺口
+
+    act(() => { result.current.ignoreAwayTime(); });
+    // 段起点前移 1s → elapsed 回到 14000（关页面前的瞬间值）
+    expect(result.current.awayIgnored).toBe(true);
+    expect(result.current.elapsed).toBe(14000);
+
+    // 切回计入：缺口重新计入
+    act(() => { result.current.countAwayTime(); });
+    expect(result.current.awayIgnored).toBe(false);
+    expect(result.current.elapsed).toBe(15000);
+  });
+
+  it('从快照水合恢复 paused / resting', () => {
+    const base = Date.now();
+
+    // paused：elapsed 停在累计学习时长，pausedElapsed 从段起点推导
+    const paused = renderHook(() => useTimer({
+      version: 1, phase: 'paused',
+      segmentStart: base - 3000, accumulatedStudy: 8000, accumulatedPause: 0,
+      segments: [{ type: 'study', duration_ms: 8000 }],
+      subject: { id: 1, name: '英语' }, notes: '', tags: [], pages: null,
+      updatedAt: base - 500,
+    }));
+    expect(paused.result.current.phase).toBe('paused');
+    expect(paused.result.current.elapsed).toBe(8000);
+    expect(paused.result.current.pausedElapsed).toBe(3000);
+
+    // resting：elapsed 从段起点推导
+    const resting = renderHook(() => useTimer({
+      version: 1, phase: 'resting',
+      segmentStart: base - 4000, accumulatedStudy: 0, accumulatedPause: 0,
+      segments: [], subject: null, notes: '', tags: [], pages: null,
+      updatedAt: base - 1000,
+    }));
+    expect(resting.result.current.phase).toBe('resting');
+    expect(resting.result.current.elapsed).toBe(4000);
+  });
+
+  it('discardRestore 清快照回 idle', () => {
+    const { result } = renderHook(() => useTimer(makeStudySnapshot()));
+
+    act(() => { result.current.discardRestore(); });
+
+    expect(result.current.phase).toBe('idle');
+    expect(result.current.restored).toBe(false);
+    expect(result.current.restoreInfo).toBeNull();
+    expect(result.current.selectedSubject).toBeNull();
+    expect(localStorage.getItem(SNAPSHOT_KEY)).toBeNull();
+  });
+
+  it('dismissRestore 仅隐藏提示条：快照保留、计时继续', () => {
+    // 模拟 App 真实流程：快照先存在于 localStorage，经 loadTimerSnapshot 水合
+    localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(makeStudySnapshot()));
+    const { result } = renderHook(() => useTimer(loadTimerSnapshot()));
+
+    act(() => { result.current.dismissRestore(); });
+
+    expect(result.current.restored).toBe(false);
+    expect(result.current.phase).toBe('studying');
+    // 快照保留（下次刷新仍可恢复）
+    expect(localStorage.getItem(SNAPSHOT_KEY)).not.toBeNull();
+    // 计时继续（绝对时间戳咬合）
+    act(() => { vi.advanceTimersByTime(2000); });
+    expect(result.current.elapsed).toBe(17000);
+  });
+
+  it('pagehide 事件最后时刻补写快照', () => {
+    const { result } = renderHook(() => useTimer());
+
+    act(() => { result.current.startStudy(); });
+    act(() => { window.dispatchEvent(new Event('pagehide')); });
+
+    const snap = JSON.parse(localStorage.getItem(SNAPSHOT_KEY));
+    expect(snap.phase).toBe('studying');
+    expect(snap.updatedAt).toBeLessThanOrEqual(Date.now());
+  });
+
+  it('无快照时正常 idle，不进入恢复态', () => {
+    const { result } = renderHook(() => useTimer());
+
+    expect(result.current.restored).toBe(false);
+    expect(result.current.restoreInfo).toBeNull();
+    expect(result.current.phase).toBe('idle');
+  });
+
+  it('非法快照被 loadTimerSnapshot 拒绝 → null（不崩溃、回 idle）', () => {
+    // phase 非法（idle 不在活跃三态）
+    localStorage.setItem(SNAPSHOT_KEY, JSON.stringify({
+      version: 1, phase: 'idle', segmentStart: Date.now(), accumulatedStudy: 0,
+      accumulatedPause: 0, segments: [], subject: null, notes: '', tags: [], pages: null, updatedAt: Date.now(),
+    }));
+    expect(loadTimerSnapshot()).toBeNull();
+
+    // JSON 损坏
+    localStorage.setItem(SNAPSHOT_KEY, 'not-json{{{');
+    expect(loadTimerSnapshot()).toBeNull();
+
+    // version 不符
+    localStorage.setItem(SNAPSHOT_KEY, JSON.stringify({ version: 99, phase: 'studying' }));
+    expect(loadTimerSnapshot()).toBeNull();
+
+    // 无快照
+    localStorage.removeItem(SNAPSHOT_KEY);
+    expect(loadTimerSnapshot()).toBeNull();
   });
 });
