@@ -1,6 +1,6 @@
 # FOCUS 路线图
 
-> 客户端：0.5.0 · 服务端：0.3.6 · git tag: v0.5.0 — 最新：无后端方案迭代 A（双版本数据层，纯静态版可独立构建）
+> 客户端：0.5.1 · 服务端：0.3.6 · git tag: v0.5.1 — 最新：无后端方案迭代 B（GitHub Pages 部署）
 
 ## 已实现
 
@@ -32,8 +32,19 @@
 - ✅ 数据导出（管理模式）：管理模式横幅「导出数据」按钮一键全量导出五张业务表（records/subjects/tags/record_tags/reminder_items）为 JSON 文件下载（`GET /api/export`，文件名 `focus-export-YYYYMMDD-HHMMSS.json`）；导出物含 `app`/`version`/`exported_at` 元数据，records 的 `segments` 解析为数组，不含 `_migrations` 内部表；点击后按钮禁用显示「导出中…」，失败 alert 提示；仅导出，导入留待后续评估
 - ✅ 数据导入（管理模式）：管理模式横幅「导入数据」按钮，把导出的 JSON 文件恢复到本地（`POST /api/import`），与导出配对，语义 = 恢复到导出时状态——事务内清空五张业务表后按导入数据原样插入（保留原 id，record_tags 引用一致），任何一行不合法整个事务回滚；前端读文件 → 校验顶层结构（app=FOCUS、data 五表）→ 确认弹窗展示文件信息/导入统计/风险提示 +「先下载当前备份」入口 → 确认后导入；导入成功提示后整页刷新；学习中（计时非空闲态）禁止导入；不补默认科目，完全信任文件（[设计文档](docs/adr/0010-data-export-import.md)）
 - ✅ 无后端方案迭代 A（Local-First 双版本数据层）：同一代码库 + 构建开关 `VITE_DATA_LAYER` 产出两种形态——服务端版（默认构建，REST + SQLite，部署不变）与纯静态版（`build:static`，浏览器 IndexedDB 五仓库 1:1 模拟五表，可部署任意静态托管）；数据层接口与现有 `utils/api.js` 完全一致（组件零改动）；导出/导入浏览器端本地实现，格式与后端完全一致、双版本文件互通；默认科目种子/按名禁删/导入不补与后端一致；新增 `build-client-static.ps1` 手动构建脚本；双向 tree-shaking 保证两版产物互不携带对方数据层代码（[设计文档](docs/adr/0011-no-backend-local-first.md)）
+- ✅ 无后端方案迭代 B（GitHub Pages 部署）：纯静态版一键部署到 GitHub Pages——FOCUS 源码仓库 `gh-pages` 分支、`https://baobingwen.github.io/FOCUS/` 子路径（`focus` 名字已被源码仓库占用、根地址被其他站占用，故用项目页子路径；URL 大小写不敏感）；vite base 按 mode 区分（static 模式 `/FOCUS/`，服务端版部署不受影响）；新增 `deploy-static.ps1` 部署脚本——构建 → 同步到独立部署工作区 `code/.deploy-static/` → commit → 普通快进 push（保留每次部署的 git 历史、非强制覆盖、远程分叉时停下提示手动处理）+ `DEPLOY_STATIC.md` 部署指南（一次性设置/发布流程/本地预览/数据迁移/回滚/常见问题）；迭代 C（移除后端）v0.5.1 修改：不再移除后端，服务端版 + 纯静态版长期共存、各自演进（[设计文档](docs/adr/0011-no-backend-local-first.md)）
 
 ## 推荐方向（按优先级）
+
+### P0: 纯前端版特性优化（迭代 D 方向）
+
+**目标**：利用纯前端（无后端）形态的特性持续优化纯静态版，与服务端版各自演进。
+**背景**：v0.5.1 起确定双版本长期共存；若未来某节点纯前端版能真正取代服务端版，再考虑将纯静态版作为首选默认。
+**候选方向**（具体功能待 grill 确认）：
+- PWA 化（可离线、添加到主屏幕）——静态托管天然适合
+- 纯前端版特有的性能/体验优化（无需与后端折衷）
+- 浏览器端能力利用（如定时提醒、通知）
+**注意**：与服务端版功能/界面保持一致的原则是否需要放宽，待评估。
 
 ### P1: PWA 手机桌面化
 
@@ -73,7 +84,6 @@ Docker 多阶段构建 + 香港节点 + 持久卷方案 已就绪。
 
 ## 开发中
 
-- 无后端方案迭代 B/C（后续轮次）：**B** GitHub Pages 部署（vite base 配置、部署脚本/文档）→ **C** 移除 Express/SQLite 代码、部署文档清理（迭代 A 已完成，见已实现）
 - 代码结构拆分（后续轮次）：TimerPage（404 行）→ Toast 组件 + 页数区块；TagPicker（260 行）/ useTimer（262 行）评估后再拆（原则：纯搬家，行为一致）
 
 ## 💡 日常点子

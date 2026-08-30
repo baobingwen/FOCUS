@@ -40,6 +40,8 @@
 | `code/start-local.bat` | `code/` | 一键启动脚本（构建前端 + 启动服务） |
 | `code/build-client.ps1` | `code/` | 手动构建前端脚本（改完代码后运行，再执行 start-local.bat） |
 | `code/build-client-static.ps1` | `code/` | 手动构建纯静态版脚本（改完代码后运行，产物 `client/dist-static/`） |
+| `code/deploy-static.ps1` | `code/` | 纯静态版部署到 GitHub Pages 脚本（构建 + 推送到 gh-pages 分支） |
+| `code/DEPLOY_STATIC.md` | `code/` | GitHub Pages 部署指南（纯静态版，地址 `https://baobingwen.github.io/FOCUS/`） |
 | `feat/deploy` 分支 | — | Fly.io 云部署方案（Dockerfile + fly.toml，需外币卡暂搁置） |
 
 ## 架构决策记录 (ADR)

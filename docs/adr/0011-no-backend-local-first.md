@@ -62,9 +62,9 @@
 
 ### 迭代拆分
 
-- **A（本次）**：数据层抽象 + IndexedDB 实现 + 前端切换 + 导出/导入本地化 + 测试。产出纯静态可跑的最小闭环，后端保留。
-- **B（后续）**：GitHub Pages 部署（vite base 配置、部署脚本/文档）。
-- **C（后续）**：移除 Express/SQLite 代码，部署文档清理。
+- **A（v0.5.0 已完成）**：数据层抽象 + IndexedDB 实现 + 前端切换 + 导出/导入本地化 + 测试。产出纯静态可跑的最小闭环，后端保留。
+- **B（v0.5.1 已完成）**：GitHub Pages 部署——部署到 FOCUS 源码仓库 `gh-pages` 分支、地址 `https://baobingwen.github.io/FOCUS/`（项目页子路径：`focus` 名字已被源码仓库占用、根地址被其他站占用，故不能用根路径或另建同名仓库；GitHub Pages URL 大小写不敏感，小写 `/focus/` 亦可访问）；vite base 按 mode 区分（`static` 模式 `/FOCUS/`，默认 `'/'` 服务端版部署不受影响）；新增 `code/deploy-static.ps1`（构建 → 同步到独立部署工作区 `code/.deploy-static/` → commit → 普通快进 push，保留每次部署的 git 历史、非强制覆盖、远程分叉时停下提示手动处理）与 `code/DEPLOY_STATIC.md`（一次性设置、发布流程、本地预览验证、数据 origin 隔离迁移说明、回滚、常见问题）。
+- **C（v0.5.1 修改）**：不再移除 Express/SQLite 代码、部署文档清理。决定保留后端，服务端版 + 纯静态版长期共存，各自演进；纯前端版后续按纯前端特性持续优化，不取代服务端版。
 
 ## Consequences
 

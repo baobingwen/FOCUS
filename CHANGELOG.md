@@ -2,6 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.1] — 2026-08-30
+
+### 版本线：0.5.x 维护（无后端 Local-First 主线）
+
+日常点子「设计一套无后端方案」迭代 B 落地——纯静态版部署到 GitHub Pages：浏览器打开固定网址即可使用。v0.5.1 起确定双版本（服务端版 + 纯静态版）长期共存、各自演进，不再移除后端。
+
+### Added
+
+- **GitHub Pages 部署（纯静态版）**：部署地址 `https://baobingwen.github.io/FOCUS/`（FOCUS 源码仓库 `gh-pages` 分支、项目页子路径——`focus` 名字已被源码仓库占用、根地址被其他站占用，故用子路径；GitHub Pages URL 大小写不敏感，小写 `/focus/` 亦可访问）
+- **vite base 按 mode 区分**：`vite.config.js` 在 `static` 模式下 `base` 为 `/FOCUS/`（资源引用带子路径前缀），默认模式保持 `'/'`——服务端版构建与部署不受影响
+- **部署脚本 `code/deploy-static.ps1`**：构建纯静态版 → 同步到独立部署工作区 `code/.deploy-static/`（保留 `.git` 部署历史，仅首次初始化，已加入 `.gitignore`）→ commit（带版本号）→ **普通快进 push**（非强制覆盖）；无变更时跳过部署；远程 `gh-pages` 被外部改动导致 push 被拒时停下提示，由用户确认后手动 `--force-with-lease` 处理
+- **部署指南 `code/DEPLOY_STATIC.md`**：一次性设置（Settings → Pages 选 gh-pages 分支）、每次发布流程、本地预览验证（`vite preview --base /FOCUS/`）、IndexedDB origin 隔离与数据迁移说明、回滚（gh-pages 保留每次部署历史）、常见问题
+
+### Changed
+
+- README/CONTEXT/CLAUDE/INDEX/CODE_STRUCTURE/ADR 0011 — 双版本条目与部署方案同步 GitHub Pages 部署
+- 预览命令补 `--base /FOCUS/`（子路径部署下本地预览需匹配 base）
+
+### Docs
+
+- `code/DEPLOY_STATIC.md` — 新增 GitHub Pages 部署指南（一次性设置/发布流程/数据迁移/回滚/常见问题）
+- `code/ROADMAP.md` — 迭代 B 移入已实现 + 版本头 0.5.1
+- `docs/adr/0011-no-backend-local-first.md` — 迭代拆分 B 标注 v0.5.1 已完成 + 落地内容
+- `CONTEXT.md` — 「纯静态版/服务端版」条目补 GitHub Pages 子路径部署
+- `README.md` — 纯静态版章节补「部署到 GitHub Pages」命令块 + 项目结构
+- `CLAUDE.md` — Commands 加 `deploy-static.ps1` + 部署方案区新增「GitHub Pages」+ 核心概念「部署」更新
+- `code/client/docs/CODE_STRUCTURE.md` — 版本头 v0.5.1
+- `docs/INDEX.md` — 部署区登记 `deploy-static.ps1` / `DEPLOY_STATIC.md`
+
+### Tests
+
+- 服务端 140 全绿（零改动）；客户端 297 全绿（零改动，迭代 B 为构建配置与部署脚本，无新增用例）
+
 ## [0.5.0] — 2026-08-30
 
 ### 版本线：0.5.x 起点（无后端 Local-First 主线）

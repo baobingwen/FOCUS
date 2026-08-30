@@ -48,12 +48,16 @@ cd code && pwsh -File build-client.ps1
 # 开发（无需后端）
 cd code/client && npm run dev:static
 
-# 构建（产物 dist-static/）+ 预览
+# 构建（产物 dist-static/）+ 预览（子路径需 --base /FOCUS/）
 cd code/client && npm run build:static
-npx vite preview --outDir dist-static
+npx vite preview --outDir dist-static --base /FOCUS/
 
 # 手动构建脚本
 cd code && pwsh -File build-client-static.ps1
+
+# 部署到 GitHub Pages（构建 + 推送到 FOCUS 仓库 gh-pages 分支）
+cd code && pwsh -File deploy-static.ps1
+# 部署地址 https://baobingwen.github.io/FOCUS/（详见 code/DEPLOY_STATIC.md）
 
 # === 测试 ===
 
@@ -202,6 +206,10 @@ code/start-local.bat
 手机浏览器打开 `http://<Tailscale-IP>:3001` 即可使用。  
 详细指南见 `code/LOCAL_DEPLOY.md`。
 
+#### GitHub Pages（纯静态版）
+
+纯静态版部署到 GitHub Pages：构建 + 推送到 FOCUS 仓库 `gh-pages` 分支，地址 `https://baobingwen.github.io/FOCUS/`（项目页子路径，`focus` 名字已被源码仓库占用、根地址被其他站占用；URL 大小写不敏感）。构建时 `vite base` 为 `/FOCUS/`（仅 static 模式）。手动脚本 `code/deploy-static.ps1`，详见 `code/DEPLOY_STATIC.md`。
+
 #### Fly.io 云部署（备选，需外币信用卡）
 
 方案文档在 `feat/deploy` 分支，含 Dockerfile、`fly.toml` 等配置。  
@@ -225,4 +233,4 @@ code/start-local.bat
 - **数据层**: 组件依赖统一数据访问入口（utils/api.js），构建开关 `VITE_DATA_LAYER` 分发到 REST（apiRest.js，服务端版）或 IndexedDB（apiLocal.js，纯静态版）
 - **双版本**: 同一代码库产出服务端版（默认构建，REST + SQLite）与纯静态版（build:static，IndexedDB 五仓库）；功能/界面一致，导出文件互通
 - **复习提醒**: 用户自维护的提醒语句库，学习中「结束学习」大按钮下方小字提醒条展示一条、每 15 分钟顺序轮换，点 ＋ 随时新增，管理模式内编辑/删除；存后端 `reminder_items` 表
-- **部署**: 本地 + Tailscale 优先，纯静态版可部署静态托管（GitHub Pages 方案见路线图迭代 B），Fly.io 方案备选
+- **部署**: 本地 + Tailscale 优先，纯静态版可部署 GitHub Pages（`https://baobingwen.github.io/FOCUS/`，脚本 `code/deploy-static.ps1`，详见 `code/DEPLOY_STATIC.md`），Fly.io 方案备选

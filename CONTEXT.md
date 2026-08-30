@@ -58,7 +58,7 @@ _Avoid_: 合并/增量导入、按 id 覆盖、导入时补默认科目、multip
 _Avoid_: 组件直接操作 IndexedDB、多端实时同步、冲突合并
 
 **纯静态版 / 服务端版（双版本）**：
-同一套代码库按构建时开关 `VITE_DATA_LAYER`（`local` / `rest`）产出的两种形态：纯静态版（`dist-static`，纯前端，数据存浏览器 IndexedDB，可部署到任意静态托管如 GitHub Pages）与服务端版（`dist`，沿用现有 Node 服务 + Tailscale 部署）。功能、界面、交互完全一致，仅数据存储位置不同。日常默认构建为服务端版，纯静态版作为无后端方向显式 opt-in。
+同一套代码库按构建时开关 `VITE_DATA_LAYER`（`local` / `rest`）产出的两种形态：纯静态版（`dist-static`，纯前端，数据存浏览器 IndexedDB）与服务端版（`dist`，沿用现有 Node 服务 + Tailscale 部署）。功能、界面、交互完全一致，仅数据存储位置不同。日常目前默认构建为服务端版，纯静态版作为无后端形态显式 opt-in，两版长期共存、各自演进。纯静态版部署到 GitHub Pages：FOCUS 仓库 `gh-pages` 分支、`https://baobingwen.github.io/FOCUS/` 子路径（`focus` 名字已被源码仓库占用、根地址被其他站占用，故用项目页子路径；GitHub Pages URL 大小写不敏感，小写 `/focus/` 亦可访问），构建时 `vite base` 为 `/FOCUS/`（仅 static 模式）。IndexedDB 按浏览器 origin 隔离：新地址部署后数据为全新起点，旧数据通过导出/导入 JSON 迁移（见 `code/DEPLOY_STATIC.md`）。
 _Avoid_: 两套独立代码副本、运行时切换数据层
 
 ## Flow

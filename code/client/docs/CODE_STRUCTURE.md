@@ -1,6 +1,6 @@
 # FOCUS 客户端代码结构关系
 
-> 当前版本：v0.5.0（数据层双实现结构变动见 [docs/adr/0011-no-backend-local-first.md](../../../docs/adr/0011-no-backend-local-first.md)；v0.4.1 结构拆分见 [adr/0001-v0.4.1-code-structure-changes.md](adr/0001-v0.4.1-code-structure-changes.md)）
+> 当前版本：v0.5.1（数据层双实现结构变动见 [docs/adr/0011-no-backend-local-first.md](../../../docs/adr/0011-no-backend-local-first.md)；v0.4.1 结构拆分见 [adr/0001-v0.4.1-code-structure-changes.md](adr/0001-v0.4.1-code-structure-changes.md)）
 
 ## 源码依赖图
 

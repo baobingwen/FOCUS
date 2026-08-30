@@ -18,7 +18,7 @@
 - **管理模式** — 删除类功能统一收进隐藏模式：连点 5 下右上角考研倒计时进入，管理模式下可删除历史记录（单条，不可恢复）、自定义科目、标签，以及拖拽排序标签库；日常界面只留展示与可逆的修改，防误触
 - **数据导出（管理模式）** — 管理模式横幅一键导出全部数据为 JSON 文件下载（含 app/版本/导出时间元数据，records 的 segments 解析为数组）
 - **数据导入（管理模式）** — 管理模式横幅「导入数据」按钮，把导出的 JSON 文件恢复到本地（全量替换，语义 = 恢复到导出时状态）；确认弹窗展示文件信息与导入统计、可先下载当前备份，导入成功后整页刷新；学习中不可导入
-- **双版本构建** — 同一套代码按构建开关 `VITE_DATA_LAYER` 产出两种形态。**服务端版**，默认构建，数据存后端 SQLite，沿用现有 Node + Tailscale 部署；**纯静态版**，`npm run build:static`，数据存浏览器 IndexedDB，可部署到任意静态托管如 GitHub Pages；两版功能、界面、交互一致，导出文件互通
+- **双版本构建** — 同一套代码按构建开关 `VITE_DATA_LAYER` 产出两种形态。**服务端版**，默认构建，数据存后端 SQLite，沿用现有 Node + Tailscale 部署；**纯静态版**，`npm run build:static`，数据存浏览器 IndexedDB，可一键部署到 GitHub Pages（`https://baobingwen.github.io/FOCUS/`，见 `code/DEPLOY_STATIC.md`）；两版功能、界面、交互一致，导出文件互通
 
 ## 快速开始
 
@@ -73,7 +73,7 @@ cd code/client && npm run dev:static
 
 ```bash
 cd code/client && npm run build:static   # 产物在 dist-static/
-npx vite preview --outDir dist-static    # 预览（或任意静态服务器托管）
+npx vite preview --outDir dist-static --base /FOCUS/   # 预览子路径（访问 http://localhost:4173/FOCUS/）
 ```
 
 或使用手动构建脚本（改完代码后，与 `build-client.ps1` 对应）：
@@ -82,7 +82,15 @@ npx vite preview --outDir dist-static    # 预览（或任意静态服务器托�
 cd code && pwsh -File build-client-static.ps1   # 产物在 client/dist-static/
 ```
 
-数据存于浏览器 IndexedDB，清除站点数据会清空记录，注意先导出备份。部署到 GitHub Pages 等静态托管见路线图后续迭代。
+数据存于浏览器 IndexedDB，清除站点数据会清空记录，注意先导出备份。
+
+**部署到 GitHub Pages**：
+
+```bash
+cd code && pwsh -File deploy-static.ps1   # 构建 + 推送到 gh-pages 分支
+```
+
+部署地址 `https://baobingwen.github.io/FOCUS/`（FOCUS 仓库 gh-pages 分支，项目页子路径，GitHub Pages 大小写不敏感、小写 /focus/ 亦可访问）。一次性设置（仓库 Settings → Pages 选 gh-pages 分支）与数据迁移说明见 [`code/DEPLOY_STATIC.md`](code/DEPLOY_STATIC.md)。
 
 ## 构建形态（双版本）
 
@@ -154,9 +162,12 @@ code/
 │   └── package.json
 │
 ├── build-client.ps1                 # 手动构建脚本
+├── build-client-static.ps1          # 手动构建纯静态版脚本
+├── deploy-static.ps1                # 纯静态版部署到 GitHub Pages 脚本
 ├── start-local.bat                  # 本地一键启动
 ├── ROADMAP.md                       # 功能路线图
-└── LOCAL_DEPLOY.md                  # 本地 + Tailscale 部署指南
+├── LOCAL_DEPLOY.md                  # 本地 + Tailscale 部署指南
+└── DEPLOY_STATIC.md                 # GitHub Pages 部署指南（纯静态版）
 
 docs/
 ├── INDEX.md                         # 全部文档索引
