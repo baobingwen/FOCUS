@@ -162,6 +162,9 @@ code/
 │   │   └── import.js                # 数据导入 API
 │   └── package.json
 │
+├── shared/                          # 双版本共用模块
+│   └── importValidation.js          # 导入校验（顶层结构 + 行级规则；client 经 Vite alias 引用、server 相对路径引用）
+│
 ├── build-client.ps1                 # 手动构建脚本
 ├── build-client-static.ps1          # 手动构建纯静态版脚本
 ├── deploy-static.ps1                # 纯静态版部署到 GitHub Pages 脚本
