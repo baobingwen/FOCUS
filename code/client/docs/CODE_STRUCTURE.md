@@ -1,6 +1,6 @@
 # FOCUS 客户端代码结构关系
 
-> 当前版本：v0.5.2（计时快照持久化见 [docs/adr/0012-timer-persistence.md](../../../docs/adr/0012-timer-persistence.md)；数据层双实现结构变动见 [docs/adr/0011-no-backend-local-first.md](../../../docs/adr/0011-no-backend-local-first.md)；v0.4.1 结构拆分见 [adr/0001-v0.4.1-code-structure-changes.md](adr/0001-v0.4.1-code-structure-changes.md)）
+> 当前版本：v0.5.3（双版本导入校验统一见 [docs/adr/0013-import-validation-unified.md](../../../docs/adr/0013-import-validation-unified.md)；计时快照持久化见 [docs/adr/0012-timer-persistence.md](../../../docs/adr/0012-timer-persistence.md)；数据层双实现结构变动见 [docs/adr/0011-no-backend-local-first.md](../../../docs/adr/0011-no-backend-local-first.md)；v0.4.1 结构拆分见 [adr/0001-v0.4.1-code-structure-changes.md](adr/0001-v0.4.1-code-structure-changes.md)）
 
 ## 源码依赖图
 
@@ -27,6 +27,7 @@ graph TD
     api[utils/api.js]
     apiRest[utils/apiRest.js]
     apiLocal[utils/apiLocal.js]
+    importValidation[shared/importValidation.js]
     clipboard[utils/clipboard.js]
     fmtTime[utils/fmtTime.js]
     timerStorage[utils/timerStorage.js]
@@ -70,9 +71,12 @@ graph TD
     %% 数据层分发：组件只依赖 api 统一入口
     api -->|VITE_DATA_LAYER=rest| apiRest
     api -->|VITE_DATA_LAYER=local| apiLocal
+
+    %% 共享校验：双版本共用（服务端 import.js 亦引用同一模块）
+    apiLocal -->|validatePayload/validateImportRows| importValidation
 ```
 
-> 说明：`useFreezeOnLeave` 不 import `useTimer`，通过 App 层把 timer 的 freeze/thaw 作为参数传入（运行时依赖）；`useTimer`/`useMultiTap`/`utils/*` 除 `useTimer → utils/timerStorage`（计时快照存取）外不 import 任何项目内模块。
+> 说明：`useFreezeOnLeave` 不 import `useTimer`，通过 App 层把 timer 的 freeze/thaw 作为参数传入（运行时依赖）；`useTimer`/`useMultiTap`/`utils/*` 除 `useTimer → utils/timerStorage`（计时快照存取）与 `apiLocal → shared/importValidation`（导入校验）外不 import 任何项目内模块。
 
 ## 文件职责与状态归属
 
@@ -97,6 +101,7 @@ graph TD
 | `utils/clipboard.js`             | 剪贴板复制（navigator.clipboard + execCommand 降级）                               | 否                                                                                                             |
 | `utils/fmtTime.js`               | 时长格式化纯函数（fmtTime / fmtClock / fmtShortClock）                             | 否                                                                                                             |
 | `utils/timerStorage.js`          | 计时快照存取（save / load / clear + 校验，localStorage 键 `focus:timer:snapshot`） | 否                                                                                                             |
+| `shared/importValidation.js`     | 双版本共用导入校验纯函数，见 [ADR 0013](../../../docs/adr/0013-import-validation-unified.md) | 否                                                                                                             |
 
 ## 格式化函数分工（utils/fmtTime.js）
 

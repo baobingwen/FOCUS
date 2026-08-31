@@ -149,7 +149,7 @@ src/
 │   ├── apiRest.js             # REST 数据层实现（服务端版）
 │   ├── apiRest.test.js        # REST 层 25 条（含 tagsApi 5 条 + remindersApi 4 条 + exportApi 3 条 + importApi 2 条）
 │   ├── apiLocal.js            # IndexedDB 数据层实现（纯静态版，五仓库 1:1 模拟五表）
-│   ├── apiLocal.test.js       # 本地数据层 41 条（fake-indexeddb 直测：种子/CRUD/排序/幂等/级联/统计/导出结构/导入事务）
+│   ├── apiLocal.test.js       # 本地数据层 46 条（fake-indexeddb 直测：种子/CRUD/排序/幂等/级联/统计/导出结构/导入事务与行级校验（重复科目/重复关联/duration_ms/空名/sort_order 归一））
 │   ├── clipboard.js
 │   ├── clipboard.test.js      # 剪贴板复制工具 3 条
 │   ├── fmtTime.js             # 时长格式化（fmtTime 中文 + fmtClock + fmtShortClock）
@@ -186,7 +186,7 @@ src/
     └── TodayOverview.test.jsx  # 概览 + 条形图 + 按标签分组 + 页数汇总 10 条
 ```
 
-总计 **320 条测试用例**，19 个测试文件。
+总计 **325 条测试用例**，19 个测试文件。
 
 ## 测试模式详解
 

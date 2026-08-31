@@ -2,6 +2,34 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.3] — 2026-08-31
+
+### 版本线：0.5.x 维护（无后端 Local-First 主线）
+
+日常点子「导入校验在双版本之间不一致」落地——双版本共用同一套导入校验规则，同一份文件两端要么都接受要么都拒绝。
+
+### Changed
+
+- **导入校验双版本统一**：抽公共模块 `code/shared/importValidation.js`（纯函数，客户端经 Vite alias `@shared` 引用、服务端相对路径引用），双版本共用同一套显式行级校验——顶层结构（app=FOCUS、data 五表均为数组）+ 行级规则（id 正整数 / mode 仅 study·rest / duration_ms > 0 / 科目·标签·提醒名称非空 / record_tags 引用存在 / 重复科目名与重复 record_tags 拒绝）；任何一行不合法整体拒绝、事务回滚，错误消息统一为「导入数据不合法: …」中文描述
+- **服务端行为对齐明细**：duration_ms ≤ 0 与空串名称从「接受」变为「拒绝」（此前 SQLite 仅 NOT NULL 放行）；重复科目名/重复 record_tags 的拒绝前置到校验层（400 的 error 字段从 SQLite 英文原文变为中文规则消息）；sort_order 缺失/null 从「拒绝」变为「接受并归一为 0」；notes/paused_ms/pages/created_at 缺失字段默认值归一化与纯静态版一致（intOr/strOr 共享辅助）
+- **纯静态版**：删除本地 `validatePayload/validateImportRows` 改用共享模块；补齐缺失的重复科目名/重复 record_tags 检查（此前 IndexedDB 无唯一约束会接受）；归一化改用共享辅助
+- 服务端 SQLite 现有约束（UNIQUE/复合主键/外键/NOT NULL）保留作理论兜底，不加新 migration/CHECK 约束；对正常流程与历史导出文件零影响（FOCUS 自身导出的文件字段齐全、值合法，必然通过校验；唯一边界：已含重复数据（脏库）导出的文件会被拒绝，属合理保护）
+
+### Tests
+
+- 服务端 140 → 146 全绿：import.test.js 7 → 13 条（+6：duration_ms≤0 拒绝 / 空串科目名拒绝 / 重复科目名 400 中文消息 / 重复标签名拒绝 / 重复 record_tags 拒绝 / sort_order 缺失归一 0）；原「NOT NULL 约束回滚」用例改为行级校验语义（断言「导入数据不合法」）
+- 客户端 320 → 325 全绿：apiLocal.test.js 41 → 46 条（+5：重复科目名 / 重复 record_tags / duration_ms≤0 / 空串标签名 / sort_order 缺失归 0）；双构建（dist / dist-static）验证 alias 解析正常
+
+### Docs
+
+- `docs/adr/0013-import-validation-unified.md` — 新增双版本导入校验统一设计文档（差异清单 / 6 条决策 / 影响分析）
+- `CONTEXT.md` — 「数据导入」概念更新：完全信任文件 → 双版本共用同一套行级校验 + 中文错误 + 默认值归一化
+- `code/ROADMAP.md` — 日常点子「导入校验双版本不一致」标记设计已确定；v0.4.4 导入条目「完全信任文件」表述修正
+- `CLAUDE.md` — routes/import.js 描述更新 + 新增 code/shared/importValidation.js 说明行
+- `code/client/docs/CODE_STRUCTURE.md` — 版本头 v0.5.3 + 依赖图 apiLocal → shared/importValidation + 文件职责表新增共享模块行
+- `docs/INDEX.md` — 登记 ADR 0013
+- `code/server/TESTING.md` / `code/client/TESTING.md` — import.test.js 7→13 条、apiLocal 41→46 条、总数 140→146 / 320→325 同步
+
 ## [0.5.2] — 2026-08-30
 
 ### 版本线：0.5.x 维护（无后端 Local-First 主线）

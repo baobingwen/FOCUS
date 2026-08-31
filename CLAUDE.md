@@ -127,8 +127,10 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 | `routes/tags.js` | 标签 CRUD：GET 全量（按 sort_order）、POST 幂等复用（≤12 字，排末尾）、PUT /order 批量重排（全量校验）、DELETE 级联清关联 |
 | `routes/reminders.js` | 复习提醒 CRUD：GET 全量（按 sort_order）、POST 新增（≤200 字，排末尾）、PATCH /:id 改内容、DELETE /:id 删除 |
 | `routes/export.js` | 数据导出：GET /api/export 全量导出五张业务表为 JSON 下载（含 app/version/exported_at 元数据，records 的 segments 解析为数组，不含 _migrations） |
-| `routes/import.js` | 数据导入：POST /api/import 全量替换恢复（事务内清空五表后按导入数据原样插入保留原 id，顶层校验 app/data 五表，行级 SQLite 约束兜底，任何一行不合法整体回滚；records 的 segments 数组序列化回 TEXT；express.json limit 调大至 10mb） |
+| `routes/import.js` | 数据导入：POST /api/import 全量替换恢复（事务内清空五表后按导入数据原样插入保留原 id；顶层校验 + 行级校验共用 code/shared/importValidation.js，任何一行不合法整体回滚并返回「导入数据不合法: …」中文错误；SQLite 现有约束仅作兜底；records 的 segments 数组序列化回 TEXT；express.json limit 调大至 10mb） |
 | `migrations/` | 增量 SQL 迁移脚本目录，按文件名排序执行，仅增不删改 |
+
+> `code/shared/importValidation.js` — 双版本共用导入校验模块（纯函数：顶层结构 + 行级规则，见 [ADR 0013](../docs/adr/0013-import-validation-unified.md)），客户端经 Vite `resolve.alias` 引用，服务端相对路径引用
 
 ### 数据库迁移系统
 

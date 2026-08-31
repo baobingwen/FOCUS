@@ -147,22 +147,91 @@ describe('POST /api/import', () => {
     expect(res.body.error).toContain('tags');
   });
 
-  it('行数据不合法（NOT NULL 约束）时整个事务回滚，原数据保留', async () => {
+  it('行数据不合法（行级校验）时整体拒绝，原数据保留', async () => {
     const db = getDb();
     db.prepare('INSERT INTO subjects (name, sort_order) VALUES (?, ?)').run('政治', 3);
 
-    // subjects 中有一行 name 为 null（违反 NOT NULL）；records 数据合法但不应落库
+    // subjects 中有一行 name 为 null（行级校验拦截）；records 数据合法但不应落库
     const payload = makePayload({
       subjects: [{ id: 1, name: null, sort_order: 0 }],
       records: [{ id: 2, mode: 'study', subject: '数学', duration_ms: 1000, paused_ms: 0 }],
     });
     const res = await request(app).post('/api/import').send(payload);
     expect(res.status).toBe(400);
-    expect(res.body.error).toContain('导入数据失败');
+    expect(res.body.error).toContain('导入数据不合法');
 
-    // 事务回滚：旧数据保留、无半截数据
+    // 校验在事务前执行：旧数据保留、无半截数据
     expect(db.prepare('SELECT COUNT(*) AS n FROM subjects').get().n).toBe(4); // 默认 3 + 政治
     expect(db.prepare('SELECT COUNT(*) AS n FROM records').get().n).toBe(0);
+  });
+
+  it('duration_ms ≤ 0 拒绝（行级校验，之前 SQLite 仅 NOT NULL 放行）', async () => {
+    const payload = makePayload({
+      subjects: [{ id: 1, name: '数学', sort_order: 0 }],
+      records: [{ id: 2, mode: 'study', subject: '数学', duration_ms: 0, paused_ms: 0 }],
+    });
+    const res = await request(app).post('/api/import').send(payload);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('导入数据不合法: records 行 duration_ms 无效');
+    expect(getDb().prepare('SELECT COUNT(*) AS n FROM records').get().n).toBe(0);
+  });
+
+  it('空串 subjects.name 拒绝（行级校验，之前 NOT NULL 放行空串）', async () => {
+    const payload = makePayload({ subjects: [{ id: 1, name: '  ', sort_order: 0 }] });
+    const res = await request(app).post('/api/import').send(payload);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('导入数据不合法: subjects 行 name 缺失');
+  });
+
+  it('重复 subjects.name 拒绝（400 中文消息，替代原 SQLite UNIQUE 英文原文）', async () => {
+    const payload = makePayload({
+      subjects: [
+        { id: 1, name: '数学', sort_order: 0 },
+        { id: 2, name: '数学', sort_order: 1 },
+      ],
+    });
+    const res = await request(app).post('/api/import').send(payload);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('导入数据不合法: subjects 行 name 重复');
+  });
+
+  it('重复 tags.name 拒绝（行级校验，错误消息统一中文）', async () => {
+    const payload = makePayload({
+      tags: [
+        { id: 1, name: '高数', sort_order: 0 },
+        { id: 2, name: '高数', sort_order: 1 },
+      ],
+    });
+    const res = await request(app).post('/api/import').send(payload);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('导入数据不合法: tags 行 name 重复');
+  });
+
+  it('重复 record_tags 拒绝（行级校验，替代原复合主键兜底）', async () => {
+    const payload = makePayload({
+      subjects: [{ id: 1, name: '数学', sort_order: 0 }],
+      records: [{ id: 2, mode: 'study', subject: '数学', duration_ms: 1000, paused_ms: 0 }],
+      tags: [{ id: 3, name: '高数', sort_order: 0 }],
+      record_tags: [
+        { record_id: 2, tag_id: 3 },
+        { record_id: 2, tag_id: 3 },
+      ],
+    });
+    const res = await request(app).post('/api/import').send(payload);
+    expect(res.status).toBe(400);
+    expect(res.body.error).toContain('导入数据不合法: record_tags 行重复');
+  });
+
+  it('sort_order 缺失时接受并归一为 0（行为放宽，对齐纯静态版）', async () => {
+    const payload = makePayload({
+      subjects: [{ id: 1, name: '数学' }], // 无 sort_order
+      records: [{ id: 2, mode: 'study', subject: '数学', duration_ms: 1000, paused_ms: 0, pages: 3 }],
+    });
+    const res = await request(app).post('/api/import').send(payload);
+    expect(res.status).toBe(200);
+    expect(getDb().prepare('SELECT sort_order FROM subjects WHERE id = 1').get())
+      .toEqual({ sort_order: 0 });
+    expect(getDb().prepare('SELECT pages FROM records WHERE id = 2').get()).toEqual({ pages: 3 });
   });
 
   it('导入后 sqlite_sequence 更新：新插入记录 id 从导入最大 id 之后继续', async () => {

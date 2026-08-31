@@ -1,6 +1,7 @@
 // code/client/src/utils/apiLocal.js
 // IndexedDB 数据层实现（纯静态版）
 // 与 apiRest.js 保持完全一致的接口签名、返回形态与错误语义（组件零改动）
+import { validatePayload, validateImportRows, intOr, strOr } from '@shared/importValidation';
 
 const DB_NAME = 'focus-db';
 const DB_VERSION = 1;
@@ -12,7 +13,6 @@ const DEFAULT_SUBJECTS = [
   { name: '英语', sort_order: 1 },
   { name: '专业课', sort_order: 2 },
 ];
-const TABLES = ['records', 'subjects', 'tags', 'record_tags', 'reminder_items'];
 
 /** @type {Promise<IDBDatabase> | null} */
 let dbPromise = null;
@@ -645,59 +645,6 @@ export const exportApi = {
   },
 };
 
-/**
- * 顶层校验导入文件结构（与后端一致）
- * @param {unknown} body - 完整导出 JSON
- * @returns {string | null} 错误信息；null 表示通过
- */
-function validatePayload(body) {
-  if (!body || typeof body !== 'object') return '导入数据格式不正确';
-  if (body.app !== 'FOCUS') return '不是 FOCUS 导出的数据文件';
-  const data = body.data;
-  if (!data || typeof data !== 'object') return '导入数据缺少 data 字段';
-  for (const table of TABLES) {
-    if (!Array.isArray(data[table])) return `导入数据缺少表: ${table}`;
-  }
-  return null;
-}
-
-/**
- * 事务外行级校验（对齐后端 SQLite 约束兜底的语义：任何一行不合法 → 整体拒绝）
- * @param {object} data - 五表数据
- * @returns {void}
- * @throws {Error} 任一行不合法时抛出
- */
-function validateImportRows(data) {
-  for (const row of data.subjects) {
-    if (!Number.isInteger(row.id) || row.id <= 0) throw new Error('导入数据不合法: subjects 行缺少有效 id');
-    if (typeof row.name !== 'string' || !row.name.trim()) throw new Error('导入数据不合法: subjects 行 name 缺失');
-  }
-  for (const row of data.tags) {
-    if (!Number.isInteger(row.id) || row.id <= 0) throw new Error('导入数据不合法: tags 行缺少有效 id');
-    if (typeof row.name !== 'string' || !row.name.trim()) throw new Error('导入数据不合法: tags 行 name 缺失');
-  }
-  for (const row of data.records) {
-    if (!Number.isInteger(row.id) || row.id <= 0) throw new Error('导入数据不合法: records 行缺少有效 id');
-    if (!['study', 'rest'].includes(row.mode)) throw new Error('导入数据不合法: records 行 mode 无效');
-    if (typeof row.duration_ms !== 'number' || row.duration_ms <= 0) throw new Error('导入数据不合法: records 行 duration_ms 无效');
-  }
-  const tagIds = new Set(data.tags.map((t) => t.id));
-  const recordIds = new Set(data.records.map((r) => r.id));
-  for (const row of data.record_tags) {
-    if (!Number.isInteger(row.record_id) || row.record_id <= 0
-      || !Number.isInteger(row.tag_id) || row.tag_id <= 0) {
-      throw new Error('导入数据不合法: record_tags 行引用无效');
-    }
-    if (!recordIds.has(row.record_id) || !tagIds.has(row.tag_id)) {
-      throw new Error('导入数据不合法: record_tags 引用的记录或标签不存在');
-    }
-  }
-  for (const row of data.reminder_items) {
-    if (!Number.isInteger(row.id) || row.id <= 0) throw new Error('导入数据不合法: reminder_items 行缺少有效 id');
-    if (typeof row.content !== 'string' || !row.content.trim()) throw new Error('导入数据不合法: reminder_items 行 content 缺失');
-  }
-}
-
 export const importApi = {
   /**
    * 导入全部数据（全量替换，IndexedDB 事务内清空五仓库后原样插入，任何一行不合法整体回滚）
@@ -728,12 +675,12 @@ export const importApi = {
       // 先父后子插入，保证引用关系（与后端顺序一致）
       const insertSubjects = tx.objectStore('subjects');
       for (const row of data.subjects) {
-        insertSubjects.add({ id: row.id, name: row.name, sort_order: Number.isInteger(row.sort_order) ? row.sort_order : 0 });
+        insertSubjects.add({ id: row.id, name: row.name, sort_order: intOr(row.sort_order, 0) });
       }
 
       const insertTags = tx.objectStore('tags');
       for (const row of data.tags) {
-        insertTags.add({ id: row.id, name: row.name, sort_order: Number.isInteger(row.sort_order) ? row.sort_order : 0 });
+        insertTags.add({ id: row.id, name: row.name, sort_order: intOr(row.sort_order, 0) });
       }
 
       const insertRecords = tx.objectStore('records');
@@ -749,11 +696,11 @@ export const importApi = {
           mode: row.mode,
           subject: row.mode === 'study' ? (row.subject ?? null) : null,
           duration_ms: row.duration_ms,
-          notes: typeof row.notes === 'string' ? row.notes : '',
+          notes: strOr(row.notes, ''),
           segments,
-          paused_ms: Number.isInteger(row.paused_ms) ? row.paused_ms : 0,
-          pages: Number.isInteger(row.pages) ? row.pages : null,
-          created_at: typeof row.created_at === 'string' ? row.created_at : null,
+          paused_ms: intOr(row.paused_ms, 0),
+          pages: intOr(row.pages, null),
+          created_at: strOr(row.created_at, null),
         });
       }
 
@@ -767,8 +714,8 @@ export const importApi = {
         insertReminders.add({
           id: row.id,
           content: row.content,
-          sort_order: Number.isInteger(row.sort_order) ? row.sort_order : 0,
-          created_at: typeof row.created_at === 'string' ? row.created_at : null,
+          sort_order: intOr(row.sort_order, 0),
+          created_at: strOr(row.created_at, null),
         });
       }
 

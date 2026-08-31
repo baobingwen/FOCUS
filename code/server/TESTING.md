@@ -44,7 +44,7 @@ npm run test:watch
 │   ├── tags.test.js        # 标签路由（22 条用例，GET 排序/POST 幂等复用/DELETE 级联/PUT 全量重排）
 │   ├── reminders.test.js   # 复习提醒路由（19 条用例，GET 排序/POST 校验递增/PATCH 修改/DELETE 删除）
 │   ├── export.test.js      # 数据导出路由（5 条用例，全量 JSON + 元数据/默认科目 + segments 解析 + 附件文件名 + 不含内部表）
-│   └── import.test.js      # 数据导入路由（7 条用例，全量替换/保留原 id/事务回滚/顶层校验/segments 序列化/sqlite_sequence）
+│   └── import.test.js      # 数据导入路由（13 条用例，全量替换/保留原 id/事务回滚/顶层校验/行级校验/segments 序列化/sqlite_sequence）
 ├── jest.setup.cjs          # 环境变量初始化（CJS，在 ESM 加载前执行）
 └── package.json            # Jest 配置内联于此
 ```
@@ -183,7 +183,7 @@ app.get('/{*path}', handler);
 | `PUT /tags/order` | 重排后 GET 顺序更新（200）、缺 id 非全量（400）、含不存在 id（400）、含重复（400）、ids 非数组（400）、含非正整数（400）、空库空数组幂等（200）、新标签排末尾（含经 records 创建的标签） |
 | `reminders` | GET 空库空数组（200）、按 sort_order 排序、POST 新增（201）/trim（201）/sort_order 递增（201）、内容为空/空白/缺失（400）、超 200 字（400）、恰好 200 字（201）、PATCH 修改（200）/不存在（404）/id 非数字（404）/空内容（400）/sort_order 不变、DELETE 删除（200）/不存在（404）/id 非数字（404）/多条互不影响 |
 | `GET /api/export` | 空库含默认科目（数学/英语/专业课）、exported_at 格式（YYYY-MM-DD HH:MM:SS）、附件文件名（focus-export-YYYYMMDD-HHMMSS.json）、全量导出各表 + segments JSON 文本解析为数组、无 segments 保持 null、不含 _migrations |
-| `POST /api/import` | 空五表导入清空默认科目（信任文件）、全量替换旧数据消失且保留原 id/record_tags 引用、records.segments 数组序列化为 JSON 文本并可再导出解析回数组、app 非 FOCUS（400）、data 缺表（400）、行数据 NOT NULL 违反整个事务回滚旧数据保留、导入后 sqlite_sequence 更新（新记录 id 续在导入最大 id 之后） |
+| `POST /api/import` | 空五表导入清空默认科目（信任文件）、全量替换旧数据消失且保留原 id/record_tags 引用、records.segments 数组序列化为 JSON 文本并可再导出解析回数组、app 非 FOCUS（400）、data 缺表（400）、行级校验（共享模块 code/shared/importValidation.js）：name 为 null 整体拒绝旧数据保留、duration_ms≤0（400）、空串科目名（400）、重复 subjects.name（400）、重复 tags.name（400）、重复 record_tags（400）、sort_order 缺失归一为 0（200）、导入后 sqlite_sequence 更新（新记录 id 续在导入最大 id 之后） |
 
 ## 添加新测试
 
@@ -223,7 +223,7 @@ describe('GET /api/xxx', () => {
 | `__tests__/tags.test.js` | 22 条用例，GET 排序/POST 幂等复用/DELETE 级联/PUT 全量重排 |
 | `__tests__/reminders.test.js` | 19 条用例，GET 排序/POST 校验递增/PATCH 修改/DELETE 删除 |
 | `__tests__/export.test.js` | 5 条用例，全量 JSON 导出 + 元数据 + segments 解析 + 附件文件名 |
-| `__tests__/import.test.js` | 7 条用例，全量替换 + 保留原 id + 事务回滚 + 顶层校验 + segments 序列化 |
+| `__tests__/import.test.js` | 13 条用例，全量替换 + 保留原 id + 事务回滚 + 顶层校验 + 行级校验（共享模块）+ segments 序列化 |
 | `jest.setup.cjs` | 环境变量初始化 |
 | `../database.js` | 支持 `DB_PATH` 环境变量和 `closeDb()` |
 | `../index.js` | 导出 `app`，测试环境不监听端口 |

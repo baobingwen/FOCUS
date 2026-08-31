@@ -449,4 +449,51 @@ describe('importApi.submit', () => {
     });
     await expect(importApi.submit(payload)).rejects.toThrow('导入数据不合法: record_tags 引用的记录或标签不存在');
   });
+
+  it('重复 subjects.name 拒绝（双版本规则一致）', async () => {
+    const payload = makePayload({
+      subjects: [
+        { id: 1, name: '数学', sort_order: 0 },
+        { id: 2, name: '数学', sort_order: 1 },
+      ],
+    });
+    await expect(importApi.submit(payload)).rejects.toThrow('导入数据不合法: subjects 行 name 重复');
+  });
+
+  it('重复 record_tags 拒绝（双版本规则一致）', async () => {
+    const payload = makePayload({
+      subjects: [{ id: 1, name: '数学', sort_order: 0 }],
+      records: [{ id: 2, mode: 'study', subject: '数学', duration_ms: 1000, notes: '', segments: null, paused_ms: 0, pages: null, created_at: '2026-01-01 00:00:00' }],
+      tags: [{ id: 3, name: '高数', sort_order: 0 }],
+      record_tags: [
+        { record_id: 2, tag_id: 3 },
+        { record_id: 2, tag_id: 3 },
+      ],
+    });
+    await expect(importApi.submit(payload)).rejects.toThrow('导入数据不合法: record_tags 行重复');
+  });
+
+  it('duration_ms ≤ 0 拒绝', async () => {
+    const payload = makePayload({
+      subjects: [{ id: 1, name: '数学', sort_order: 0 }],
+      records: [{ id: 2, mode: 'study', subject: '数学', duration_ms: 0 }],
+    });
+    await expect(importApi.submit(payload)).rejects.toThrow('导入数据不合法: records 行 duration_ms 无效');
+  });
+
+  it('空串 tags.name 拒绝', async () => {
+    const payload = makePayload({ tags: [{ id: 1, name: '  ', sort_order: 0 }] });
+    await expect(importApi.submit(payload)).rejects.toThrow('导入数据不合法: tags 行 name 缺失');
+  });
+
+  it('sort_order 缺失时接受并归一为 0（默认值归一化双端一致）', async () => {
+    const payload = makePayload({
+      subjects: [{ id: 1, name: '政治' }], // 无 sort_order
+      records: [{ id: 2, mode: 'study', subject: '政治', duration_ms: 1000, notes: '', segments: null, paused_ms: 0, pages: null, created_at: '2026-01-01 00:00:00' }],
+    });
+    const result = await importApi.submit(payload);
+    expect(result.counts.subjects).toBe(1);
+    const subjects = await subjectsApi.list();
+    expect(subjects[0]).toMatchObject({ id: 1, name: '政治', sort_order: 0 });
+  });
 });
