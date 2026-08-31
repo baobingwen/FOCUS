@@ -4,7 +4,8 @@ import SubjectSelector from './SubjectSelector';
 import TagPicker from './TagPicker';
 import ReminderBar from './ReminderBar';
 import { recordsApi } from '../utils/api';
-import { fmtClock } from '../utils/fmtTime';
+import { fmtClock, fmtTime } from '../utils/fmtTime';
+import { loadPendingRecord, savePendingRecord, clearPendingRecord } from '../utils/pendingRecord';
 
 /**
  * 计时器页面组件
@@ -20,8 +21,10 @@ export default function TimerPage({ timer, onRecordSaved, adminMode = false }) {
   const [saving, setSaving] = useState(false);
   // Toast通知状态
   const [toast, setToast] = useState(null);
-  // 控制暂停态结束学习确认弹窗的显示状态
+  // 结束学习确认弹窗（学习中/暂停中共用）
   const [showEndConfirm, setShowEndConfirm] = useState(false);
+  // 待重试记录：学习记录保存失败后暂存
+  const [pending, setPending] = useState(() => loadPendingRecord());
 
   /**
    * 显示Toast通知
@@ -34,53 +37,83 @@ export default function TimerPage({ timer, onRecordSaved, adminMode = false }) {
   }, []);
 
   /**
-   * 处理结束学习
-   * 停止计时器并保存学习记录到后端
+   * 提交学习记录（首次结束 / 重试共用）
+   * 成功清空待重试；失败暂存待重试并提示
+   * @param {Object} payload - 提交给 recordsApi.create 的完整数据（mode/subject/duration_ms/paused_ms/segments/notes/tags/pages）
    */
-  const handleEndStudy = async () => {
-    const data = timer.endStudy(); // 停止计时并获取数据
-    if (!data) return; // 退出
-
+  const submitStudyRecord = async (payload) => {
     setSaving(true);
     try {
       // 调用API保存学习记录
-      await recordsApi.create({
-        mode: 'study',
-        subject: timer.selectedSubject.name,
-        duration_ms: data.duration_ms,
-        paused_ms: data.paused_ms,
-        segments: data.segments,
-        notes: timer.notes.trim(),
-        tags: timer.tags,
-        pages: timer.pages,
-      });
+      await recordsApi.create(payload);
+      clearPendingRecord();
+      setPending(null);
       onRecordSaved?.(); // 通知父组件刷新数据
     } catch (err) {
+      savePendingRecord(payload);
+      setPending(payload);
       showToast(`保存失败: ${err.message}`, 'error');
     }
     setSaving(false);
   };
 
   /**
-   * 处理暂停态下点击结束 → 弹窗确认
+   * 处理结束学习（确认弹窗「结束学习」按钮）
+   * 停止计时器并保存学习记录到后端
    */
-  const handleEndFromPaused = () => {
+  const handleEndStudy = async () => {
+    const data = timer.endStudy(); // 停止计时并获取数据
+    if (!data) return; // 退出
+
+    await submitStudyRecord({
+      mode: 'study',
+      subject: timer.selectedSubject.name,
+      duration_ms: data.duration_ms,
+      paused_ms: data.paused_ms,
+      segments: data.segments,
+      notes: timer.notes.trim(),
+      tags: timer.tags,
+      pages: timer.pages,
+    });
+  };
+
+  /**
+   * 学习中/暂停中点「结束学习」→ 弹确认框
+   */
+  const handleEndFromActive = () => {
     setShowEndConfirm(true);
   };
 
   /**
-   * 确认结束（暂停态）
+   * 确认结束（确认弹窗「结束学习」按钮）
    */
-  const confirmEndFromPaused = async () => {
+  const confirmEndFromActive = async () => {
     setShowEndConfirm(false);
     await handleEndStudy();
   };
 
   /**
-   * 取消结束（暂停态）
+   * 返回学习（确认弹窗「返回学习」按钮）— 关弹窗继续计时，尚未结束
    */
-  const cancelEndFromPaused = () => {
+  const returnToActive = () => {
     setShowEndConfirm(false);
+  };
+
+  /**
+   * 重试保存待重试记录
+   */
+  const handleRetrySave = async () => {
+    if (!pending || saving) return;
+    await submitStudyRecord(pending);
+  };
+
+  /**
+   * 放弃记录 — 丢弃待重试记录，直接回 idle（不再问休息）
+   */
+  const handleDiscardPending = () => {
+    clearPendingRecord();
+    setPending(null);
+    if (timer.phase === 'rest_prompt') timer.skipRest();
   };
 
   /**
@@ -143,6 +176,16 @@ export default function TimerPage({ timer, onRecordSaved, adminMode = false }) {
         )}
 
         {toast && <Toast message={toast.message} type={toast.type} />}
+
+        {/* 刷新恢复：上次学习记录保存失败未处理 → 强制重试/放弃 */}
+        {pending && (
+          <PendingRecordModal
+            record={pending}
+            saving={saving}
+            onRetry={handleRetrySave}
+            onDiscard={handleDiscardPending}
+          />
+        )}
       </div>
     );
   }
@@ -248,7 +291,7 @@ export default function TimerPage({ timer, onRecordSaved, adminMode = false }) {
         <div className={`relative flex items-center ${isStudying ? 'group' : ''}`}>
           {/* 结束学习按钮 */}
           <button
-            onClick={isStudying ? handleEndStudy : handleEndFromPaused}
+            onClick={handleEndFromActive}
             disabled={saving}
             className="w-36 h-36 rounded-full bg-orange-400 hover:bg-orange-500 active:bg-orange-600
               shadow-lg transition-all duration-200 text-white font-bold flex items-center justify-center"
@@ -288,28 +331,30 @@ export default function TimerPage({ timer, onRecordSaved, adminMode = false }) {
 
         {toast && <Toast message={toast.message} type={toast.type} />}
 
-        {/* 暂停态结束确认弹窗 */}
-        {isPaused && showEndConfirm && (
+        {/* 结束学习确认弹窗（学习中/暂停中共用） */}
+        {showEndConfirm && (
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
             <div className="bg-white rounded-3xl p-8 mx-4 max-w-sm w-full shadow-2xl text-center">
               <h2 className="text-lg font-bold text-gray-800 mb-2">结束学习？</h2>
-              <p className="text-sm text-gray-400 mb-8">当前处于暂停中，确定结束吗？</p>
+              <p className="text-sm text-gray-400 mb-8">
+                {isPaused ? '当前处于暂停中，确定结束吗？' : '确定结束本次学习吗？'}
+              </p>
 
               <div className="flex gap-4 justify-center">
                 <button
-                  onClick={confirmEndFromPaused}
+                  onClick={confirmEndFromActive}
                   disabled={saving}
                   className="px-8 py-3 bg-orange-400 text-white rounded-xl font-medium
                     hover:bg-orange-500 active:bg-orange-600 transition-all shadow-md"
                 >
-                  {saving ? '保存中...' : '确定'}
+                  {saving ? '保存中...' : '结束学习'}
                 </button>
                 <button
-                  onClick={cancelEndFromPaused}
+                  onClick={returnToActive}
                   className="px-8 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium
                     hover:bg-gray-200 active:bg-gray-300 transition-all"
                 >
-                  取消
+                  返回学习
                 </button>
               </div>
             </div>
@@ -321,6 +366,18 @@ export default function TimerPage({ timer, onRecordSaved, adminMode = false }) {
 
   // 状态 4：休息弹窗
   if (timer.phase === 'rest_prompt') {
+    if (pending) {
+      // 保存失败：本次学习记录未落库，必须重试或放弃
+      return (
+        <PendingRecordModal
+          record={pending}
+          saving={saving}
+          onRetry={handleRetrySave}
+          onDiscard={handleDiscardPending}
+        />
+      );
+    }
+
     return (
       <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
         <div className="bg-white rounded-3xl p-8 mx-4 max-w-sm w-full shadow-2xl text-center">
@@ -381,8 +438,52 @@ export default function TimerPage({ timer, onRecordSaved, adminMode = false }) {
 }
 
 /**
+ * 待重试记录弹窗（保存失败态 / 刷新恢复态共用）
+ * 「重试保存」重新提交；「放弃记录」丢弃该条数据
+ * @param {Object} props - 组件属性
+ * @param {Object} props.record - 待重试记录（subject/duration_ms 用于展示）
+ * @param {boolean} props.saving - 保存中（重试按钮禁用并显示「保存中...」）
+ * @param {Function} props.onRetry - 重试保存回调
+ * @param {Function} props.onDiscard - 放弃记录回调
+ */
+function PendingRecordModal({ record, saving, onRetry, onDiscard }) {
+  return (
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+      <div className="bg-white rounded-3xl p-8 mx-4 max-w-sm w-full shadow-2xl text-center">
+        <div className="text-4xl mb-3">⚠️</div>
+        <h2 className="text-lg font-bold text-gray-800 mb-2">学习记录保存失败</h2>
+        <p className="text-sm text-gray-400 mb-8">
+          {record.subject} · {fmtTime(record.duration_ms)} 未保存
+        </p>
+
+        <div className="flex gap-4 justify-center">
+          <button
+            onClick={onRetry}
+            disabled={saving}
+            className="px-8 py-3 bg-orange-400 text-white rounded-xl font-medium
+              hover:bg-orange-500 active:bg-orange-600 transition-all shadow-md"
+          >
+            {saving ? '保存中...' : '重试保存'}
+          </button>
+          <button
+            onClick={onDiscard}
+            className="px-8 py-3 bg-gray-100 text-gray-600 rounded-xl font-medium
+              hover:bg-gray-200 active:bg-gray-300 transition-all"
+          >
+            放弃记录
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/**
  * Toast通知组件
  * 显示短暂的消息提示（成功或错误）
+ * @param {Object} props - 组件属性
+ * @param {string} props.message - 提示文本
+ * @param {string} props.type - 通知类型（'success' 或 'error'）
  */
 function Toast({ message, type }) {
   return (

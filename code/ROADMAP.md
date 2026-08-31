@@ -1,6 +1,6 @@
 # FOCUS 路线图
 
-> 客户端：0.5.3 · 服务端：0.3.7 · git tag: v0.5.3 — 最新：双版本导入校验统一
+> 客户端：0.5.4 · 服务端：0.3.7 · git tag: v0.5.4 — 最新：保存失败可重试
 
 ## 已实现
 
@@ -35,6 +35,7 @@
 - ✅ 无后端方案迭代 B（GitHub Pages 部署）：纯静态版一键部署到 GitHub Pages——FOCUS 源码仓库 `gh-pages` 分支、`https://baobingwen.github.io/FOCUS/` 子路径（`focus` 名字已被源码仓库占用、根地址被其他站占用，故用项目页子路径；URL 大小写不敏感）；vite base 按 mode 区分（static 模式 `/FOCUS/`，服务端版部署不受影响）；新增 `deploy-static.ps1` 部署脚本——构建 → 同步到独立部署工作区 `code/.deploy-static/` → commit → 普通快进 push（保留每次部署的 git 历史、非强制覆盖、远程分叉时停下提示手动处理）+ `DEPLOY_STATIC.md` 部署指南（一次性设置/发布流程/本地预览/数据迁移/回滚/常见问题）；迭代 C（移除后端）v0.5.1 修改：不再移除后端，服务端版 + 纯静态版长期共存、各自演进（[设计文档](docs/adr/0011-no-backend-local-first.md)）
 - ✅ 计时器状态持久化：学习中/暂停中/休息中三态的关键状态快照定时写入浏览器 localStorage（键 `focus:timer:snapshot`，带 version），刷新/误关标签/浏览器崩溃后重新打开自动恢复计时（科目/备注/标签/页数/已学时长原样还原）+ App 顶部提示条——默认计入离开时间（绝对时间戳继续累计），可「忽略离开时间」（离开缺口不计入、可切回）、「放弃本次学习」或 ✕ 关闭（仅隐藏，快照保留）；elapsed 不落盘（绝对时间戳推导）；rest_prompt 不持久化，会话正常结束清空；写时机 = 状态切换/输入即写 + pagehide/beforeunload + 活跃态每 10 秒兜底；纯前端改动，双版本（服务端版/纯静态版）共用 useTimer 天然生效（[设计文档](docs/adr/0012-timer-persistence.md)）
 - ✅ 导入校验双版本统一：双版本共用同一套显式行级校验规则（公共模块 `code/shared/importValidation.js`，纯函数，client 经 Vite alias `@shared` 引用、server 相对路径引用）——顶层结构校验（app=FOCUS、data 五表数组）+ 行级校验（id 正整数 / mode 仅 study·rest / duration_ms > 0 / 科目·标签·提醒名称非空 / record_tags 引用存在 / 重复科目名与重复关联拒绝），任何一行不合法整体拒绝、事务回滚；默认值归一化双端一致（sort_order→0、notes→''、paused_ms→0、pages→null、created_at→null）；错误消息统一「导入数据不合法: …」中文格式（服务端 400 的 error 字段从 SQLite 英文原文变为中文规则消息）；服务端 SQLite 现有约束（UNIQUE/复合主键/外键/NOT NULL）保留作理论兜底、不加新 migration；同一文件双端要么都接受要么都拒绝，对正常流程与历史导出文件零影响（[设计文档](docs/adr/0013-import-validation-unified.md)）
+- ✅ 保存失败可重试（v0.5.4）：学习中/暂停中按「结束学习」先弹确认框「结束学习 / 返回学习」（返回学习 = 关弹窗继续计时，尚未结束不产生记录，不误触）；学习记录保存失败时 rest_prompt 弹窗变为「重试保存 / 放弃记录」（重试成功 → 恢复正常「要休息吗？」流程，再失败保持待重试；放弃记录 → 丢弃该条、直接回空闲）；待重试记录（科目/时长/段/备注/标签/页数）写入浏览器 localStorage（键 `focus:pending-record`），保存失败后刷新/误关页面重新打开仍弹「重试保存 / 放弃记录」，学习数据不再丢失；仅学习记录，休息记录保存失败保持 toast 提示（[设计文档](docs/adr/0014-save-retry.md)）
 
 ## 推荐方向（按优先级）
 
@@ -90,11 +91,6 @@ Docker 多阶段构建 + 香港节点 + 持久卷方案 已就绪。
 
 ## 💡 日常点子
 
-- 问题：保存失败无法重试，且阶段已推进
-  - 如果 recordsApi.create 失败，phase 已经变成 rest_prompt
-  - 用户只能选“休息/不休息”，无法重试保存刚才那条学习记录
-  - 休息记录 handleEndRest 也有同样问题
-  - 可能方法：先保存成功后再切换状态；或保存失败时保留“待重试记录”
 - 问题：记录+标签写入不是事务，可能方法：服务端用事务；IndexedDB 用单事务跨 store
 - 问题：日期导航存在时区隐患
   - 可能方法：改为本地日期解析

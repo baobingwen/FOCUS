@@ -96,7 +96,7 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 | 文件 | 说明 |
 |------|------|
 | `App.jsx` | 主布局 + 底部导航 + useTimer 调用（计时状态托管于此，跨标签切换不丢失）+ 计时快照恢复（挂载时从 localStorage 读快照水合 useTimer，恢复时渲染 TimerRestoreBar 提示条）+ 全局管理模式 state/横幅（连点右上角考研倒计时进入，跨 tab 常驻；横幅内含「导出数据」按钮点击全量导出 JSON 下载、「导入数据」按钮选文件 → 确认弹窗（文件信息/导入统计/风险提示/先下载当前备份）→ 提交导入成功提示后整页刷新，学习中禁止导入）；`useFreezeOnLeave` 调用点已注释停用（v0.4.3，代码保留） |
-| `components/TimerPage.jsx` | 计时器页面，5 状态机 (idle→studying→paused→rest_prompt→resting)，从 props 接收 timer；idle 态支持直接休息；暂停态支持继续和确认结束；学习中可点选/新增标签、累计复习页数（数字框 + +1/+5/+10 快捷芯片）；学习/暂停态大按钮始终居中，暂停/继续按钮悬浮右缘不占布局 |
+| `components/TimerPage.jsx` | 计时器页面，5 状态机 (idle→studying→paused→rest_prompt→resting)，从 props 接收 timer；idle 态支持直接休息；学习中/暂停中结束先弹确认框（结束学习/返回学习，返回继续计时）；学习记录保存失败时 rest_prompt 弹窗变「重试保存/放弃记录」、待重试记录存 localStorage（utils/pendingRecord.js，刷新不丢、挂载恢复弹窗）；学习中可点选/新增标签、累计复习页数（数字框 + +1/+5/+10 快捷芯片）；学习/暂停态大按钮始终居中，暂停/继续按钮悬浮右缘不占布局 |
 | `components/ReminderBar.jsx` | 复习方法和提醒条：学习中「结束学习」大按钮下方小字提醒（💡 浅灰不抢眼），每 15 分钟按插入顺序轮换下一条；提醒条旁 ＋ 弹框新增（随时记录）；管理模式开启时出现「管理」按钮 → 弹窗列表编辑/删除全部条目（AddModal/ManageModal 子组件） |
 | `components/ExamCountdown.jsx` | 考研倒计时（右上角常驻，写死 2026-12-19，过期自动隐藏）+ 全局管理模式隐藏入口（连点 5 下调用 onMultiTap，任何状态可见） |
 | `components/TimerRestoreBar.jsx` | 计时快照恢复提示条（App 层，计时/历史 tab 都可见）：「已恢复上次学习：科目 · 已学时长 · 离开时长」+ 计入/忽略离开时间切换按钮 + 「放弃本次学习」按钮 + ✕ 关闭（仅隐藏，快照保留）（调 useTimer 的 ignoreAwayTime/countAwayTime/discardRestore/dismissRestore） |
@@ -115,6 +115,7 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 | `utils/clipboard.js` | 剪贴板复制工具（navigator.clipboard + execCommand 降级） |
 | `utils/fmtTime.js` | 时长格式化工具：`fmtTime`（中文时长"1小时30分"）+ `fmtClock`（HH:MM:SS/MM:SS，计时页用）+ `fmtShortClock`（MM:SS，历史页/千层饼用） |
 | `utils/timerStorage.js` | 计时快照存取：save / load / clear + 校验（localStorage 键 `focus:timer:snapshot`，带 version），计时状态持久化专用 |
+| `utils/pendingRecord.js` | 待重试记录存取：save / load / clear（localStorage 键 `focus:pending-record`，带 version），学习记录保存失败后的重试数据专用 |
 
 ### 服务端结构 (`code/server/`)
 
@@ -176,7 +177,7 @@ CREATE INDEX IF NOT EXISTS idx_records_notes ON records(notes);
 | `utils/clipboard.test.js` | 剪贴板复制工具测试 |
 | `hooks/useTimer.test.js` | 状态机全路径覆盖 + 计时快照持久化/水合恢复/忽略离开/放弃/关闭提示条 |
 | `hooks/useFreezeOnLeave.test.js` | 页面离开冻结事件测试 |
-| `components/TimerPage.test.jsx` | 5 态渲染 + 保存 + 休息 + 暂停 + 弹窗确认 + 冻结 UI |
+| `components/TimerPage.test.jsx` | 5 态渲染 + 保存 + 休息 + 暂停 + 弹窗确认 + 冻结 UI + 结束确认弹窗（学习中）+ 保存失败重试（待重试记录/重试/放弃/刷新恢复） |
 | `components/TimerRestoreBar.test.jsx` | 恢复提示条（null 不渲染/学习/休息展示/计入忽略切换/放弃/✕ 关闭） |
 | `components/ReminderBar.test.jsx` | 提醒条展示/轮换/新增/管理模式门控 + 编辑/删除 |
 | `components/SubjectSelector.test.jsx` | CRUD + confirm 弹窗 + 休息 |
@@ -239,4 +240,5 @@ code/start-local.bat
 - **双版本**: 同一代码库产出服务端版（默认构建，REST + SQLite）与纯静态版（build:static，IndexedDB 五仓库）；功能/界面一致，导出文件互通
 - **复习提醒**: 用户自维护的提醒语句库，学习中「结束学习」大按钮下方小字提醒条展示一条、每 15 分钟顺序轮换，点 ＋ 随时新增，管理模式内编辑/删除；存后端 `reminder_items` 表
 - **计时快照**: 进行中的学习/休息计时（studying/paused/resting 三态）关键状态定时写入 localStorage（`focus:timer:snapshot`，带 version），刷新/误关标签/崩溃后自动恢复 + App 顶部提示条（默认计入离开时间，可忽略离开时间/放弃本次学习）；elapsed 不落盘（绝对时间戳推导）；rest_prompt 不持久化；会话正常结束清空
+- **待重试记录**: 学习记录保存失败后完整 payload 暂存 localStorage（`focus:pending-record`，带 version），rest_prompt 弹窗变「重试保存/放弃记录」，刷新/误关后恢复弹窗继续处理；仅学习记录，不进五表/五仓库、不参与导出导入；组件层 TimerPage 管理
 - **部署**: 本地 + Tailscale 优先，纯静态版可部署 GitHub Pages（`https://baobingwen.github.io/FOCUS/`，脚本 `code/deploy-static.ps1`，详见 `code/DEPLOY_STATIC.md`），Fly.io 方案备选

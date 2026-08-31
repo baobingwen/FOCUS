@@ -1,6 +1,6 @@
 # FOCUS 客户端代码结构关系
 
-> 当前版本：v0.5.3（双版本导入校验统一见 [docs/adr/0013-import-validation-unified.md](../../../docs/adr/0013-import-validation-unified.md)；计时快照持久化见 [docs/adr/0012-timer-persistence.md](../../../docs/adr/0012-timer-persistence.md)；数据层双实现结构变动见 [docs/adr/0011-no-backend-local-first.md](../../../docs/adr/0011-no-backend-local-first.md)；v0.4.1 结构拆分见 [adr/0001-v0.4.1-code-structure-changes.md](adr/0001-v0.4.1-code-structure-changes.md)）
+> 当前版本：v0.5.4（保存失败可重试见 [docs/adr/0014-save-retry.md](../../../docs/adr/0014-save-retry.md)；双版本导入校验统一见 [docs/adr/0013-import-validation-unified.md](../../../docs/adr/0013-import-validation-unified.md)；计时快照持久化见 [docs/adr/0012-timer-persistence.md](../../../docs/adr/0012-timer-persistence.md)；数据层双实现结构变动见 [docs/adr/0011-no-backend-local-first.md](../../../docs/adr/0011-no-backend-local-first.md)；v0.4.1 结构拆分见 [adr/0001-v0.4.1-code-structure-changes.md](adr/0001-v0.4.1-code-structure-changes.md)）
 
 ## 源码依赖图
 
@@ -31,6 +31,7 @@ graph TD
     clipboard[utils/clipboard.js]
     fmtTime[utils/fmtTime.js]
     timerStorage[utils/timerStorage.js]
+    pendingRecord[utils/pendingRecord.js]
 
     App -->|useTimer| useTimer
     App -->|freeze/thaw 运行时传入| useFreeze
@@ -46,7 +47,8 @@ graph TD
     TimerPage --> SubjectSelector
     TimerPage --> TagPicker
     TimerPage -->|recordsApi| api
-    TimerPage -->|fmtClock| fmtTime
+    TimerPage -->|fmtClock, fmtTime| fmtTime
+    TimerPage -->|save/load/clear| pendingRecord
 
     HistoryPage --> TodayOverview
     HistoryPage --> RecordCard
@@ -101,6 +103,7 @@ graph TD
 | `utils/clipboard.js`             | 剪贴板复制（navigator.clipboard + execCommand 降级）                               | 否                                                                                                             |
 | `utils/fmtTime.js`               | 时长格式化纯函数（fmtTime / fmtClock / fmtShortClock）                             | 否                                                                                                             |
 | `utils/timerStorage.js`          | 计时快照存取（save / load / clear + 校验，localStorage 键 `focus:timer:snapshot`） | 否                                                                                                             |
+| `utils/pendingRecord.js`         | 待重试记录存取（save / load / clear + 校验，localStorage 键 `focus:pending-record`，学习记录保存失败后暂存，TimerPage 使用） | 否                                                                                                             |
 | `shared/importValidation.js`     | 双版本共用导入校验纯函数，见 [ADR 0013](../../../docs/adr/0013-import-validation-unified.md) | 否                                                                                                             |
 
 ## 格式化函数分工（utils/fmtTime.js）
@@ -116,7 +119,7 @@ graph TD
 | 测试文件                              | 被测单元                                                                | 层级                   |
 | ------------------------------------- | ----------------------------------------------------------------------- | ---------------------- |
 | `App.test.jsx`                        | App 布局与 Tab 切换 + 管理模式 + 数据导出 + 数据导入 + 计时快照恢复提示条                  | 集成                   |
-| `components/TimerPage.test.jsx`       | TimerPage 5 态 + 保存/休息/暂停/冻结 UI                                 | 组件                   |
+| `components/TimerPage.test.jsx`       | TimerPage 5 态 + 保存/休息/暂停/冻结 UI + 结束确认弹窗 + 保存失败重试（待重试记录/重试/放弃/刷新恢复） | 组件                   |
 | `components/HistoryPage.test.jsx`     | HistoryPage 页面级逻辑（加载/日期导航/编辑流/复制/筛选/删除 confirm）   | 组件（页面）           |
 | `components/RecordCard.test.jsx`      | RecordCard 查看态/编辑态渲染 + 回调转发 + 千层饼显示条件 + 管理模式按钮 | 组件（卡片直测 props） |
 | `components/SegmentStack.test.jsx`    | 千层饼段行渲染/顺序/汇总                                                | 组件                   |
@@ -133,5 +136,6 @@ graph TD
 | `utils/apiLocal.test.js`              | 本地数据层（fake-indexeddb 直测：CRUD/排序/幂等/级联/种子/统计/导出/导入事务） | 单元                |
 | `utils/clipboard.test.js`             | 剪贴板工具                                                              | 单元                   |
 | `utils/fmtTime.test.js`               | 三个格式化函数                                                          | 单元                   |
+| `utils/pendingRecord.test.js`         | 待重试记录存取（往返/非法数据校验/清空）                                 | 单元                   |
 
 > 测试依赖：所有组件测试通过 `vi.mock('../utils/api')` 拦截 API 调用；RecordCard/SegmentStack 直测时由调用方传入 mock 回调。

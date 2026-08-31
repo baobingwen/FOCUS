@@ -2,6 +2,35 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.4] — 2026-08-31
+
+### 版本线：0.5.x 维护（无后端 Local-First 主线）
+
+日常点子「保存失败无法重试，且阶段已推进」落地——学习中/暂停中结束学习先弹确认框（可返回学习继续计时），学习记录保存失败后弹窗变「重试保存 / 放弃记录」，待重试记录存 localStorage 刷新不丢。
+
+### Changed
+
+- **结束学习确认弹窗**：学习中点中央大按钮不再直接结束，先弹「结束学习？」确认框（按钮「结束学习 / 返回学习」）——返回学习 = 关弹窗继续计时（尚未结束、不产生记录，消除误触）；暂停态已有确认框按钮统一为「结束学习 / 返回学习」（原「确定 / 取消」）
+- **保存失败可重试**：学习记录 `recordsApi.create` 失败时完整 payload 暂存为「待重试记录」（组件 state + localStorage 键 `focus:pending-record` 带 version，新工具模块 `utils/pendingRecord.js`），rest_prompt 弹窗变「重试保存 / 放弃记录」（隐藏休息/不休息）——重试保存成功 → 清空待重试、恢复正常「要休息吗？」弹窗并刷新历史；再失败 → 保持失败态；放弃记录 → 丢弃该条、直接回 idle（不再问休息）
+- **刷新/误关不丢**：待重试记录写入 localStorage，保存失败后刷新/误关页面重新打开 → 弹「重试保存 / 放弃记录」恢复弹窗（处理后才进入正常使用），学习数据不再因保存失败丢失
+- **仅学习记录**：休息记录保存失败保持现状（toast 提示，不重试）；useTimer 零改动（返回学习发生在结束前、放弃记录复用 skipRest）
+
+### Tests
+
+- 客户端 325 → 347 全绿：TimerPage.test.jsx 37 → 46 条（+9：学习中结束确认框弹窗/返回学习不结束/保存失败暂存 localStorage/失败态重试与放弃/重试成功恢复正常弹窗/重试再失败保持/放弃调 skipRest/idle 恢复弹窗重试与放弃）；新增 pendingRecord.test.js 13 条（往返/无记录/清空/覆盖写/JSON 损坏/version 不匹配/非 study/duration_ms≤0/空科目/segments 非法/tags 非法/pages 越界/pages null）；原「结束学习直接保存」用例适配为两步点击
+- 服务端 146 全绿（零改动）
+
+### Docs
+
+- `docs/adr/0014-save-retry.md` — 新增学习记录保存失败可重试设计文档（确认弹窗/待重试记录/弹窗两态/跨刷新保留/仅学习记录/useTimer 零改动）
+- `CONTEXT.md` — 新增「待重试记录」概念；学习流程更新（结束确认框 + 保存失败分支）；恢复流程加入待重试记录检测
+- `README.md` — 功能列表新增「结束确认 + 保存失败重试」；学习流程 ASCII 图更新；恢复流程补充待重试记录；项目结构树补 pendingRecord/timerStorage
+- `code/ROADMAP.md` — 日常点子「保存失败无法重试」移入已实现（v0.5.4）
+- `CLAUDE.md` — TimerPage 组件表/测试表更新 + 工具表新增 `utils/pendingRecord.js` + 核心概念新增「待重试记录」
+- `docs/INDEX.md` — 登记 ADR 0014
+- `code/client/docs/CODE_STRUCTURE.md` — 版本头 v0.5.4 + 依赖图/文件职责表新增 pendingRecord
+- `code/client/TESTING.md` — TimerPage 37→46 条、新增 pendingRecord.test.js 13 条、总计 325→347 / 20 个测试文件
+
 ## [0.5.3] — 2026-08-31
 
 ### 版本线：0.5.x 维护（无后端 Local-First 主线）

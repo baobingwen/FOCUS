@@ -3,6 +3,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import TimerPage from './TimerPage';
 import { recordsApi, subjectsApi, tagsApi, remindersApi } from '../utils/api';
+import { loadPendingRecord, savePendingRecord } from '../utils/pendingRecord';
 
 vi.mock('../utils/api');
 
@@ -37,6 +38,7 @@ function createMockTimer(overrides = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  localStorage.clear(); // 待重试记录隔离：避免上个用例的待重试态污染下个用例
   subjectsApi.list.mockResolvedValue([]);
   tagsApi.list.mockResolvedValue([]);
   remindersApi.list.mockResolvedValue([]);
@@ -128,7 +130,7 @@ describe('TimerPage', () => {
     expect(screen.getByText(/00:10/)).toBeInTheDocument();
   });
 
-  it('结束学习 → API 成功 → 调用 onRecordSaved', async () => {
+  it('结束学习 → 确认弹窗 → API 成功 → 调用 onRecordSaved', async () => {
     const endStudy = vi.fn(() => ({ duration_ms: 5000, paused_ms: 0, segments: [{ type: 'study', duration_ms: 5000 }] }));
     const onRecordSaved = vi.fn();
     const timer = createMockTimer({
@@ -142,7 +144,12 @@ describe('TimerPage', () => {
 
     render(<TimerPage timer={timer} onRecordSaved={onRecordSaved} />);
 
-    await userEvent.click(screen.getByText('结束学习'));
+    // 先弹确认框（此时尚未结束）
+    await userEvent.click(screen.getAllByText('结束学习')[0]);
+    expect(endStudy).not.toHaveBeenCalled();
+
+    // 确认结束
+    await userEvent.click(screen.getAllByText('结束学习')[1]);
 
     expect(endStudy).toHaveBeenCalled();
     expect(recordsApi.create).toHaveBeenCalledWith({
@@ -160,7 +167,7 @@ describe('TimerPage', () => {
     });
   });
 
-  it('结束学习 → API 失败 → 显示错误 toast', async () => {
+  it('结束学习 → 确认弹窗 → API 失败 → toast + 待重试记录写入 localStorage', async () => {
     const endStudy = vi.fn(() => ({ duration_ms: 5000, paused_ms: 0, segments: [{ type: 'study', duration_ms: 5000 }] }));
     const timer = createMockTimer({
       phase: 'studying',
@@ -173,11 +180,17 @@ describe('TimerPage', () => {
 
     render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
 
-    await userEvent.click(screen.getByText('结束学习'));
+    await userEvent.click(screen.getAllByText('结束学习')[0]);
+    await userEvent.click(screen.getAllByText('结束学习')[1]);
 
     await waitFor(() => {
       expect(screen.getByText('保存失败: 网络错误')).toBeInTheDocument();
     });
+    // 待重试记录已暂存（localStorage 持久化，刷新不丢）
+    const pending = loadPendingRecord();
+    expect(pending).not.toBeNull();
+    expect(pending.subject).toBe('数学');
+    expect(pending.duration_ms).toBe(5000);
   });
 
   it('结束学习 → duration=0 时什么都不做', async () => {
@@ -189,7 +202,8 @@ describe('TimerPage', () => {
 
     render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
 
-    await userEvent.click(screen.getByText('结束学习'));
+    await userEvent.click(screen.getAllByText('结束学习')[0]);
+    await userEvent.click(screen.getAllByText('结束学习')[1]);
     expect(recordsApi.create).not.toHaveBeenCalled();
   });
 
@@ -346,7 +360,7 @@ describe('TimerPage', () => {
     await userEvent.click(screen.getByText('结束学习'));
     expect(screen.getByText('当前处于暂停中，确定结束吗？')).toBeInTheDocument();
 
-    await userEvent.click(screen.getByText('确定'));
+    await userEvent.click(screen.getAllByText('结束学习')[1]);
 
     expect(endStudy).toHaveBeenCalled();
     expect(recordsApi.create).toHaveBeenCalledWith({
@@ -367,7 +381,7 @@ describe('TimerPage', () => {
     });
   });
 
-  it('暂停态结束确认弹窗 → 取消关闭弹窗', async () => {
+  it('暂停态结束确认弹窗 → 返回学习关闭弹窗', async () => {
     const endStudy = vi.fn();
     const timer = createMockTimer({ phase: 'paused', endStudy });
     render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
@@ -375,7 +389,7 @@ describe('TimerPage', () => {
     await userEvent.click(screen.getByText('结束学习'));
     expect(screen.getByText('当前处于暂停中，确定结束吗？')).toBeInTheDocument();
 
-    await userEvent.click(screen.getByText('取消'));
+    await userEvent.click(screen.getByText('返回学习'));
     expect(endStudy).not.toHaveBeenCalled();
     expect(screen.queryByText('当前处于暂停中，确定结束吗？')).not.toBeInTheDocument();
   });
@@ -493,7 +507,8 @@ describe('TimerPage', () => {
     recordsApi.create.mockResolvedValueOnce({ id: 1 });
 
     render(<TimerPage timer={timer} onRecordSaved={onRecordSaved} />);
-    await userEvent.click(screen.getByText('结束学习'));
+    await userEvent.click(screen.getAllByText('结束学习')[0]);
+    await userEvent.click(screen.getAllByText('结束学习')[1]);
 
     expect(recordsApi.create).toHaveBeenCalledWith({
       mode: 'study',
@@ -577,7 +592,8 @@ describe('TimerPage', () => {
     recordsApi.create.mockResolvedValueOnce({ id: 1 });
 
     render(<TimerPage timer={timer} onRecordSaved={onRecordSaved} />);
-    await userEvent.click(screen.getByText('结束学习'));
+    await userEvent.click(screen.getAllByText('结束学习')[0]);
+    await userEvent.click(screen.getAllByText('结束学习')[1]);
 
     expect(recordsApi.create).toHaveBeenCalledWith(expect.objectContaining({ pages: 30 }));
   });
@@ -593,5 +609,166 @@ describe('TimerPage', () => {
 
     expect(screen.getByLabelText('复习页数')).toBeInTheDocument();
     expect(screen.getByLabelText('页数 +1')).toBeInTheDocument();
+  });
+
+  // ──── 结束确认弹窗（学习中）────
+
+  it('学习中点结束学习 → 弹确认框（结束学习/返回学习），尚未结束', async () => {
+    const endStudy = vi.fn();
+    const timer = createMockTimer({ phase: 'studying', endStudy });
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    await userEvent.click(screen.getAllByText('结束学习')[0]);
+
+    expect(screen.getByText('结束学习？')).toBeInTheDocument();
+    expect(screen.getAllByText('结束学习')).toHaveLength(2); // 大按钮 + 弹窗确认按钮
+    expect(screen.getByText('返回学习')).toBeInTheDocument();
+    expect(endStudy).not.toHaveBeenCalled();
+  });
+
+  it('学习中确认框点返回学习 → 关闭弹窗，不结束', async () => {
+    const endStudy = vi.fn();
+    const timer = createMockTimer({ phase: 'studying', endStudy });
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    await userEvent.click(screen.getAllByText('结束学习')[0]);
+    await userEvent.click(screen.getByText('返回学习'));
+
+    expect(endStudy).not.toHaveBeenCalled();
+    expect(screen.queryByText('结束学习？')).not.toBeInTheDocument();
+    expect(recordsApi.create).not.toHaveBeenCalled();
+  });
+
+  // ──── 保存失败重试（待重试记录）────
+
+  it('保存失败（rest_prompt + 待重试）→ 弹窗变「重试保存/放弃记录」，隐藏休息/不休息', () => {
+    savePendingRecord({
+      mode: 'study', subject: '数学', duration_ms: 3600000, paused_ms: 0,
+      segments: [{ type: 'study', duration_ms: 3600000 }], notes: '', tags: [], pages: null,
+    });
+    const timer = createMockTimer({ phase: 'rest_prompt' });
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    expect(screen.getByText('学习记录保存失败')).toBeInTheDocument();
+    expect(screen.getByText('数学 · 1小时0分 未保存')).toBeInTheDocument();
+    expect(screen.getByText('重试保存')).toBeInTheDocument();
+    expect(screen.getByText('放弃记录')).toBeInTheDocument();
+    expect(screen.queryByText('休息一下')).not.toBeInTheDocument();
+    expect(screen.queryByText('不休息')).not.toBeInTheDocument();
+  });
+
+  it('重试保存成功 → 清空待重试并恢复正常休息弹窗', async () => {
+    savePendingRecord({
+      mode: 'study', subject: '数学', duration_ms: 3600000, paused_ms: 0,
+      segments: [{ type: 'study', duration_ms: 3600000 }], notes: '', tags: [], pages: null,
+    });
+    const onRecordSaved = vi.fn();
+    const timer = createMockTimer({ phase: 'rest_prompt' });
+    recordsApi.create.mockResolvedValueOnce({ id: 9 });
+
+    render(<TimerPage timer={timer} onRecordSaved={onRecordSaved} />);
+
+    await userEvent.click(screen.getByText('重试保存'));
+
+    expect(recordsApi.create).toHaveBeenCalledWith(expect.objectContaining({ subject: '数学', duration_ms: 3600000 }));
+    await waitFor(() => {
+      expect(onRecordSaved).toHaveBeenCalled();
+    });
+    // 清空待重试 + 恢复正常「要休息吗？」弹窗
+    expect(loadPendingRecord()).toBeNull();
+    await waitFor(() => {
+      expect(screen.getByText('休息一下')).toBeInTheDocument();
+    });
+  });
+
+  it('重试保存再次失败 → 保持失败态并提示', async () => {
+    savePendingRecord({
+      mode: 'study', subject: '数学', duration_ms: 3600000, paused_ms: 0,
+      segments: [{ type: 'study', duration_ms: 3600000 }], notes: '', tags: [], pages: null,
+    });
+    const timer = createMockTimer({ phase: 'rest_prompt' });
+    recordsApi.create.mockRejectedValueOnce(new Error('还是不行'));
+
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    await userEvent.click(screen.getByText('重试保存'));
+
+    await waitFor(() => {
+      expect(recordsApi.create).toHaveBeenCalledTimes(1);
+    });
+    // 仍为失败态（重试/放弃在，休息/不休息不出现），待重试保留
+    expect(screen.getByText('学习记录保存失败')).toBeInTheDocument();
+    expect(screen.getByText('重试保存')).toBeInTheDocument();
+    expect(screen.queryByText('休息一下')).not.toBeInTheDocument();
+    expect(loadPendingRecord()).not.toBeNull();
+  });
+
+  it('放弃记录（rest_prompt）→ 调用 skipRest 并清空待重试', async () => {
+    savePendingRecord({
+      mode: 'study', subject: '数学', duration_ms: 3600000, paused_ms: 0,
+      segments: [{ type: 'study', duration_ms: 3600000 }], notes: '', tags: [], pages: null,
+    });
+    const skipRest = vi.fn();
+    const timer = createMockTimer({ phase: 'rest_prompt', skipRest });
+
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    await userEvent.click(screen.getByText('放弃记录'));
+
+    expect(skipRest).toHaveBeenCalled();
+    expect(loadPendingRecord()).toBeNull();
+  });
+
+  // ──── 刷新恢复（idle + 待重试记录）────
+
+  it('idle 且存在待重试记录（刷新恢复）→ 显示恢复弹窗', () => {
+    savePendingRecord({
+      mode: 'study', subject: '英语', duration_ms: 1800000, paused_ms: 0,
+      segments: [{ type: 'study', duration_ms: 1800000 }], notes: '', tags: [], pages: null,
+    });
+    const timer = createMockTimer(); // idle
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    expect(screen.getByText('学习记录保存失败')).toBeInTheDocument();
+    expect(screen.getByText('英语 · 30分 未保存')).toBeInTheDocument();
+    expect(screen.getByText('重试保存')).toBeInTheDocument();
+    expect(screen.getByText('放弃记录')).toBeInTheDocument();
+  });
+
+  it('idle 恢复弹窗重试保存成功 → 清空待重试并调用 onRecordSaved', async () => {
+    savePendingRecord({
+      mode: 'study', subject: '英语', duration_ms: 1800000, paused_ms: 0,
+      segments: [{ type: 'study', duration_ms: 1800000 }], notes: '', tags: [], pages: null,
+    });
+    const onRecordSaved = vi.fn();
+    const timer = createMockTimer(); // idle
+    recordsApi.create.mockResolvedValueOnce({ id: 9 });
+
+    render(<TimerPage timer={timer} onRecordSaved={onRecordSaved} />);
+
+    await userEvent.click(screen.getByText('重试保存'));
+
+    expect(recordsApi.create).toHaveBeenCalledWith(expect.objectContaining({ subject: '英语' }));
+    await waitFor(() => {
+      expect(onRecordSaved).toHaveBeenCalled();
+    });
+    await waitFor(() => {
+      expect(screen.queryByText('学习记录保存失败')).not.toBeInTheDocument();
+    });
+    expect(loadPendingRecord()).toBeNull();
+  });
+
+  it('idle 恢复弹窗点放弃记录 → 弹窗关闭且 localStorage 清空', async () => {
+    savePendingRecord({
+      mode: 'study', subject: '英语', duration_ms: 1800000, paused_ms: 0,
+      segments: [{ type: 'study', duration_ms: 1800000 }], notes: '', tags: [], pages: null,
+    });
+    const timer = createMockTimer(); // idle
+    render(<TimerPage timer={timer} onRecordSaved={vi.fn()} />);
+
+    await userEvent.click(screen.getByText('放弃记录'));
+
+    expect(screen.queryByText('学习记录保存失败')).not.toBeInTheDocument();
+    expect(loadPendingRecord()).toBeNull();
   });
 });

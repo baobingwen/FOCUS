@@ -153,7 +153,9 @@ src/
 │   ├── clipboard.js
 │   ├── clipboard.test.js      # 剪贴板复制工具 3 条
 │   ├── fmtTime.js             # 时长格式化（fmtTime 中文 + fmtClock + fmtShortClock）
-│   └── fmtTime.test.js        # 三个格式化函数 8 条
+│   ├── fmtTime.test.js        # 三个格式化函数 8 条
+│   ├── pendingRecord.js       # 待重试记录存取（localStorage 键 focus:pending-record，带 version，学习记录保存失败后暂存）
+│   └── pendingRecord.test.js  # 待重试记录 13 条（save/load 往返/无记录/clear/覆盖写/JSON 损坏/version 不匹配/非 study/duration_ms≤0/空科目/segments 非法/tags 非法/pages 越界/pages null）
 ├── hooks/
 │   ├── useTimer.js
 │   ├── useTimer.test.js       # 状态机 37 条（含暂停态 6 条 + 冻结 6 条 + 标签态 5 条 + 计时快照持久化/恢复 11 条）
@@ -169,7 +171,7 @@ src/
     ├── TimerRestoreBar.jsx    # 计时快照恢复提示条（App 层：科目/已学/离开展示 + 计入/忽略切换 + 放弃本次学习 + ✕ 关闭）
     ├── TimerRestoreBar.test.jsx # 恢复提示条 7 条（null 不渲染/学习中展示/休息中展示/忽略调用/计入调用/放弃调用/✕ 关闭调用）
     ├── TimerPage.jsx
-    ├── TimerPage.test.jsx     # 5 态渲染 + 保存 + 休息 + 暂停交互 + 弹窗确认 + 冻结 UI + 标签交互 + 页数交互 + 管理模式标签门控 37 条
+    ├── TimerPage.test.jsx     # 5 态渲染 + 保存 + 休息 + 暂停交互 + 弹窗确认 + 冻结 UI + 标签交互 + 页数交互 + 管理模式标签门控 + 结束确认弹窗（学习中）+ 保存失败重试（待重试记录/重试/放弃/刷新恢复）46 条
     ├── ReminderBar.jsx        # 复习方法和提醒条（学习中「结束学习」大按钮下方小字提醒 + 15 分钟顺序轮换 + 点＋新增弹框 + 管理模式管理弹窗）
     ├── ReminderBar.test.jsx   # 空库/展示/轮换循环/不足 2 条不轮换/＋新增/空内容 disabled/管理模式门控/编辑/删除/confirm 拒绝/关闭 12 条
     ├── SubjectSelector.jsx
@@ -186,7 +188,7 @@ src/
     └── TodayOverview.test.jsx  # 概览 + 条形图 + 按标签分组 + 页数汇总 10 条
 ```
 
-总计 **325 条测试用例**，19 个测试文件。
+总计 **347 条测试用例**，20 个测试文件。
 
 ## 测试模式详解
 

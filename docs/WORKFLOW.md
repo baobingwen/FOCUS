@@ -66,7 +66,10 @@
 
 1. `CHANGELOG.md` — Unreleased → 版本号 + 日期
 2. 版本号三轨推进（见下）
-3. 提交 + 打 tag
+3. 分支提交（发布线分支见 `CLAUDE.md` 分支表）：
+   - 切到发布线分支（带上工作区改动）→ commit → 打 tag `vX.Y.Z`
+   - 切回 `master` → merge 发布线分支（快进）保持两分支同步
+   - commit message 格式参照历史带 tag 提交：标题 `vX.Y.Z: 功能名（简要描述）`，正文以 `- ` 分点列出（新增/改动/测试/文档），结尾附 `Co-Authored-By`
 
 ---
 
