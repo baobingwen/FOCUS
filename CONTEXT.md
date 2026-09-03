@@ -59,7 +59,11 @@ _Avoid_: 组件直接操作 IndexedDB、多端实时同步、冲突合并
 
 **纯静态版 / 服务端版（双版本）**：
 同一套代码库按构建时开关 `VITE_DATA_LAYER`（`local` / `rest`）产出的两种形态：纯静态版（`dist-static`，纯前端，数据存浏览器 IndexedDB）与服务端版（`dist`，沿用现有 Node 服务 + Tailscale 部署）。功能、界面、交互完全一致，仅数据存储位置不同。日常目前默认构建为服务端版，纯静态版作为无后端形态显式 opt-in，两版长期共存、各自演进。纯静态版部署到 GitHub Pages：FOCUS 仓库 `gh-pages` 分支、`https://baobingwen.github.io/FOCUS/` 子路径（`focus` 名字已被源码仓库占用、根地址被其他站占用，故用项目页子路径；GitHub Pages URL 大小写不敏感，小写 `/focus/` 亦可访问），构建时 `vite base` 为 `/FOCUS/`（仅 static 模式）。IndexedDB 按浏览器 origin 隔离：新地址部署后数据为全新起点，旧数据通过导出/导入 JSON 迁移（见 `code/DEPLOY_STATIC.md`）。
-_Avoid_: 两套独立代码副本、运行时切换数据层
+_Avoid_: 两套独立代码副本、运行时切换数据层（指双版本形态本身）
+
+**PWA（仅纯静态版）**：
+纯静态版构建注入 PWA（`vite-plugin-pwa`，仅 `mode=static` 启用，服务端版构建无 PWA 痕迹）：生成 manifest（名称「FOCUS 学习计时」/短名「FOCUS」/独立窗口 `standalone`/主题色沿用 `#f8f9fa`）+ 全套图标（192/512 PNG、maskable、apple-touch-icon，blue-500 底 + 白环青箭头 target 图形，资源文件引用）+ 应用截图（`screenshots`，手机窄屏 + 桌面宽屏各一，Rich Install UI 安装对话框带预览）+ Service Worker 离线缓存——可添加到手机主屏幕像原生 App 一样使用，断网离线仍可查看/记录（数据本就在 IndexedDB）。SW 更新策略为自动更新（`autoUpdate`，完整注册逻辑在 `public/registerSW.js`）：新版部署后下次打开页面自动刷新生效，零用户操作；正在学习被刷新打断的极端情形由计时快照（见「计时快照」）兜底恢复，数据不丢。安装引导不做（靠浏览器原生能力：Android 自动横幅 / iOS 手动分享）；HarmonyOS 华为浏览器等对 PWA 安装支持弱属浏览器能力限制。
+_Avoid_: 服务端版注入 PWA、SW 更新弹窗提示、学习中延迟刷新逻辑、内嵌图标的硬编码资源、manifest 元数据散落硬编码（集中定义于 vite.config PWA_MANIFEST）
 
 **待重试记录**：
 结束学习时因保存失败而未能落库的学习记录——科目、时长、暂停时长、段列表、备注、标签、页数完整暂存于浏览器 localStorage（键 `focus:pending-record`），用户可「重试保存」（重新提交，成功后恢复正常流程）或「放弃记录」（丢弃该条数据，直接回到空闲）。保存失败后页面刷新/误关也不会丢——下次打开时检测到待重试记录即弹出恢复弹窗继续处理。仅学习记录有此机制；休息记录保存失败保持现状（仅 toast 提示，不重试）。待重试记录是 UI 运行态而非业务数据——不进五表/五仓库、不参与导出/导入，双版本（服务端版/纯静态版）共用。

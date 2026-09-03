@@ -45,6 +45,18 @@ cd code/client && npx vite preview --outDir dist-static --base /FOCUS/
 # 浏览器访问 http://localhost:4173/FOCUS/
 ```
 
+> 本地预览亦可先行验证 PWA：localhost 属安全上下文，Service Worker 可注册——DevTools → Application 面板可见 Manifest/Service Workers/缓存，可勾选 Offline 后刷新验证离线可用。
+
+## PWA 验收（部署后）
+
+纯静态版为 PWA（manifest + Service Worker 离线缓存，见 `docs/adr/0015-static-pwa.md`）。部署后在手机上或 Chrome 验收：
+
+1. **可安装**：手机浏览器打开 `https://baobingwen.github.io/FOCUS/`，Chrome/Edge 地址栏或菜单出现「安装应用/添加到主屏幕」入口（Android 多访问几次会自动横幅）；iOS Safari 用「分享 → 添加到主屏幕」（无自动提示）
+2. **主屏启动**：从主屏图标打开为全屏独立窗口（无浏览器地址栏），标题「FOCUS 学习计时」、图标为蓝底 target
+3. **离线可用**：断网/飞行模式后从主屏打开，页面正常加载，历史数据（IndexedDB）可查看、可继续学习计时
+4. **更新生效**：再次部署新版后打开，页面自动刷新一次到新版（后台 SW 更新）；学习中被刷新的极端情形由计时快照恢复兜底
+5. Lighthouse（可选）：Chrome DevTools → Lighthouse → 勾选 PWA 类别 → 生成报告查看安装/离线项
+
 ## 数据说明
 
 IndexedDB 按**浏览器 origin** 隔离：

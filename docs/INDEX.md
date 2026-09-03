@@ -62,6 +62,7 @@
 | `docs/adr/0012-timer-persistence.md` | `docs/adr/` | 计时器状态持久化 — 学习中/暂停中/休息中三态快照定时写入 localStorage、刷新/误关标签/崩溃后自动恢复 + 顶部提示条（计入/忽略离开时间、放弃本次学习）、elapsed 不落盘绝对时间戳推导、rest_prompt 不持久化、会话结束清空 |
 | `docs/adr/0013-import-validation-unified.md` | `docs/adr/` | 双版本导入校验统一 — 共用 `code/shared/importValidation.js` 显式行级校验（顶层结构 + 行级规则：重复科目/重复关联拒绝、duration_ms>0、名称非空、引用存在、默认值归一化）、SQLite 约束保留兜底、错误消息统一中文「导入数据不合法」 |
 | `docs/adr/0014-save-retry.md` | `docs/adr/` | 学习记录保存失败可重试 — 学习中/暂停中结束确认弹窗（结束学习/返回学习）、保存失败变「重试保存/放弃记录」、待重试记录存 localStorage（`focus:pending-record`）刷新不丢、仅学习记录 |
+| `docs/adr/0015-static-pwa.md` | `docs/adr/` | 纯静态版 PWA 化 — 仅 static 模式注入 vite-plugin-pwa（服务端版构建零变化）、图标全套资源文件（public/icon*.svg + 生成 PNG）、SW autoUpdate（public/registerSW.js 完整注册 + 计时快照兜底）、Rich Install UI screenshots（narrow/wide）、manifest 元数据软编码集中定义 |
 | `code/client/docs/CODE_STRUCTURE.md` | `code/client/docs/` | 客户端代码结构关系 — 源码依赖图（mermaid）、文件职责与状态归属、格式化函数分工、测试文件对应关系 |
 | `code/client/docs/adr/0001-v0.4.1-code-structure-changes.md` | `code/client/docs/adr/` | v0.4.1 结构拆分改动说明 — HistoryPage 拆出 RecordCard/SegmentStack、格式化函数并入 utils/fmtTime.js，前后依赖图对比 + 文件直接映射 + 行为不变保证 |
 

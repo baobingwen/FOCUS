@@ -21,6 +21,7 @@
 - **计时状态持久化** — 学习中/暂停中/休息中的计时状态自动存入浏览器 localStorage：刷新页面、误关标签页、浏览器崩溃后重新打开自动恢复计时（科目/备注/标签/页数/已学时长原样还原），顶部提示条显示离开时长，默认计入离开时间，可「忽略离开时间」（离开缺口不计入）或「放弃本次学习」；会话正常结束自动清空
 - **结束确认 + 保存失败重试** — 学习中/暂停中点「结束学习」先弹确认框（「结束学习 / 返回学习」，返回学习继续计时，不会误触结束）；学习记录保存失败时弹窗变为「重试保存 / 放弃记录」——待重试记录写入浏览器 localStorage，刷新/误关页面后仍可重试，学习数据不再因保存失败丢失
 - **双版本构建** — 同一套代码按构建开关 `VITE_DATA_LAYER` 产出两种形态。**服务端版**，默认构建，数据存后端 SQLite，沿用现有 Node + Tailscale 部署；**纯静态版**，`npm run build:static`，数据存浏览器 IndexedDB，可一键部署到 GitHub Pages（`https://baobingwen.github.io/FOCUS/`，见 `code/DEPLOY_STATIC.md`）；两版功能、界面、交互一致，导出文件互通
+- **PWA（纯静态版专属）** — 纯静态版构建产物注入 PWA：manifest（名称「FOCUS 学习计时」、独立窗口模式）+ 全套图标 + 应用截图（Rich Install UI：手机/桌面安装对话框带预览）+ Service Worker 离线缓存。手机浏览器可「添加到主屏幕」像原生 App 一样使用；断网离线后刷新仍可打开、正常查看/记录（数据在浏览器 IndexedDB）；SW 自动更新（新版部署后下次打开自动生效，学习中被刷新的极端情形由计时状态持久化兜底恢复，数据不丢）。服务端版构建不含 PWA
 
 ## 快速开始
 
@@ -86,6 +87,8 @@ cd code && pwsh -File build-client-static.ps1   # 产物在 client/dist-static/
 
 数据存于浏览器 IndexedDB，清除站点数据会清空记录，注意先导出备份。
 
+纯静态版同时是 PWA（Service Worker + manifest + 全套图标）：部署后手机浏览器访问可「添加到主屏幕」，之后像原生 App 一样全屏独立使用；断网离线刷新仍能打开并使用历史数据。安装与更新均自动（SW 自动更新，无需手动操作）。
+
 **部署到 GitHub Pages**：
 
 ```bash
@@ -149,7 +152,17 @@ code/
 │   │       ├── fmtTime.js           # 时长格式化
 │   │       ├── timerStorage.js      # 计时快照存取（localStorage，刷新/崩溃恢复）
 │   │       └── pendingRecord.js     # 待重试记录存取（localStorage，保存失败重试）
-│   ├── vite.config.js               # Vite 配置（注入 __APP_VERSION__）
+│   ├── public/                       # PWA 资源（仅 static 构建注入，详见 CLAUDE.md「纯静态版 PWA 资源」）
+│   │   ├── icon.svg                 # 图标源（target 图形，blue-500 底 + 白环青箭头）
+│   │   ├── icon-maskable.svg        # maskable 专用源（满幅底 + 内容缩入安全区）
+│   │   ├── pwa-64x64.png            # 图标产物 64px
+│   │   ├── pwa-192x192.png          # 图标产物 192px（manifest icons）
+│   │   ├── pwa-512x512.png          # 图标产物 512px（manifest icons）
+│   │   ├── maskable-icon-512x512.png # maskable 图标产物（manifest purpose: maskable）
+│   │   ├── apple-touch-icon-180x180.png # iOS 主屏图标
+│   │   ├── registerSW.js            # SW 注册脚本（autoUpdate 完整语义）
+│   │   └── screenshots/             # Rich Install UI 截图（phone.png 手机 / desktop.png 桌面）
+│   ├── vite.config.js               # Vite 配置（注入 __APP_VERSION__；static 模式启用 PWA + PWA_MANIFEST 常量）
 │   └── package.json
 │
 ├── server/                          # Express 后端

@@ -2,6 +2,42 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.5] — 2026-09-03
+
+### 版本线：0.5.x 维护（无后端 Local-First 主线）
+
+ROADMAP「开发中」讨论思路落地——纯静态版 PWA 化：GitHub Pages 静态版可添加到手机主屏幕（manifest + 全套图标 + screenshots 应用截图 + standalone），Service Worker 离线缓存使断网刷新仍可查看/记录 IndexedDB 数据；服务端版构建无 PWA 痕迹、部署脚本零改动。
+
+### Added
+
+- **PWA（仅 static 构建注入）**：`vite.config.js` 按 `mode === 'static'` 条件启用 `vite-plugin-pwa`（^1.3.0，peer 支持 Vite 8），普通服务端版构建完全不带 PWA（无 manifest/sw/注册脚本，产物零 PWA 痕迹）
+- **manifest**：name「FOCUS 学习计时」/short_name「FOCUS」/`display: standalone`（全屏近原生）/theme·background `#f8f9fa`；元数据集中定义于 `vite.config.js` 顶部 `PWA_MANIFEST` 常量（软编码：不散落硬编码，index.html 对应 meta 同源）；icons 引用 192/512 + maskable；**screenshots（Rich Install UI）**：手机窄屏（`public/screenshots/phone.png` 1316×2646，form_factor narrow）+ 桌面宽屏（`desktop.png` 2154×1406，form_factor wide）各一，满足 Chromium 增强安装界面要求（解决 Edge/Chrome 警告「更丰富的 PWA 安装 UI 不可用」，提升 Android Chrome/Edge 安装入口可见性）
+- **图标全套**：新建 `public/icon.svg` + `public/icon-maskable.svg`（flat-color-icons target 图形，blue-500 底 + 白环 + 青箭头，PD 许可；maskable 版满幅无圆角底 + 内容缩入 80% 安全区），经 `@vite-pwa/assets-generator`（devDep）生成 `pwa-64/192/512`、`maskable-icon-512`、`apple-touch-icon-180` 资源文件；favicon 由内联 emoji 改为 `public/icon.svg` 引用（软编码：资源走文件不内嵌代码）；图标由用户确认的 target 图形定制（后续换图标：用户找 SVG → 改源文件重新生成）
+- **SW 自动更新（autoUpdate 完整语义）**：`public/registerSW.js` 提供注册逻辑（插件检测到 public/ 存在即复用）——相对路径注册（scope `./`）+ 检测新版安装激活后自动 `location.reload()` 一次生效（首次安装不刷新）；学习中被打断的极端情形由计时快照（v0.5.2，ADR 0012）兜底恢复，数据不丢；不引入 virtual module、main.jsx 零改动
+- **子路径适配**：static base `/FOCUS/`，`start_url`/`scope`/icons 路径由 `isStatic`/`base` 派生（不手写散落）；navigateFallback → index.html
+- **index.html**：补 `mobile-web-app-capable`、`apple-mobile-web-app-status-bar-style`、`apple-mobile-web-app-title`、apple-touch-icon link
+
+### Changed
+
+- `index.html` favicon 从内联 SVG emoji 改为 `public/icon.svg` 文件引用（双版本共享新图标）
+- `code/client/package.json`：devDeps 新增 `vite-plugin-pwa` ^1.3.0、`@vite-pwa/assets-generator` ^1.0.2（sharp 0.33.5 安装脚本已 approve，`allowScripts` 记录）
+
+### Tests
+
+- 客户端 347 全绿（零用例变化——PWA 化未改任何 React 源码，注册走 public 脚本注入）；双构建验证：dist（服务端版）无 PWA 痕迹 + dist-static（纯静态版）含 manifest.webmanifest/sw.js/registerSW.js/图标全套/screenshots，precache 14 条无重复，本地 `vite preview` 冒烟 200（manifest/sw/registerSW/图标/截图/SPA fallback 全通过）
+- 服务端 146 全绿（零改动）
+
+### Docs
+
+- `docs/adr/0015-static-pwa.md` — 新增纯静态版 PWA 化设计文档（仅 static 注入/图标资源/自定义 registerSW.js autoUpdate 注册/screenshots Rich Install UI/软编码原则/子路径派生；实现后已按最终落地更新）
+- `CONTEXT.md` — 新增「PWA（仅纯静态版）」概念（manifest/图标/SW 离线/autoUpdate/快照兜底/不做安装引导 + Avoid）；「纯静态版/服务端版」条目 Avoid 标注归属
+- `code/ROADMAP.md` — PWA 化从「开发中」移入已实现（v0.5.5）；P1「PWA 手机桌面化」与 P0 候选中的 PWA 化条目移除（已完成）；版本头 0.5.4 → 0.5.5
+- `CLAUDE.md` — 新增「纯静态版 PWA 资源（code/client/public/）」独立小节（与 src 结构分置，逐文件列出 icon*/pwa-*/maskable/apple-touch/registerSW.js/screenshots 说明 + 生成方式）；核心概念区新增「PWA（仅纯静态版）」条目
+- `README.md` — 功能列表新增「PWA（纯静态版专属）」；纯静态版章节补安装/离线/自动更新说明；项目结构树补 public/ 目录与 vite.config PWA 说明
+- `code/DEPLOY_STATIC.md` — 新增「PWA 验收（部署后）」清单（可安装/主屏启动/离线可用/更新生效/Lighthouse）+ 本地预览 DevTools 验证提示
+- `docs/INDEX.md` — 登记 ADR 0015
+- `code/client/docs/CODE_STRUCTURE.md` — 版本头 v0.5.5（PWA 化属构建层变化，src 依赖结构不变）
+
 ## [0.5.4] — 2026-08-31
 
 ### 版本线：0.5.x 维护（无后端 Local-First 主线）

@@ -1,6 +1,6 @@
 # FOCUS 路线图
 
-> 客户端：0.5.4 · 服务端：0.3.7 · git tag: v0.5.4 — 最新：保存失败可重试
+> 客户端：0.5.5 · 服务端：0.3.7 · git tag: v0.5.5 — 最新：纯静态版 PWA 化
 
 ## 已实现
 
@@ -36,6 +36,7 @@
 - ✅ 计时器状态持久化：学习中/暂停中/休息中三态的关键状态快照定时写入浏览器 localStorage（键 `focus:timer:snapshot`，带 version），刷新/误关标签/浏览器崩溃后重新打开自动恢复计时（科目/备注/标签/页数/已学时长原样还原）+ App 顶部提示条——默认计入离开时间（绝对时间戳继续累计），可「忽略离开时间」（离开缺口不计入、可切回）、「放弃本次学习」或 ✕ 关闭（仅隐藏，快照保留）；elapsed 不落盘（绝对时间戳推导）；rest_prompt 不持久化，会话正常结束清空；写时机 = 状态切换/输入即写 + pagehide/beforeunload + 活跃态每 10 秒兜底；纯前端改动，双版本（服务端版/纯静态版）共用 useTimer 天然生效（[设计文档](docs/adr/0012-timer-persistence.md)）
 - ✅ 导入校验双版本统一：双版本共用同一套显式行级校验规则（公共模块 `code/shared/importValidation.js`，纯函数，client 经 Vite alias `@shared` 引用、server 相对路径引用）——顶层结构校验（app=FOCUS、data 五表数组）+ 行级校验（id 正整数 / mode 仅 study·rest / duration_ms > 0 / 科目·标签·提醒名称非空 / record_tags 引用存在 / 重复科目名与重复关联拒绝），任何一行不合法整体拒绝、事务回滚；默认值归一化双端一致（sort_order→0、notes→''、paused_ms→0、pages→null、created_at→null）；错误消息统一「导入数据不合法: …」中文格式（服务端 400 的 error 字段从 SQLite 英文原文变为中文规则消息）；服务端 SQLite 现有约束（UNIQUE/复合主键/外键/NOT NULL）保留作理论兜底、不加新 migration；同一文件双端要么都接受要么都拒绝，对正常流程与历史导出文件零影响（[设计文档](docs/adr/0013-import-validation-unified.md)）
 - ✅ 保存失败可重试（v0.5.4）：学习中/暂停中按「结束学习」先弹确认框「结束学习 / 返回学习」（返回学习 = 关弹窗继续计时，尚未结束不产生记录，不误触）；学习记录保存失败时 rest_prompt 弹窗变为「重试保存 / 放弃记录」（重试成功 → 恢复正常「要休息吗？」流程，再失败保持待重试；放弃记录 → 丢弃该条、直接回空闲）；待重试记录（科目/时长/段/备注/标签/页数）写入浏览器 localStorage（键 `focus:pending-record`），保存失败后刷新/误关页面重新打开仍弹「重试保存 / 放弃记录」，学习数据不再丢失；仅学习记录，休息记录保存失败保持 toast 提示（[设计文档](docs/adr/0014-save-retry.md)）
+- ✅ 纯静态版 PWA 化（v0.5.5）：可安装到主屏幕 + Service Worker 离线缓存 + Rich Install UI（[设计文档](docs/adr/0015-static-pwa.md)）——仅 `mode=static` 构建注入 `vite-plugin-pwa`（^1.3.0 兼容 Vite 8，服务端版构建零 PWA 痕迹）；manifest 元数据集中定义（「FOCUS 学习计时」/短名「FOCUS」/standalone/theme #f8f9fa，软编码不散落）+ screenshots 应用截图（`public/screenshots/`，narrow 手机 + wide 桌面，安装对话框带预览）；图标全套资源文件（flat-color-icons target 图形 SVG 源 blue-500 底 + 白环青箭头，`@vite-pwa/assets-generator` 生成 192/512/maskable/apple-touch 至 public/）；SW 更新策略 autoUpdate（完整注册逻辑在 `public/registerSW.js`：新版安装激活后自动刷新一次生效，学习中被打断的极端情形由计时快照 ADR 0012 兜底）；scope/start_url 由 isStatic 派生（static 用 `/FOCUS/`）、navigateFallback 相对 index.html；`deploy-static.ps1` 无需改动自动带上新产物；不含安装引导与通知（P0 候选另行评估）
 
 ## 推荐方向（按优先级）
 
@@ -44,17 +45,9 @@
 **目标**：利用纯前端（无后端）形态的特性持续优化纯静态版，与服务端版各自演进。
 **背景**：v0.5.1 起确定双版本长期共存；若未来某节点纯前端版能真正取代服务端版，再考虑将纯静态版作为首选默认。
 **候选方向**（具体功能待 grill 确认）：
-- PWA 化（可离线、添加到主屏幕）——静态托管天然适合
 - 纯前端版特有的性能/体验优化（无需与后端折衷）
 - 浏览器端能力利用（如定时提醒、通知）
 **注意**：与服务端版功能/界面保持一致的原则是否需要放宽，待评估。
-
-### P1: PWA 手机桌面化
-
-**目标**：手机浏览器添加到桌面，像原生 App 一样使用。
-**方案**：Vite PWA 插件 (`vite-plugin-pwa`) + Service Worker 缓存。
-**工作量**：约半天。
-**价值**：每次使用不用再开浏览器输 IP，体验质的飞跃。
 
 ### P2: 学习数据看板
 
@@ -76,7 +69,7 @@
 ### P4: 番茄钟模式 / 目标设定
 
 **目标**：结合 25+5 番茄钟，支持每日目标时长。
-**注意**：会增加状态机复杂度，建议在 P1-P2 完成后评估是否需要。
+**注意**：会增加状态机复杂度，建议在 P2 完成后评估是否需要。
 
 ## 存档方案
 

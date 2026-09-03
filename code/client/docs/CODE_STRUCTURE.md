@@ -1,6 +1,6 @@
 # FOCUS 客户端代码结构关系
 
-> 当前版本：v0.5.4（保存失败可重试见 [docs/adr/0014-save-retry.md](../../../docs/adr/0014-save-retry.md)；双版本导入校验统一见 [docs/adr/0013-import-validation-unified.md](../../../docs/adr/0013-import-validation-unified.md)；计时快照持久化见 [docs/adr/0012-timer-persistence.md](../../../docs/adr/0012-timer-persistence.md)；数据层双实现结构变动见 [docs/adr/0011-no-backend-local-first.md](../../../docs/adr/0011-no-backend-local-first.md)；v0.4.1 结构拆分见 [adr/0001-v0.4.1-code-structure-changes.md](adr/0001-v0.4.1-code-structure-changes.md)）
+> 当前版本：v0.5.5（纯静态版 PWA 化见 [docs/adr/0015-static-pwa.md](../../../docs/adr/0015-static-pwa.md)，构建层变化、src 依赖结构不变；保存失败可重试见 [docs/adr/0014-save-retry.md](../../../docs/adr/0014-save-retry.md)；双版本导入校验统一见 [docs/adr/0013-import-validation-unified.md](../../../docs/adr/0013-import-validation-unified.md)；计时快照持久化见 [docs/adr/0012-timer-persistence.md](../../../docs/adr/0012-timer-persistence.md)；数据层双实现结构变动见 [docs/adr/0011-no-backend-local-first.md](../../../docs/adr/0011-no-backend-local-first.md)；v0.4.1 结构拆分见 [adr/0001-v0.4.1-code-structure-changes.md](adr/0001-v0.4.1-code-structure-changes.md)）
 
 ## 源码依赖图
 

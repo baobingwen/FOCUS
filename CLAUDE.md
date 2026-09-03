@@ -48,9 +48,10 @@ cd code && pwsh -File build-client.ps1
 # 开发（无需后端）
 cd code/client && npm run dev:static
 
-# 构建（产物 dist-static/）+ 预览（子路径需 --base /FOCUS/）
+# 构建（产物 dist-static/，含 PWA：manifest.webmanifest/sw.js/registerSW.js/图标）+ 预览（子路径需 --base /FOCUS/）
 cd code/client && npm run build:static
 npx vite preview --outDir dist-static --base /FOCUS/
+# 本地预览可在 DevTools Application 面板验证 PWA（localhost 属安全上下文，SW 可注册）
 
 # 手动构建脚本
 cd code && pwsh -File build-client-static.ps1
@@ -116,6 +117,23 @@ cd 111日常学习计时器-第三方项目/client && npm run dev
 | `utils/fmtTime.js` | 时长格式化工具：`fmtTime`（中文时长"1小时30分"）+ `fmtClock`（HH:MM:SS/MM:SS，计时页用）+ `fmtShortClock`（MM:SS，历史页/千层饼用） |
 | `utils/timerStorage.js` | 计时快照存取：save / load / clear + 校验（localStorage 键 `focus:timer:snapshot`，带 version），计时状态持久化专用 |
 | `utils/pendingRecord.js` | 待重试记录存取：save / load / clear（localStorage 键 `focus:pending-record`，带 version），学习记录保存失败后的重试数据专用 |
+
+### 纯静态版 PWA 资源 (`code/client/public/` + `vite.config.js`)
+
+纯静态版（`mode=static`）构建注入 PWA（见 [ADR 0015](../docs/adr/0015-static-pwa.md)）：可安装到主屏幕 + Service Worker 离线缓存。仅 static 模式启用 `vite-plugin-pwa`，服务端版构建零 PWA 痕迹；manifest 元数据集中定义在 `vite.config.js` 顶部 `PWA_MANIFEST` 常量（软编码，`index.html` 对应 meta 与产物引用同源）。
+
+| 文件 | 说明 |
+|------|------|
+| `public/icon.svg` | 图标源 SVG（flat-color-icons target 图形，blue-500 圆角底 + 白环 + 青箭头，PD 许可），manifest/apple-touch/favicon 均出自此 |
+| `public/icon-maskable.svg` | maskable 专用源（满幅无圆角 blue-500 底 + 内容缩入 80% 安全区，适配系统遮罩裁切） |
+| `public/pwa-64x64.png` / `pwa-192x192.png` / `pwa-512x512.png` | 透明背景图标产物（64/192/512），manifest icons 引用 192/512 |
+| `public/maskable-icon-512x512.png` | maskable 图标产物（512），manifest `purpose: maskable` |
+| `public/apple-touch-icon-180x180.png` | iOS 主屏图标产物（180），`index.html` apple-touch-icon 引用 |
+| `public/registerSW.js` | SW 注册脚本（插件检测到 public/ 存在即复用，不生成极简版）：相对路径注册（scope `./`）+ autoUpdate 完整语义——检测新版本 → 新版 SW 安装激活后自动 `location.reload()` 一次使新版生效（首次安装不刷新）；刷新若恰逢学习中，计时快照（`focus:timer:snapshot`）自动恢复，数据不丢 |
+| `public/screenshots/phone.png` | Rich Install UI 移动端截图（1316×2646，form_factor narrow） |
+| `public/screenshots/desktop.png` | Rich Install UI 桌面端截图（2154×1406，form_factor wide） |
+
+图标生成：`npm i -D @vite-pwa/assets-generator`（sharp 后端），由 `public/icon*.svg` 生成上述 PNG；换图标设计时只改 SVG 源重新生成。
 
 ### 服务端结构 (`code/server/`)
 
@@ -241,4 +259,5 @@ code/start-local.bat
 - **复习提醒**: 用户自维护的提醒语句库，学习中「结束学习」大按钮下方小字提醒条展示一条、每 15 分钟顺序轮换，点 ＋ 随时新增，管理模式内编辑/删除；存后端 `reminder_items` 表
 - **计时快照**: 进行中的学习/休息计时（studying/paused/resting 三态）关键状态定时写入 localStorage（`focus:timer:snapshot`，带 version），刷新/误关标签/崩溃后自动恢复 + App 顶部提示条（默认计入离开时间，可忽略离开时间/放弃本次学习）；elapsed 不落盘（绝对时间戳推导）；rest_prompt 不持久化；会话正常结束清空
 - **待重试记录**: 学习记录保存失败后完整 payload 暂存 localStorage（`focus:pending-record`，带 version），rest_prompt 弹窗变「重试保存/放弃记录」，刷新/误关后恢复弹窗继续处理；仅学习记录，不进五表/五仓库、不参与导出导入；组件层 TimerPage 管理
+- **PWA（仅纯静态版）**: 纯静态版构建注入 PWA（vite-plugin-pwa 仅 static 模式启用）——manifest + 全套图标 + screenshots（Rich Install UI）+ Service Worker 离线缓存，可添加到手机主屏幕像原生 App 使用，断网离线仍可查看/记录（数据本在 IndexedDB）；SW 更新策略 autoUpdate（public/registerSW.js 完整注册：新版安装激活后自动刷新一次生效，学习中被刷新的极端情形由计时快照兜底）；不做安装引导与通知（P0 候选另行评估）
 - **部署**: 本地 + Tailscale 优先，纯静态版可部署 GitHub Pages（`https://baobingwen.github.io/FOCUS/`，脚本 `code/deploy-static.ps1`，详见 `code/DEPLOY_STATIC.md`），Fly.io 方案备选
