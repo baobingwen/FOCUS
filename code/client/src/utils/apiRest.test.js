@@ -82,6 +82,33 @@ describe('recordsApi', () => {
     );
   });
 
+  it('range: 拼接 from/to 区间查询串并返回记录', async () => {
+    globalThis.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ records: [{ id: 1 }] }),
+    });
+
+    const result = await recordsApi.range('2026-09-06', '2026-09-12');
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/records?from=2026-09-06&to=2026-09-12',
+      expect.any(Object),
+    );
+    expect(result).toEqual({ records: [{ id: 1 }] });
+  });
+
+  it('range: from/to 参数经过 encodeURIComponent 编码', async () => {
+    globalThis.fetch.mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ records: [] }),
+    });
+
+    await recordsApi.range('2026/09/06', '2026/09/12');
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/records?from=2026%2F09%2F06&to=2026%2F09%2F12',
+      expect.any(Object),
+    );
+  });
+
   it('todayOverview: 返回今日概览数据', async () => {
     const mockData = { total_study_ms: 3600000, total_rest_ms: 300000, by_subject: [] };
     globalThis.fetch.mockResolvedValue({

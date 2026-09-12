@@ -2,6 +2,47 @@
 
 All notable changes to this project will be documented in this file.
 
+## [0.5.6] — 2026-09-12
+
+### 版本线：0.5.x 维护（无后端 Local-First 主线）
+
+返校后使用形态从「在家 · 台式机 · 日均 6.56h」变为「在校 · 手机 PWA · 约 3.2h/有效天且碎片化」，科目重心随之翻转（暑假数学占 51.5% → 学期 9 天仅 2.2h / 7.6%）。今日概览是单日视角、历史页只能按天翻，都回答不了「哪一科正在被落下」。本次新增第三个底部 tab「进度」，提供跨天的科目覆盖与配速回顾。
+
+### Added
+
+- **进度页（第三个 tab「进度」📈）**：纯只读跨天回顾视图
+  - **页头一行标题「📈 学习进度」**：与计时页「🎯 FOCUS」/ 历史页「📋 历史记录」同款；**考研剩余天数不在此页重复**——右上角常驻倒计时是唯一来源（用户实际观察后调整：原方案在页头再放一张倒计时卡片，与右上角同一信息二次呈现）
+  - **科目覆盖格（断层）**：滚动近 7 天（含今天）× 全部科目（按 `sort_order`）点阵，某天该科有学习记录即点亮——**二元判定、无时长阈值**（库里 5 分钟以下记录占 17.8%，设阈值会把「背词 112 秒」这类真实碎片学习判成没碰）；每行右侧「上次」列（表头「上次」；今天学过显示「今天」，其余「N 天前」，回溯窗口内无记录显示 —）；不隐藏、不折叠长期空白科目（隐藏恰好会把最该看见的断层藏起来）
+  - **各科配速**：近 7 天各科目累计学习时长占比条，视觉与今日概览的科目条形图同款；不加日均（条长表示总量而数字表示均值会造成口径不一致）
+  - 只统计已保存记录（不体现进行中的计时）；休息记录不参与统计；不进管理模式（无删除类功能，无需入口隔离）
+- **数据层 `recordsApi.range(from, to)`**：区间查询（两端含端点，按 `created_at` 倒序，含 tags），双版本同契约——服务端版走 `GET /api/records?from=&to=`，纯静态版走 IndexedDB 区间读取
+
+### Changed
+
+- `routes/records.js` 的 `GET /`：在既有 `?date=` 之外支持 `?from=&to=` 区间查询（`WHERE DATE(created_at) >= DATE(?) AND DATE(created_at) <= DATE(?)`）；**`?date=` 行为与优先级不变**（同时传时 `date` 优先），无参仍取最近 200 条，只传 `from` 或只传 `to` 回落到无过滤行为（不新增错误分支）；响应形态 `{ records }` 与 tags 附加逻辑不变
+- `App.jsx`：`TABS` 增第三项（📈 进度），`refreshKey` 传入进度页（结束学习保存后自动刷新）
+- 进度页取数回溯 **90 天**（展示窗口仍是 7 天）——「上次学习距今 N 天」需要更早的历史，一次区间取数同时满足两者，避免二次请求
+- `ExamCountdown.jsx` **不改动**（仍为右上角常驻倒计时 + 管理模式隐藏入口，是考研剩余天数的唯一来源）
+
+### Tests
+
+- 客户端 **366 全绿**（21 个文件；347 → 366，+19）：`ProgressPage.test.jsx` 新增 11 条（取数区间 90 天回溯/页面标题与今天列高亮/覆盖格点亮含 1 秒记录/窗口外不点亮/距今天数 0 天·N 天·—·取最近一条/休息不参与/配速条比例含 0%/空状态/refreshKey 重载）、`apiRest.test.js` +2（range 拼接与编码）、`apiLocal.test.js` +4（含端点/跨月/带 tags/空结果）、`App.test.jsx` +2（进度 tab 切换与只读往返）
+- 服务端 **155 全绿**（146 → 155，+9）：`GET /api/records` 日期范围查询（区间过滤 + 两端含端点 00:00:00/23:59:59 + 倒序 + 仍附 tags + 跨月 + `date` 优先 + 只传 from / 只传 to 回落 + 空结果）
+
+### Docs
+
+- `docs/adr/0016-progress-pacing-view.md` — 新增学期配速视图设计文档（背景实测数据 + 7 个 grill 设计点 + 5 条派生决策 + 影响面）
+- `CONTEXT.md` — 新增「进度页」「统计窗口」「科目覆盖」「断层」「配速」五个领域词（各带 `_Avoid_`）与「进度查看流程」
+- `README.md` — 功能列表新增「学习进度（第三个 tab）」；结构树补 `ProgressPage.jsx`；API 表补 `?from=&to=`；使用流程新增「进度查看」
+- `code/ROADMAP.md` — 学期配速视图从「开发中」移入已实现（v0.5.6）；版本头 0.5.5/0.3.7 → 0.5.6/0.3.8；P2 数据看板补注与进度页的边界划分
+- `CLAUDE.md` — 组件清单补 `ProgressPage.jsx`；App 行改「三个 tab」；`routes/records.js` 行补区间查询；核心概念新增「进度页」
+- `code/client/TESTING.md` — 文件树补 ProgressPage，计数更新（apiRest 25→27、apiLocal 46→50、App 28→30、总计 347→366、20→21 文件）
+- `code/server/TESTING.md` — records 用例计数 75→84 + 描述补「日期范围查询 from/to」
+- `code/client/docs/CODE_STRUCTURE.md` — 依赖图补 ProgressPage 节点与边、职责表与测试对应表补行、版本头 v0.5.6
+- `docs/INDEX.md` — 登记 ADR 0016
+- **文档陈旧性修复**（对全仓 29 份文档做了一次陈旧性审计后集中修正）：`code/LOCAL_DEPLOY.md` 的 WAL 备份/重置说明（原文「SQLite 单文件，直接拷贝就能备份」在 WAL 模式下会丢数据）、`code/DEPLOY_STATIC.md` 的回滚步骤（原文命令实际回不了滚）、失效链接 23 条（`code/ROADMAP.md` 18 + `CLAUDE.md` 4 + `docs/adr/0003` 1）、`CLAUDE.md` 两张测试表与分支表补全（测试文件 21 / 6，分支 8）、`README.md` 的 version.js 说明与结构树补漏（含 `server/migrations/`）、`code/server/TESTING.md` 与 `CHANGELOG.md` 的用例计数（records 84 / tags 21；74→83 更正为 75→84）、`CONTEXT.md` 复习提醒的显隐口径（暂停中同样显示，与 ADR 0009 及代码一致）、`code/client/TESTING.md` 的 `App.jsx` 目录归属、`CODE_STRUCTURE.md` 的 `ReminderBar` 缺失与 3 条依赖边、`docs/WORKFLOW.md` 测试命令补 `cd`
+
+
 ## [0.5.5] — 2026-09-03
 
 ### 版本线：0.5.x 维护（无后端 Local-First 主线）
@@ -456,7 +497,7 @@ ROADMAP「开发中」讨论思路落地——纯静态版 PWA 化：GitHub Page
   - 数据模型：`002_add_tags.sql` — 新增 `tags` 表（name 唯一）+ `record_tags` 多对多关联表（外键级联删除）
   - `server/routes/tags.js` — 新增 `GET /api/tags`、`POST /api/tags`（幂等复用、≤12 字）、`DELETE /api/tags/:id`（级联清关联）
   - `server/routes/records.js` — POST 接受 `tags`、GET 返回每条 `tags`、PATCH 扩展支持整组替换标签（备注与标签均可选，空 body 为无操作）
-  - `client/components/TagPicker.jsx` — 新组件，学习中与历史编辑态共用：点选/新增/删除标签（重名幂等复用）
+  - `client/src/components/TagPicker.jsx` — 新组件，学习中与历史编辑态共用：点选/新增/删除标签（重名幂等复用）
   - `TimerPage.jsx` — 学习中标签选择区（备注上方），结束保存时随记录提交
   - `HistoryPage.jsx` — 查看态标签 chips（点标签即筛选）+ 列表上方筛选行 + ✏️ 编辑态可增删标签，备注与标签一起保存
   - `TodayOverview.jsx` — 按标签分组时长（纯前端从当天记录聚算，统计仅学习记录）
@@ -481,7 +522,7 @@ ROADMAP「开发中」讨论思路落地——纯静态版 PWA 化：GitHub Page
 ### Added
 
 - **历史记录备注复制**：点击历史页学习记录的备注文字即复制到剪贴板，内联显示「已复制✓」/「复制失败」；编辑入口从备注文字移入 ✏️ 按钮（hover 样式保持一致）。
-  - `client/utils/clipboard.js` — 新增 `copyText`：优先 `navigator.clipboard`（仅安全上下文），降级隐藏 textarea + `document.execCommand('copy')`（兼容 Tailscale 手机 HTTP 访问）
+  - `client/src/utils/clipboard.js` — 新增 `copyText`：优先 `navigator.clipboard`（仅安全上下文），降级隐藏 textarea + `document.execCommand('copy')`（兼容 Tailscale 手机 HTTP 访问）
   - `HistoryPage.jsx` — 备注文字变为复制按钮，✏️ 升级为真实编辑按钮；复制反馈 1.5s 自动消失，单条互斥（新编辑/复制自动收起旧反馈）
 - 版本号：client `0.2.5`→`0.2.6`，server 不变 `0.2.4`，git tag `v0.2.9`
 
@@ -520,7 +561,7 @@ ROADMAP「开发中」讨论思路落地——纯静态版 PWA 化：GitHub Page
 
 - **历史记录修改备注**：学习记录的备注可在历史页内联编辑/补充/清空，休息记录不可编辑。
   - `server/routes/records.js` — 新增 `PATCH /api/records/:id`（仅学习记录；id 非法/不存在 404，notes 非字符串或休息记录 400，trim 后存储，空串清空备注）
-  - `client/utils/api.js` — 新增 `recordsApi.update(id, { notes })`
+  - `client/src/utils/api.js` — 新增 `recordsApi.update(id, { notes })`
   - `HistoryPage.jsx` — 备注文字可点进入内联编辑（无备注时显示「＋ 添加备注」），保存成功静默原地更新，失败保持编辑态并显示错误，取消丢弃草稿，单条互斥
 - 版本号：client `0.2.3`→`0.2.4`，server `0.2.3`→`0.2.4`，git tag `v0.2.7`
 

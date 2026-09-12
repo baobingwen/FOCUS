@@ -20,6 +20,8 @@ beforeEach(() => {
     total_study_ms: 0, total_rest_ms: 0, total_records: 0, by_subject: [],
   });
   recordsApi.list.mockResolvedValue({ records: [] });
+  // 进度页（第三个 tab）取数：科目列表 + 回溯区间记录
+  recordsApi.range.mockResolvedValue({ records: [] });
   // 学习中渲染 TagPicker / ReminderBar 会拉取标签库与提醒
   tagsApi.list.mockResolvedValue([]);
   remindersApi.list.mockResolvedValue([]);
@@ -74,6 +76,33 @@ describe('App', () => {
     await userEvent.click(screen.getByText('📋'));
     await waitFor(() => {
       expect(screen.getByText('📋 历史记录')).toBeInTheDocument();
+    });
+
+    await userEvent.click(screen.getByText('⏱️'));
+    await waitFor(() => {
+      expect(screen.getByText('🎯 FOCUS')).toBeInTheDocument();
+    });
+  });
+
+  it('点击「进度」tab 切换到进度页面', async () => {
+    render(<App />);
+
+    await userEvent.click(screen.getByText('📈'));
+
+    await waitFor(() => {
+      expect(screen.getByText('科目覆盖 · 近 7 天')).toBeInTheDocument();
+    });
+    expect(screen.getByText('各科配速 · 近 7 天')).toBeInTheDocument();
+    // 进度页按区间取数（一次请求，双版本同一契约）
+    expect(recordsApi.range).toHaveBeenCalled();
+  });
+
+  it('进度页只读：切到进度页再切回计时页，计时页照常渲染', async () => {
+    render(<App />);
+
+    await userEvent.click(screen.getByText('📈'));
+    await waitFor(() => {
+      expect(screen.getByText('科目覆盖 · 近 7 天')).toBeInTheDocument();
     });
 
     await userEvent.click(screen.getByText('⏱️'));

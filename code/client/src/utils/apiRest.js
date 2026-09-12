@@ -35,6 +35,15 @@ export const recordsApi = {
     return request(`/records${qs}`);
   },
 
+  /**
+   * 获取指定日期区间的记录（两端含端点，按 created_at 倒序，含 tags）
+   * @param {string} from - 起始日期 YYYY-MM-DD（含）
+   * @param {string} to - 结束日期 YYYY-MM-DD（含）
+   * @returns {Promise<{ records: object[] }>}
+   */
+  range: (from, to) =>
+    request(`/records?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
+
   todayOverview: () => request('/records/today'),
 };
 

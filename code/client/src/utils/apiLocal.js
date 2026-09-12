@@ -414,6 +414,33 @@ export const recordsApi = {
   },
 
   /**
+   * 获取指定日期区间的记录（两端含端点，按 created_at 倒序，含 tags）
+   * 日期比较按 created_at 的前 10 位字符串进行，与后端 DATE(created_at) BETWEEN 语义一致
+   * @param {string} from - 起始日期 YYYY-MM-DD（含）
+   * @param {string} to - 结束日期 YYYY-MM-DD（含）
+   * @returns {Promise<{ records: object[] }>}
+   */
+  range: async (from, to) => {
+    const lower = String(from).slice(0, 10);
+    const upper = String(to).slice(0, 10);
+    const rows = await getAll('records');
+    const filtered = rows
+      .filter((r) => {
+        const d = String(r.created_at).slice(0, 10);
+        return d >= lower && d <= upper;
+      })
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+
+    const records = [];
+    for (const r of filtered) {
+      const row = { ...r };
+      row.tags = await getRecordTags(r.id);
+      records.push(row);
+    }
+    return { records };
+  },
+
+  /**
    * 获取今日概览（总学习/休息时长、总页数、按科目分组，与后端 /today 形态一致）
    * @returns {Promise<object>}
    */

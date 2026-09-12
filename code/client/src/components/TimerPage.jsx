@@ -324,7 +324,7 @@ export default function TimerPage({ timer, onRecordSaved, adminMode = false }) {
           </button>
         </div>
 
-        {/* 复习方法和提醒（仅学习中显示，大按钮下方；15 分钟轮换 + 点＋新增，管理模式可管理） */}
+        {/* 复习方法和提醒（学习中/暂停中显示，大按钮下方；15 分钟轮换 + 点＋新增，管理模式可管理） */}
         <div className="mt-6">
           <ReminderBar admin={adminMode} />
         </div>

@@ -341,6 +341,123 @@ describe('GET /api/records', () => {
 });
 
 // ──────────────────────────────────────────────
+// GET /api/records?from=&to= 日期范围查询
+// ──────────────────────────────────────────────
+describe('GET /api/records 日期范围查询', () => {
+  /** 插入一条指定 created_at 的学习记录 */
+  function insertAt(createdAt, subject, durationMs = 1000) {
+    const db = getDb();
+    db.prepare(
+      `INSERT INTO records (mode, subject, duration_ms, created_at)
+       VALUES (?, ?, ?, ?)`
+    ).run('study', subject, durationMs, createdAt);
+  }
+
+  it('只返回范围内的记录（前后各一条落在区间外）', async () => {
+    insertAt('2026-07-04 23:59:59', '区间外-前');
+    insertAt('2026-07-05 00:00:00', '起始日');
+    insertAt('2026-07-07 12:00:00', '中间');
+    insertAt('2026-07-09 23:59:59', '结束日');
+    insertAt('2026-07-10 00:00:00', '区间外-后');
+
+    const res = await request(app).get('/api/records?from=2026-07-05&to=2026-07-09');
+    expect(res.status).toBe(200);
+    expect(res.body.records).toHaveLength(3);
+    expect(res.body.records.map(r => r.subject)).toEqual(['结束日', '中间', '起始日']);
+  });
+
+  it('from 与 to 两端均包含（起始日 00:00:00 与结束日 23:59:59）', async () => {
+    insertAt('2026-07-05 00:00:00', '起始日零点');
+    insertAt('2026-07-09 23:59:59', '结束日末刻');
+
+    const res = await request(app).get('/api/records?from=2026-07-05&to=2026-07-09');
+    expect(res.status).toBe(200);
+    expect(res.body.records).toHaveLength(2);
+    expect(res.body.records.map(r => r.subject)).toEqual(['结束日末刻', '起始日零点']);
+  });
+
+  it('结果按 created_at 倒序返回', async () => {
+    insertAt('2026-07-06 08:00:00', '数学');
+    insertAt('2026-07-08 20:00:00', '英语');
+    insertAt('2026-07-07 12:00:00', '专业课');
+
+    const res = await request(app).get('/api/records?from=2026-07-05&to=2026-07-09');
+    expect(res.status).toBe(200);
+    expect(res.body.records.map(r => r.created_at)).toEqual([
+      '2026-07-08 20:00:00',
+      '2026-07-07 12:00:00',
+      '2026-07-06 08:00:00',
+    ]);
+  });
+
+  it('范围内的记录仍附加 tags', async () => {
+    const rec = (await request(app).post('/api/records').send({
+      mode: 'study', subject: '数学', duration_ms: 3600000, tags: ['高数', '极限'],
+    })).body;
+    const db = getDb();
+    db.prepare('UPDATE records SET created_at = ? WHERE id = ?').run('2026-07-07 10:00:00', rec.id);
+    // 区间外记录，不应出现在结果里
+    insertAt('2026-07-01 10:00:00', '区间外');
+
+    const res = await request(app).get('/api/records?from=2026-07-05&to=2026-07-09');
+    expect(res.status).toBe(200);
+    expect(res.body.records).toHaveLength(1);
+    expect(res.body.records[0].tags).toEqual(['高数', '极限']);
+  });
+
+  it('跨月边界的范围正常返回', async () => {
+    insertAt('2026-06-29 23:59:59', '区间外-上月末');
+    insertAt('2026-06-30 22:00:00', '六月末');
+    insertAt('2026-07-01 00:00:00', '七月初');
+    insertAt('2026-07-02 12:00:00', '七月中');
+    insertAt('2026-07-03 00:00:00', '区间外-下月初');
+
+    const res = await request(app).get('/api/records?from=2026-06-30&to=2026-07-02');
+    expect(res.status).toBe(200);
+    expect(res.body.records).toHaveLength(3);
+    expect(res.body.records.map(r => r.subject)).toEqual(['七月中', '七月初', '六月末']);
+  });
+
+  it('同时传 date 与 from/to 时 date 优先', async () => {
+    insertAt('2026-07-06 10:00:00', '目标日');
+    insertAt('2026-07-07 10:00:00', '范围内其他日');
+
+    const res = await request(app).get('/api/records?date=2026-07-06&from=2026-07-05&to=2026-07-09');
+    expect(res.status).toBe(200);
+    expect(res.body.records).toHaveLength(1);
+    expect(res.body.records[0].subject).toBe('目标日');
+  });
+
+  it('只传 from 不传 to 时退化为默认最近 200 条', async () => {
+    insertAt('2026-07-04 10:00:00', '范围外-前');
+    insertAt('2026-07-06 10:00:00', '范围内');
+
+    const res = await request(app).get('/api/records?from=2026-07-05');
+    expect(res.status).toBe(200);
+    expect(res.body.records).toHaveLength(2);
+    expect(res.body.records.map(r => r.subject)).toEqual(['范围内', '范围外-前']);
+  });
+
+  it('只传 to 不传 from 时退化为默认最近 200 条', async () => {
+    insertAt('2026-07-04 10:00:00', '范围内');
+    insertAt('2026-07-06 10:00:00', '范围外-后');
+
+    const res = await request(app).get('/api/records?to=2026-07-05');
+    expect(res.status).toBe(200);
+    expect(res.body.records).toHaveLength(2);
+    expect(res.body.records.map(r => r.subject)).toEqual(['范围外-后', '范围内']);
+  });
+
+  it('范围内无记录时返回空数组', async () => {
+    insertAt('2026-07-01 10:00:00', '区间外');
+
+    const res = await request(app).get('/api/records?from=2026-07-05&to=2026-07-09');
+    expect(res.status).toBe(200);
+    expect(res.body.records).toEqual([]);
+  });
+});
+
+// ──────────────────────────────────────────────
 // GET /api/records/today
 // ──────────────────────────────────────────────
 describe('GET /api/records/today', () => {

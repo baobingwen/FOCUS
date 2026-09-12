@@ -14,6 +14,7 @@
 - **科目管理** — 默认科目（数学、英语、专业课）+ 自定义新增（删除在管理模式内）
 - **考研倒计时** — 右上角常驻显示「距离考研 X 天」，写死 2026-12-19；连点 5 下即进入管理模式（任何页面任何状态可见）
 - **今日概览** — 今天总学习时长 + 各科目用时分布（暂停时间自动计入休息）+ 今日总页数与各科目页数汇总
+- **学习进度（第三个 tab）** — 跨天回顾视图，回答「这段时间分配得怎么样」。**科目覆盖格**：近 7 天（滚动窗口，含今天）× 全部科目，某天该科有学习记录即点亮（二元判定、无时长阈值），一眼看出断层；每行右侧「上次」列显示该科距上次学习多久（今天学过为「今天」，其余「N 天前」）。**各科配速**：近 7 天各科目累计学习时长占比条（与今日概览同款视觉）。页头为与另两个 tab 同款的一行标题（考研剩余天数不在此页重复——右上角常驻倒计时是唯一来源）。纯只读视图，休息记录不参与；服务端版与纯静态版一致
 - **历史记录** — 按天翻看过去的记录，带暂停的时段以千层饼堆叠条展示
 - **管理模式** — 删除类功能统一收进隐藏模式：连点 5 下右上角考研倒计时进入，管理模式下可删除历史记录（单条，不可恢复）、自定义科目、标签，以及拖拽排序标签库；日常界面只留展示与可逆的修改，防误触
 - **数据导出（管理模式）** — 管理模式横幅一键导出全部数据为 JSON 文件下载（含 app/版本/导出时间元数据，records 的 segments 解析为数组）
@@ -134,8 +135,10 @@ code/
 │   │   ├── App.jsx                  # 主布局 + 底部导航 + 考研倒计时 + 全局管理模式
 │   │   ├── hooks/useTimer.js        # 计时器状态机
 │   │   ├── hooks/useMultiTap.js     # 连点检测（管理模式入口）
+│   │   ├── hooks/useFreezeOnLeave.js # 离开页面自动冻结（v0.4.3 起 App 未接入，代码保留）
 │   │   ├── components/
 │   │   │   ├── TimerPage.jsx        # 计时器主页面（5 状态：idle/studying/paused/rest_prompt/resting）
+│   │   │   ├── TimerRestoreBar.jsx  # 计时快照恢复提示条（App 层，三个 tab 都可见）
 │   │   │   ├── ExamCountdown.jsx    # 考研倒计时
 │   │   │   ├── SubjectSelector.jsx  # 科目选择器
 │   │   │   ├── TagPicker.jsx        # 标签选择器
@@ -143,7 +146,8 @@ code/
 │   │   │   ├── HistoryPage.jsx      # 历史记录
 │   │   │   ├── RecordCard.jsx       # 历史记录卡片
 │   │   │   ├── SegmentStack.jsx     # 千层饼堆叠条
-│   │   │   └── TodayOverview.jsx    # 今日概览
+│   │   │   ├── TodayOverview.jsx    # 今日概览
+│   │   │   └── ProgressPage.jsx     # 进度页（科目覆盖格 + 各科配速）
 │   │   └── utils/
 │   │       ├── api.js               # 数据访问统一入口（按构建开关分发数据层）
 │   │       ├── apiRest.js           # REST 数据层实现（服务端版）
@@ -168,7 +172,7 @@ code/
 ├── server/                          # Express 后端
 │   ├── index.js                     # 入口 + /health + /api/version
 │   ├── database.js                  # SQLite 初始化 + 幂等迁移
-│   ├── version.js                   # git tag 版本读取
+│   ├── version.js                   # 版本读取（读 server/package.json#version，非 git tag）
 │   ├── routes/
 │   │   ├── records.js               # 计时记录 API
 │   │   ├── subjects.js              # 科目管理 API
@@ -176,6 +180,7 @@ code/
 │   │   ├── reminders.js             # 复习提醒 API
 │   │   ├── export.js                # 数据导出 API
 │   │   └── import.js                # 数据导入 API
+│   ├── migrations/                  # 增量 SQL 迁移脚本（按文件名排序执行，仅增不删改）
 │   └── package.json
 │
 ├── shared/                          # 双版本共用模块
@@ -231,6 +236,18 @@ docs/
 学习中/暂停中/休息中刷新页面、误关标签页或浏览器崩溃，重新打开后自动恢复上次计时（科目/备注/标签/页数/已学时长原样还原），顶部提示条显示「已恢复上次学习」与离开时长：默认计入离开时间，可「忽略离开时间」（离开缺口不计入）或「放弃本次学习」。会话正常结束自动清空恢复记录。
 
 上次学习记录保存失败且未处理时，重新打开会弹出「重试保存 / 放弃记录」（待重试记录存于 localStorage，不随刷新丢失）。
+
+### 进度查看
+
+```
+底部导航「进度」→ 标题「📈 学习进度」
+                    ↓
+        科目覆盖格：近 7 天 × 全部科目，有学习记录即点亮
+                    ↓
+        各科配速：近 7 天累计时长占比条
+```
+
+只读视图，不含修改/删除操作；休息记录不参与统计。近 7 天没有任何学习记录时显示空状态提示。
 
 ## 数据存储
 
@@ -288,6 +305,7 @@ docs/
 | GET    | `/api/version`                 | 获取当前版本号             |
 | POST   | `/api/records`                 | 保存一条记录（可带 `tags`、`pages`） |
 | GET    | `/api/records?date=YYYY-MM-DD` | 获取指定日期的记录（含 `tags`）|
+| GET    | `/api/records?from=&to=`       | 获取指定日期区间的记录（含端点，含 `tags`；进度页近 7 天窗口）|
 | PATCH  | `/api/records/:id`             | 修改学习记录的备注、标签和页数     |
 | DELETE | `/api/records/:id`             | 删除单条记录（学习/休息均可）       |
 | GET    | `/api/records/today`           | 获取今日概览                 |
@@ -310,9 +328,9 @@ docs/
 版本分为三部分，各自独立管理：
 
 ```text
-client/package.json → 0.3.0   (客户端版本，独立递增)
-server/package.json → 0.3.0   (服务端版本，独立递增)
-git tag              → v0.3.0 (项目里程碑标记)
+client/package.json → 0.5.0   (客户端版本，独立递增)
+server/package.json → 0.5.0   (服务端版本，独立递增)
+git tag              → v0.5.0 (项目里程碑标记)
 ```
 
 - 客户端/服务端版本在各自 `package.json#version` 中维护

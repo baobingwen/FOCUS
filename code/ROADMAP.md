@@ -1,6 +1,6 @@
 # FOCUS 路线图
 
-> 客户端：0.5.5 · 服务端：0.3.7 · git tag: v0.5.5 — 最新：纯静态版 PWA 化
+> 客户端：0.5.6 · 服务端：0.3.8 · git tag: v0.5.6 — 最新：学期配速视图（进度页）
 
 ## 已实现
 
@@ -14,29 +14,30 @@
 - ✅ 幂等数据库迁移系统
 - ✅ 服务端 + 客户端 测试用例 （具体数据见 [`server/TESTING.md`](server/TESTING.md)）
 - ✅ 本地 + Tailscale 手机远程访问
-- ✅ 暂停功能：学习中暂停/继续，暂停时间计入今日休息，历史记录千层饼堆叠条展示（[设计文档](docs/adr/0002-pause-feature.md)）
+- ✅ 暂停功能：学习中暂停/继续，暂停时间计入今日休息，历史记录千层饼堆叠条展示（[设计文档](../docs/adr/0002-pause-feature.md)）
 - ✅ MIT 开源协议：LICENSE 文件 + package.json license 字段，与 22 个直接依赖完全兼容
-- ✅ 离开页面自动冻结：学习中离开页面（切标签页/最小化/切应用）自动停止计时但不产生暂停记录，回来后自动恢复（[设计文档](docs/adr/0003-freeze-on-leave.md)）⚠️ v0.4.3 逻辑移除：App 不再接入 `useFreezeOnLeave`（调用点注释保留），代码未删待用
+- ✅ 离开页面自动冻结：学习中离开页面（切标签页/最小化/切应用）自动停止计时但不产生暂停记录，回来后自动恢复（[设计文档](../docs/adr/0003-freeze-on-leave.md)）⚠️ v0.4.3 逻辑移除：App 不再接入 `useFreezeOnLeave`（调用点注释保留），代码未删待用
 - ✅ 历史记录修改备注：学习记录的备注可在历史页内联编辑/补充/清空，休息记录不可编辑
 - ✅ 千层饼自下而上显示：单个学习记录内学习/暂停段改为自下而上的时间顺序（最早段在最下，最晚段在最上）
 - ✅ 历史记录备注复制：点击历史页学习记录的备注文字即复制到剪贴板，编辑入口移入 ✏️ 按钮
-- ✅ 学习标签：科目之下的知识点二级细分（扁平全局标签库），学习中随时点选/新增，一条记录可挂多个；今日概览按标签分组，历史页点标签筛选、✏️ 编辑态可增删标签（[设计文档](docs/adr/0004-study-tags.md)）
+- ✅ 学习标签：科目之下的知识点二级细分（扁平全局标签库），学习中随时点选/新增，一条记录可挂多个；今日概览按标签分组，历史页点标签筛选、✏️ 编辑态可增删标签（[设计文档](../docs/adr/0004-study-tags.md)）
 - ✅ 学习中大按钮始终居中：暂停/继续按钮悬浮于大按钮右缘（absolute 定位，不占布局），桌面 hover 浮现、移动端常驻
 - ✅ 自定义科目芯片删除叉号悬浮：× 不占布局，科目名在芯片内始终居中（hover 浮现、选中态恒显）
-- ✅ 标签拖拽排序：标签库顺序可自定义，⚙ 进入排序模式拖拽换位（sortablejs）、完成批量提交、取消恢复原序；新标签自动排末尾（[设计文档](docs/adr/0005-tag-reorder.md)）
-- ✅ 每次复习的页数：学习记录可记本次复习页数（正整数选填），学习中数字框 +「+1/+5/+10」快捷累加，历史页「📖 N 页」徽标 + ✏️ 可改，今日概览「今日 N 页」+ 科目分组页数（[设计文档](docs/adr/0006-pages-per-review.md)）
-- ✅ 历史记录删除（管理模式）：连点 5 下「历史记录」标题进入隐藏管理模式（正常使用无感知），卡片右上角删除按钮 + confirm 确认单条删除，学习/休息都可删，硬删除不可恢复（[设计文档](docs/adr/0007-record-delete.md)）
-- ✅ 全局管理模式：删除类功能统一收进隐藏模式——记录删除（已有）、科目删除、标签删除、标签排序；右上角考研倒计时连点 5 下进入（任何页面任何计时状态都可见），App 层横幅跨 tab 常驻，退出按钮关闭，刷新复位；修改类（备注/页数/标签 ✏️）保持常态入口（[设计文档](docs/adr/0008-global-admin-mode.md)）
-- ✅ v0.4.1 代码结构拆分：HistoryPage 拆出 RecordCard（单条记录卡片纯展示壳）+ SegmentStack（千层饼）独立组件；格式化函数合并入 utils/fmtTime.js（fmtClock/fmtShortClock，中文 fmtTime 不动）；纯搬家行为不变，测试通过（[结构总览](code/client/docs/CODE_STRUCTURE.md) · [改动说明](code/client/docs/adr/0001-v0.4.1-code-structure-changes.md)）
+- ✅ 标签拖拽排序：标签库顺序可自定义，⚙ 进入排序模式拖拽换位（sortablejs）、完成批量提交、取消恢复原序；新标签自动排末尾（[设计文档](../docs/adr/0005-tag-reorder.md)）
+- ✅ 每次复习的页数：学习记录可记本次复习页数（正整数选填），学习中数字框 +「+1/+5/+10」快捷累加，历史页「📖 N 页」徽标 + ✏️ 可改，今日概览「今日 N 页」+ 科目分组页数（[设计文档](../docs/adr/0006-pages-per-review.md)）
+- ✅ 历史记录删除（管理模式）：连点 5 下「历史记录」标题进入隐藏管理模式（正常使用无感知），卡片右上角删除按钮 + confirm 确认单条删除，学习/休息都可删，硬删除不可恢复（[设计文档](../docs/adr/0007-record-delete.md)）
+- ✅ 全局管理模式：删除类功能统一收进隐藏模式——记录删除（已有）、科目删除、标签删除、标签排序；右上角考研倒计时连点 5 下进入（任何页面任何计时状态都可见），App 层横幅跨 tab 常驻，退出按钮关闭，刷新复位；修改类（备注/页数/标签 ✏️）保持常态入口（[设计文档](../docs/adr/0008-global-admin-mode.md)）
+- ✅ v0.4.1 代码结构拆分：HistoryPage 拆出 RecordCard（单条记录卡片纯展示壳）+ SegmentStack（千层饼）独立组件；格式化函数合并入 utils/fmtTime.js（fmtClock/fmtShortClock，中文 fmtTime 不动）；纯搬家行为不变，测试通过（[结构总览](client/docs/CODE_STRUCTURE.md) · [改动说明](client/docs/adr/0001-v0.4.1-code-structure-changes.md)）
 - ✅ 复习方法和提醒区：用户自维护的提醒语句库（后端新表 `reminder_items` + `/api/reminders` CRUD），学习中「结束学习」大按钮下方小字提醒条展示一条（💡 浅灰不抢眼），每 15 分钟按插入顺序自动轮换（1→2→3→1…）；学习中提醒条旁点 ＋ 弹框新增（随时记录）；管理模式内「管理」按钮 → 弹窗列表编辑/删除全部条目；数据存后端跨设备可见，仅学习中显示
 - ✅ 数据导出（管理模式）：管理模式横幅「导出数据」按钮一键全量导出五张业务表（records/subjects/tags/record_tags/reminder_items）为 JSON 文件下载（`GET /api/export`，文件名 `focus-export-YYYYMMDD-HHMMSS.json`）；导出物含 `app`/`version`/`exported_at` 元数据，records 的 `segments` 解析为数组，不含 `_migrations` 内部表；点击后按钮禁用显示「导出中…」，失败 alert 提示；仅导出，导入留待后续评估
-- ✅ 数据导入（管理模式）：管理模式横幅「导入数据」按钮，把导出的 JSON 文件恢复到本地（`POST /api/import`），与导出配对，语义 = 恢复到导出时状态——事务内清空五张业务表后按导入数据原样插入（保留原 id，record_tags 引用一致），任何一行不合法整个事务回滚；前端读文件 → 校验顶层结构（app=FOCUS、data 五表）→ 确认弹窗展示文件信息/导入统计/风险提示 +「先下载当前备份」入口 → 确认后导入；导入成功提示后整页刷新；学习中（计时非空闲态）禁止导入；不补默认科目，行级校验双版本统一（[设计文档](docs/adr/0010-data-export-import.md)，校验规则见 [ADR 0013](docs/adr/0013-import-validation-unified.md)）
-- ✅ 无后端方案迭代 A（Local-First 双版本数据层）：同一代码库 + 构建开关 `VITE_DATA_LAYER` 产出两种形态——服务端版（默认构建，REST + SQLite，部署不变）与纯静态版（`build:static`，浏览器 IndexedDB 五仓库 1:1 模拟五表，可部署任意静态托管）；数据层接口与现有 `utils/api.js` 完全一致（组件零改动）；导出/导入浏览器端本地实现，格式与后端完全一致、双版本文件互通；默认科目种子/按名禁删/导入不补与后端一致；新增 `build-client-static.ps1` 手动构建脚本；双向 tree-shaking 保证两版产物互不携带对方数据层代码（[设计文档](docs/adr/0011-no-backend-local-first.md)）
-- ✅ 无后端方案迭代 B（GitHub Pages 部署）：纯静态版一键部署到 GitHub Pages——FOCUS 源码仓库 `gh-pages` 分支、`https://baobingwen.github.io/FOCUS/` 子路径（`focus` 名字已被源码仓库占用、根地址被其他站占用，故用项目页子路径；URL 大小写不敏感）；vite base 按 mode 区分（static 模式 `/FOCUS/`，服务端版部署不受影响）；新增 `deploy-static.ps1` 部署脚本——构建 → 同步到独立部署工作区 `code/.deploy-static/` → commit → 普通快进 push（保留每次部署的 git 历史、非强制覆盖、远程分叉时停下提示手动处理）+ `DEPLOY_STATIC.md` 部署指南（一次性设置/发布流程/本地预览/数据迁移/回滚/常见问题）；迭代 C（移除后端）v0.5.1 修改：不再移除后端，服务端版 + 纯静态版长期共存、各自演进（[设计文档](docs/adr/0011-no-backend-local-first.md)）
-- ✅ 计时器状态持久化：学习中/暂停中/休息中三态的关键状态快照定时写入浏览器 localStorage（键 `focus:timer:snapshot`，带 version），刷新/误关标签/浏览器崩溃后重新打开自动恢复计时（科目/备注/标签/页数/已学时长原样还原）+ App 顶部提示条——默认计入离开时间（绝对时间戳继续累计），可「忽略离开时间」（离开缺口不计入、可切回）、「放弃本次学习」或 ✕ 关闭（仅隐藏，快照保留）；elapsed 不落盘（绝对时间戳推导）；rest_prompt 不持久化，会话正常结束清空；写时机 = 状态切换/输入即写 + pagehide/beforeunload + 活跃态每 10 秒兜底；纯前端改动，双版本（服务端版/纯静态版）共用 useTimer 天然生效（[设计文档](docs/adr/0012-timer-persistence.md)）
-- ✅ 导入校验双版本统一：双版本共用同一套显式行级校验规则（公共模块 `code/shared/importValidation.js`，纯函数，client 经 Vite alias `@shared` 引用、server 相对路径引用）——顶层结构校验（app=FOCUS、data 五表数组）+ 行级校验（id 正整数 / mode 仅 study·rest / duration_ms > 0 / 科目·标签·提醒名称非空 / record_tags 引用存在 / 重复科目名与重复关联拒绝），任何一行不合法整体拒绝、事务回滚；默认值归一化双端一致（sort_order→0、notes→''、paused_ms→0、pages→null、created_at→null）；错误消息统一「导入数据不合法: …」中文格式（服务端 400 的 error 字段从 SQLite 英文原文变为中文规则消息）；服务端 SQLite 现有约束（UNIQUE/复合主键/外键/NOT NULL）保留作理论兜底、不加新 migration；同一文件双端要么都接受要么都拒绝，对正常流程与历史导出文件零影响（[设计文档](docs/adr/0013-import-validation-unified.md)）
-- ✅ 保存失败可重试（v0.5.4）：学习中/暂停中按「结束学习」先弹确认框「结束学习 / 返回学习」（返回学习 = 关弹窗继续计时，尚未结束不产生记录，不误触）；学习记录保存失败时 rest_prompt 弹窗变为「重试保存 / 放弃记录」（重试成功 → 恢复正常「要休息吗？」流程，再失败保持待重试；放弃记录 → 丢弃该条、直接回空闲）；待重试记录（科目/时长/段/备注/标签/页数）写入浏览器 localStorage（键 `focus:pending-record`），保存失败后刷新/误关页面重新打开仍弹「重试保存 / 放弃记录」，学习数据不再丢失；仅学习记录，休息记录保存失败保持 toast 提示（[设计文档](docs/adr/0014-save-retry.md)）
-- ✅ 纯静态版 PWA 化（v0.5.5）：可安装到主屏幕 + Service Worker 离线缓存 + Rich Install UI（[设计文档](docs/adr/0015-static-pwa.md)）——仅 `mode=static` 构建注入 `vite-plugin-pwa`（^1.3.0 兼容 Vite 8，服务端版构建零 PWA 痕迹）；manifest 元数据集中定义（「FOCUS 学习计时」/短名「FOCUS」/standalone/theme #f8f9fa，软编码不散落）+ screenshots 应用截图（`public/screenshots/`，narrow 手机 + wide 桌面，安装对话框带预览）；图标全套资源文件（flat-color-icons target 图形 SVG 源 blue-500 底 + 白环青箭头，`@vite-pwa/assets-generator` 生成 192/512/maskable/apple-touch 至 public/）；SW 更新策略 autoUpdate（完整注册逻辑在 `public/registerSW.js`：新版安装激活后自动刷新一次生效，学习中被打断的极端情形由计时快照 ADR 0012 兜底）；scope/start_url 由 isStatic 派生（static 用 `/FOCUS/`）、navigateFallback 相对 index.html；`deploy-static.ps1` 无需改动自动带上新产物；不含安装引导与通知（P0 候选另行评估）
+- ✅ 数据导入（管理模式）：管理模式横幅「导入数据」按钮，把导出的 JSON 文件恢复到本地（`POST /api/import`），与导出配对，语义 = 恢复到导出时状态——事务内清空五张业务表后按导入数据原样插入（保留原 id，record_tags 引用一致），任何一行不合法整个事务回滚；前端读文件 → 校验顶层结构（app=FOCUS、data 五表）→ 确认弹窗展示文件信息/导入统计/风险提示 +「先下载当前备份」入口 → 确认后导入；导入成功提示后整页刷新；学习中（计时非空闲态）禁止导入；不补默认科目，行级校验双版本统一（[设计文档](../docs/adr/0010-data-export-import.md)，校验规则见 [ADR 0013](../docs/adr/0013-import-validation-unified.md)）
+- ✅ 无后端方案迭代 A（Local-First 双版本数据层）：同一代码库 + 构建开关 `VITE_DATA_LAYER` 产出两种形态——服务端版（默认构建，REST + SQLite，部署不变）与纯静态版（`build:static`，浏览器 IndexedDB 五仓库 1:1 模拟五表，可部署任意静态托管）；数据层接口与现有 `utils/api.js` 完全一致（组件零改动）；导出/导入浏览器端本地实现，格式与后端完全一致、双版本文件互通；默认科目种子/按名禁删/导入不补与后端一致；新增 `build-client-static.ps1` 手动构建脚本；双向 tree-shaking 保证两版产物互不携带对方数据层代码（[设计文档](../docs/adr/0011-no-backend-local-first.md)）
+- ✅ 无后端方案迭代 B（GitHub Pages 部署）：纯静态版一键部署到 GitHub Pages——FOCUS 源码仓库 `gh-pages` 分支、`https://baobingwen.github.io/FOCUS/` 子路径（`focus` 名字已被源码仓库占用、根地址被其他站占用，故用项目页子路径；URL 大小写不敏感）；vite base 按 mode 区分（static 模式 `/FOCUS/`，服务端版部署不受影响）；新增 `deploy-static.ps1` 部署脚本——构建 → 同步到独立部署工作区 `code/.deploy-static/` → commit → 普通快进 push（保留每次部署的 git 历史、非强制覆盖、远程分叉时停下提示手动处理）+ `DEPLOY_STATIC.md` 部署指南（一次性设置/发布流程/本地预览/数据迁移/回滚/常见问题）；迭代 C（移除后端）v0.5.1 修改：不再移除后端，服务端版 + 纯静态版长期共存、各自演进（[设计文档](../docs/adr/0011-no-backend-local-first.md)）
+- ✅ 计时器状态持久化：学习中/暂停中/休息中三态的关键状态快照定时写入浏览器 localStorage（键 `focus:timer:snapshot`，带 version），刷新/误关标签/浏览器崩溃后重新打开自动恢复计时（科目/备注/标签/页数/已学时长原样还原）+ App 顶部提示条——默认计入离开时间（绝对时间戳继续累计），可「忽略离开时间」（离开缺口不计入、可切回）、「放弃本次学习」或 ✕ 关闭（仅隐藏，快照保留）；elapsed 不落盘（绝对时间戳推导）；rest_prompt 不持久化，会话正常结束清空；写时机 = 状态切换/输入即写 + pagehide/beforeunload + 活跃态每 10 秒兜底；纯前端改动，双版本（服务端版/纯静态版）共用 useTimer 天然生效（[设计文档](../docs/adr/0012-timer-persistence.md)）
+- ✅ 导入校验双版本统一：双版本共用同一套显式行级校验规则（公共模块 `code/shared/importValidation.js`，纯函数，client 经 Vite alias `@shared` 引用、server 相对路径引用）——顶层结构校验（app=FOCUS、data 五表数组）+ 行级校验（id 正整数 / mode 仅 study·rest / duration_ms > 0 / 科目·标签·提醒名称非空 / record_tags 引用存在 / 重复科目名与重复关联拒绝），任何一行不合法整体拒绝、事务回滚；默认值归一化双端一致（sort_order→0、notes→''、paused_ms→0、pages→null、created_at→null）；错误消息统一「导入数据不合法: …」中文格式（服务端 400 的 error 字段从 SQLite 英文原文变为中文规则消息）；服务端 SQLite 现有约束（UNIQUE/复合主键/外键/NOT NULL）保留作理论兜底、不加新 migration；同一文件双端要么都接受要么都拒绝，对正常流程与历史导出文件零影响（[设计文档](../docs/adr/0013-import-validation-unified.md)）
+- ✅ 保存失败可重试（v0.5.4）：学习中/暂停中按「结束学习」先弹确认框「结束学习 / 返回学习」（返回学习 = 关弹窗继续计时，尚未结束不产生记录，不误触）；学习记录保存失败时 rest_prompt 弹窗变为「重试保存 / 放弃记录」（重试成功 → 恢复正常「要休息吗？」流程，再失败保持待重试；放弃记录 → 丢弃该条、直接回空闲）；待重试记录（科目/时长/段/备注/标签/页数）写入浏览器 localStorage（键 `focus:pending-record`），保存失败后刷新/误关页面重新打开仍弹「重试保存 / 放弃记录」，学习数据不再丢失；仅学习记录，休息记录保存失败保持 toast 提示（[设计文档](../docs/adr/0014-save-retry.md)）
+- ✅ 纯静态版 PWA 化（v0.5.5）：可安装到主屏幕 + Service Worker 离线缓存 + Rich Install UI（[设计文档](../docs/adr/0015-static-pwa.md)）——仅 `mode=static` 构建注入 `vite-plugin-pwa`（^1.3.0 兼容 Vite 8，服务端版构建零 PWA 痕迹）；manifest 元数据集中定义（「FOCUS 学习计时」/短名「FOCUS」/standalone/theme #f8f9fa，软编码不散落）+ screenshots 应用截图（`public/screenshots/`，narrow 手机 + wide 桌面，安装对话框带预览）；图标全套资源文件（flat-color-icons target 图形 SVG 源 blue-500 底 + 白环青箭头，`@vite-pwa/assets-generator` 生成 192/512/maskable/apple-touch 至 public/）；SW 更新策略 autoUpdate（完整注册逻辑在 `public/registerSW.js`：新版安装激活后自动刷新一次生效，学习中被打断的极端情形由计时快照 ADR 0012 兜底）；scope/start_url 由 isStatic 派生（static 用 `/FOCUS/`）、navigateFallback 相对 index.html；`deploy-static.ps1` 无需改动自动带上新产物；不含安装引导与通知（P0 候选另行评估）
+- ✅ 学期配速视图（v0.5.6）：新增第三个底部 tab「进度」📈，跨天回顾科目分配，回答「哪科正在被落下」（[设计文档](../docs/adr/0016-progress-pacing-view.md)）——页头一行页面标题「📈 学习进度」（与计时页/历史页同款；**考研剩余天数不在此页重复**——右上角常驻倒计时是唯一来源，实现后按实际观察调整）+ **科目覆盖格**（滚动近 7 天含今天 × 全部科目按 `sort_order`，有学习记录即点亮——二元判定、无时长阈值，故「背词 112 秒」这类碎片学习同样计入；每行右侧「上次」列（表头「上次」；今天 =「今天」，其余「N 天前」））+ **各科配速条**（近 7 天累计学习时长占比条，视觉与今日概览科目条形图同款）；纯只读视图、不进管理模式、休息记录不参与统计；数据来源 = 前端聚合 + 数据层新增 `recordsApi.range(from, to)`（服务端版 `GET /api/records?from=&to=` 两端含端点的区间查询、`?date=` 行为与优先级不变，`GET /api/records` 无参仍取最近 200 条；纯静态版 IndexedDB 区间读取），一套聚合逻辑双版本共用；取数回溯 90 天以支撑「距今天数」（展示窗口仍是 7 天）；client 0.5.5 → 0.5.6 / server 0.3.7 → 0.3.8
 
 ## 推荐方向（按优先级）
 
@@ -60,6 +61,8 @@
 
 **工作量**：约 2-3 天。
 
+**注（v0.5.6）**：其中「各科目时间占比」视角已由**进度页**（近 7 天窗口，见上方「已实现」的 v0.5.6 条目与 [ADR 0016](../docs/adr/0016-progress-pacing-view.md)）落地为首个切片；周/月学习时长曲线与连续学习天数仍待评估——注意与进度页刻意划清边界（进度页不做曲线、不做出勤率）。
+
 ### P3: 数据库自动备份
 
 **目标**：防止 `focus.db` 意外损坏或丢失。
@@ -80,7 +83,13 @@ Docker 多阶段构建 + 香港节点 + 持久卷方案 已就绪。
 
 ## 开发中
 
-- 代码结构拆分（后续轮次）：TimerPage（404 行）→ Toast 组件 + 页数区块；TagPicker（260 行）/ useTimer（262 行）评估后再拆（原则：纯搬家，行为一致）
+- 代码结构拆分（后续轮次，尚未实施）：几个文件行数持续增长，已达「单文件多职责」临界，需评估拆分。**总原则**：纯搬家、行为不变——不新增功能、不改交互文案、不改数据流；拆完现有测试全绿即视为成功，不因拆分新增/改写测试（测试仍按功能文件归组）；每次拆一个文件、独立提交，方便 diff 审查。**当前候选与现状行数**（v0.5.5 实测）：
+  - `components/TimerPage.jsx`（495 行）——含 3 个内嵌子组件：`PendingRecordModal`（保存失败重试弹窗）、`Toast`（成功/失败提示条）、结尾确认弹窗 JSX（未抽离）；建议拆出为独立文件 `components/Toast.jsx` + `components/ConfirmModal.jsx`（通用确认弹窗外壳，页数/备注区块也可评估独立），主文件收敛为状态渲染 + 保存逻辑。注意 `PendingRecordModal` 与 `Toast` 已有现成 JSX 边界，拆出最安全。
+  - `hooks/useTimer.js`（440 行，v0.5.2 快照/水合加入后翻倍）——含三块可分离概念：计时状态机（start/pause/resume/end）+ 快照持久化（persist/恢复水合/离开时间处理，见 utils/timerStorage.js）+ 会话数据（subject/notes/tags/pages）。风险：useTimer 是状态核心、被 App/TimerPage 紧耦合，拆分必须保持返回接口不变；可选方向是抽内部纯逻辑（如快照 payload 构造/恢复计算）为 utils 层纯函数，而非拆 hook 本身（hook 拆分收益低、风险高，不建议）。
+  - `components/ReminderBar.jsx`（318 行）——含 2 个内嵌弹窗 `AddModal`（新增提醒）+ `ManageModal`（管理列表编辑/删除）；弹窗与主组件通过 props 交互清晰，可拆 `components/ReminderModals.jsx` 或独立两文件。
+  - `components/HistoryPage.jsx`（350 行）/ `components/RecordCard.jsx`（235 行）——v0.4.1 已拆出 RecordCard/SegmentStack，HistoryPage 仍持有 9 个编辑状态 + 筛选/删除逻辑，行数可控暂缓。
+  - `components/TagPicker.jsx`（260 行）——排序模式（sortablejs 拖拽 + 快照恢复）与日常点选共用一文件，但模式切换有清晰 guard（sortMode state），拆分收益一般，排后。
+  - 建议顺序：TimerPage → ReminderBar（弹窗纯展示、边界最清晰）→ useTimer 纯函数抽取；每次拆完跑 `npm test` 全绿 + 手动过一遍 5 态计时流程再进下一个。
 
 ## 💡 日常点子
 

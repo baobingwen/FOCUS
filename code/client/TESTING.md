@@ -143,13 +143,15 @@ recordsApi.todayOverview.mockReturnValueOnce(new Promise(() => {}));
 ```
 src/
 ├── test-setup.js              # 全局测试 setup
+├── App.jsx                    # 主布局 + 底部导航（计时/历史/进度）+ 计时状态托管
+├── App.test.jsx               # Tab 切换（计时/历史/进度）+ 全局管理模式 + 数据导出/导入 + 计时快照恢复 30 条
 ├── utils/
 │   ├── api.js                 # 数据访问统一入口（按构建开关 VITE_DATA_LAYER 分发数据层）
 │   ├── api.test.js            # 分发入口 2 条（默认走 REST / local 走本地实现）
 │   ├── apiRest.js             # REST 数据层实现（服务端版）
-│   ├── apiRest.test.js        # REST 层 25 条（含 tagsApi 5 条 + remindersApi 4 条 + exportApi 3 条 + importApi 2 条）
+│   ├── apiRest.test.js        # REST 层 27 条（含 tagsApi 5 条 + remindersApi 4 条 + exportApi 3 条 + importApi 2 条 + recordsApi.range 2 条）
 │   ├── apiLocal.js            # IndexedDB 数据层实现（纯静态版，五仓库 1:1 模拟五表）
-│   ├── apiLocal.test.js       # 本地数据层 46 条（fake-indexeddb 直测：种子/CRUD/排序/幂等/级联/统计/导出结构/导入事务与行级校验（重复科目/重复关联/duration_ms/空名/sort_order 归一））
+│   ├── apiLocal.test.js       # 本地数据层 50 条（fake-indexeddb 直测：种子/CRUD/排序/幂等/级联/统计/区间查询 range（含端点/跨月/带 tags/空结果）/导出结构/导入事务与行级校验（重复科目/重复关联/duration_ms/空名/sort_order 归一））
 │   ├── clipboard.js
 │   ├── clipboard.test.js      # 剪贴板复制工具 3 条
 │   ├── fmtTime.js             # 时长格式化（fmtTime 中文 + fmtClock + fmtShortClock）
@@ -164,8 +166,6 @@ src/
 │   ├── useMultiTap.js         # 连点检测 hook（管理模式隐藏入口共用：count 次点击/超时重置）
 │   └── useMultiTap.test.js    # 连点检测 5 条（达标触发/计数重置/超时重置/自定义参数/回调更新）
 └── components/
-    ├── App.jsx
-    ├── App.test.jsx           # Tab 切换 + 全局管理模式（倒计时连点入口/横幅跨 tab/退出）+ 冻结停用回归 + 数据导出（按钮门控/触发下载/导出中/失败 alert）+ 数据导入（按钮门控/学习中禁止/文件解析确认弹窗/取消/备份下载/确认导入整页刷新/导入中/失败/非法文件）+ 计时快照恢复（自动恢复显示/放弃/忽略切换/✕ 关闭/无快照不显示）28 条
     ├── ExamCountdown.jsx      # 考研倒计时（右上角常驻）+ 管理模式隐藏入口（连点 5 下）
     ├── ExamCountdown.test.jsx # 考研倒计时 3 条 + 连点入口 2 条
     ├── TimerRestoreBar.jsx    # 计时快照恢复提示条（App 层：科目/已学/离开展示 + 计入/忽略切换 + 放弃本次学习 + ✕ 关闭）
@@ -185,10 +185,12 @@ src/
     ├── SegmentStack.jsx       # 千层饼堆叠条（v0.4.1 从 HistoryPage 拆分）
     ├── SegmentStack.test.jsx  # 段行渲染/自下而上顺序/汇总/空/无暂停 5 条
     ├── TodayOverview.jsx
-    └── TodayOverview.test.jsx  # 概览 + 条形图 + 按标签分组 + 页数汇总 10 条
+    ├── TodayOverview.test.jsx  # 概览 + 条形图 + 按标签分组 + 页数汇总 10 条
+    ├── ProgressPage.jsx       # 进度页（第三个 tab：科目覆盖格 + 各科配速，页头一行标题，纯只读）
+    └── ProgressPage.test.jsx  # 取数区间（90 天回溯）/页面标题与今天列高亮/覆盖格点亮（含 1 秒记录）/窗口外不点亮/「上次」列（表头 + 今天·N 天前·—）取最近一条/休息不参与/配速条比例/空状态/refreshKey 重载 11 条
 ```
 
-总计 **347 条测试用例**，20 个测试文件。
+总计 **366 条测试用例**，21 个测试文件。
 
 ## 测试模式详解
 

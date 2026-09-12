@@ -39,9 +39,9 @@ npm run test:watch
 
 ```
 ├── __tests__/
-│   ├── records.test.js     # 记录路由（74 条用例，含暂停/segments + PATCH 备注/标签/页数 + DELETE 删除 + records×标签/页数联动）
+│   ├── records.test.js     # 记录路由（84 条用例，含暂停/segments + 日期范围查询 from/to + PATCH 备注/标签/页数 + DELETE 删除 + records×标签/页数联动）
 │   ├── subjects.test.js    # 科目路由（13 条用例）
-│   ├── tags.test.js        # 标签路由（22 条用例，GET 排序/POST 幂等复用/DELETE 级联/PUT 全量重排）
+│   ├── tags.test.js        # 标签路由（21 条用例，GET 排序/POST 幂等复用/DELETE 级联/PUT 全量重排）
 │   ├── reminders.test.js   # 复习提醒路由（19 条用例，GET 排序/POST 校验递增/PATCH 修改/DELETE 删除）
 │   ├── export.test.js      # 数据导出路由（5 条用例，全量 JSON + 元数据/默认科目 + segments 解析 + 附件文件名 + 不含内部表）
 │   └── import.test.js      # 数据导入路由（13 条用例，全量替换/保留原 id/事务回滚/顶层校验/行级校验/segments 序列化/sqlite_sequence）
@@ -218,9 +218,9 @@ describe('GET /api/xxx', () => {
 
 | 文件 | 说明 |
 |------|------|
-| `__tests__/records.test.js` | 74 条用例，含暂停/segments + PATCH 备注/标签/页数 + DELETE 删除 + records×标签/页数联动 |
+| `__tests__/records.test.js` | 84 条用例，含暂停/segments + 日期范围查询 from/to + PATCH 备注/标签/页数 + DELETE 删除 + records×标签/页数联动 |
 | `__tests__/subjects.test.js` | 13 条用例，默认科目保护等 |
-| `__tests__/tags.test.js` | 22 条用例，GET 排序/POST 幂等复用/DELETE 级联/PUT 全量重排 |
+| `__tests__/tags.test.js` | 21 条用例，GET 排序/POST 幂等复用/DELETE 级联/PUT 全量重排 |
 | `__tests__/reminders.test.js` | 19 条用例，GET 排序/POST 校验递增/PATCH 修改/DELETE 删除 |
 | `__tests__/export.test.js` | 5 条用例，全量 JSON 导出 + 元数据 + segments 解析 + 附件文件名 |
 | `__tests__/import.test.js` | 13 条用例，全量替换 + 保留原 id + 事务回滚 + 顶层校验 + 行级校验（共享模块）+ segments 序列化 |

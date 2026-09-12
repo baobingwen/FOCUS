@@ -49,7 +49,7 @@ cd code/client && npx vite preview --outDir dist-static --base /FOCUS/
 
 ## PWA 验收（部署后）
 
-纯静态版为 PWA（manifest + Service Worker 离线缓存，见 `docs/adr/0015-static-pwa.md`）。部署后在手机上或 Chrome 验收：
+纯静态版为 PWA（manifest + Service Worker 离线缓存，见 `../docs/adr/0015-static-pwa.md`）。部署后在手机上或 Chrome 验收：
 
 1. **可安装**：手机浏览器打开 `https://baobingwen.github.io/FOCUS/`，Chrome/Edge 地址栏或菜单出现「安装应用/添加到主屏幕」入口（Android 多访问几次会自动横幅）；iOS Safari 用「分享 → 添加到主屏幕」（无自动提示）
 2. **主屏启动**：从主屏图标打开为全屏独立窗口（无浏览器地址栏），标题「FOCUS 学习计时」、图标为蓝底 target
@@ -67,11 +67,22 @@ IndexedDB 按**浏览器 origin** 隔离：
 
 ## 回滚
 
-gh-pages 分支保留每次部署的提交历史（本地工作区 `code/.deploy-static/` 亦保留）。需要回滚时：
+gh-pages 分支保留每次部署的提交历史（本地工作区 `code/.deploy-static/` 亦保留）。需要回滚时，**两条路线二选一**：
 
-1. 回到上一次部署的提交：`cd code/.deploy-static && git checkout <旧部署提交>`（`git log` 查看提交号）
-2. 或检出旧版本源码（如 `git checkout v0.5.0`，注意先保存当前未提交改动）后重新跑 `deploy-static.ps1`
-3. 回滚内容确认无误后推送：`git push origin gh-pages`（快进）
+**A. 向前滚（推荐，不动历史）**——脚本的推送是普通快进，只有向前滚才推得上去：
+
+1. 检出旧版本源码（如 `git checkout v0.5.0`，注意先保存当前未提交改动）
+2. 重新跑 `deploy-static.ps1`：会用旧源码重新构建，并作为**一次新部署**快进推送
+
+**B. 直接把分支倒回旧部署提交**（会改写 gh-pages 历史）：
+
+1. `cd code/.deploy-static && git log` 找到旧部署提交号
+2. 把**分支**指回它：`git reset --hard <旧部署提交>`
+   （注意：`git checkout <旧提交>` 只会让 HEAD 游离，分支仍指向最新部署，之后的 push 会打印 `Everything up-to-date`、什么都不会发生——这是本文件旧版本给过的错误步骤）
+3. 推送时必须用 `--force-with-lease`——**倒带不可能是快进**：
+   `git push --force-with-lease origin gh-pages`
+
+> ⚠️ B 路线会改写远程历史，与「脚本只用普通快进推送」的约定冲突，只在确实需要抹掉某次部署时用。
 
 ## 常见问题
 

@@ -113,16 +113,22 @@ function attachTags(records) {
 }
 
 /**
- * 获取指定日期的记录
+ * 获取指定日期的记录，或指定日期范围的记录
+ *
+ * 查询优先级：date > from + to > 无过滤（最近 200 条）
+ * - 传 date：只返回该日记录（忽略 from/to）
+ * - 只传 from 或只传 to：视为无过滤，返回最近 200 条
+ * - 同时传 from 与 to：返回闭区间 [from, to] 内的记录（两端均含）
+ *
  * @route GET /
- * @param {Request<{}, {}, {}, { date?: string }>} req - Express 请求对象
+ * @param {Request<{}, {}, {}, { date?: string, from?: string, to?: string }>} req - Express 请求对象
  * @param {Response} res - Express 响应对象
  * @returns {Promise<void>}
  */
 recordsRouter.get('/', (req, res) => {
   try {
     const db = getDb();
-    const { date } = req.query;
+    const { date, from, to } = req.query;
 
     let rows;
     if (date) {
@@ -131,6 +137,13 @@ recordsRouter.get('/', (req, res) => {
         WHERE DATE(created_at) = DATE(?)
         ORDER BY created_at DESC
       `).all(date));
+    } else if (from && to) {
+      // 闭区间：两端日期均包含
+      rows = /** @type {Record[]} */ (db.prepare(`
+        SELECT * FROM records
+        WHERE DATE(created_at) >= DATE(?) AND DATE(created_at) <= DATE(?)
+        ORDER BY created_at DESC
+      `).all(from, to));
     } else {
       rows = /** @type {Record[]} */ (db.prepare(`
         SELECT * FROM records

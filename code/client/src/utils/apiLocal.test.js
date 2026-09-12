@@ -257,6 +257,67 @@ describe('recordsApi.list', () => {
   });
 });
 
+describe('recordsApi.range', () => {
+  // 区间查询用的固定记录（显式 created_at，id 由导入原样保留）
+  const at = (id, subject, createdAt) => ({
+    id, mode: 'study', subject, duration_ms: id * 1000,
+    notes: '', segments: null, paused_ms: 0, pages: null, created_at: createdAt,
+  });
+
+  it('按日期区间过滤：两端含端点 + 按 created_at 倒序', async () => {
+    await importApi.submit(makePayload({
+      records: [
+        at(1, '数学', '2026-09-05 10:00:00'),   // 区间外（早于 from）
+        at(2, '数学', '2026-09-06 00:00:00'),   // from 当天 00:00:00，含
+        at(3, '英语', '2026-09-08 12:00:00'),   // 区间内
+        at(4, '专业课', '2026-09-12 23:59:59'), // to 当天 23:59:59，含
+        at(5, '数学', '2026-09-13 09:00:00'),   // 区间外（晚于 to）
+      ],
+    }));
+
+    const { records } = await recordsApi.range('2026-09-06', '2026-09-12');
+    expect(records.map((r) => r.id)).toEqual([4, 3, 2]);
+  });
+
+  it('跨月边界：区间两端落在不同月份', async () => {
+    await importApi.submit(makePayload({
+      records: [
+        at(1, '数学', '2026-06-29 20:00:00'),
+        at(2, '数学', '2026-06-30 20:00:00'),
+        at(3, '英语', '2026-07-01 08:00:00'),
+        at(4, '英语', '2026-07-02 20:00:00'),
+        at(5, '英语', '2026-07-03 08:00:00'),
+      ],
+    }));
+
+    const { records } = await recordsApi.range('2026-06-30', '2026-07-02');
+    expect(records.map((r) => r.id)).toEqual([4, 3, 2]);
+  });
+
+  it('区间内的记录附带 tags（区间外的记录不返回）', async () => {
+    await importApi.submit(makePayload({
+      tags: [{ id: 1, name: '高数', sort_order: 0 }],
+      records: [
+        at(1, '数学', '2026-09-08 10:00:00'),
+        at(2, '英语', '2026-09-20 10:00:00'),
+      ],
+      record_tags: [{ record_id: 1, tag_id: 1 }, { record_id: 2, tag_id: 1 }],
+    }));
+
+    const { records } = await recordsApi.range('2026-09-06', '2026-09-12');
+    expect(records.length).toBe(1);
+    expect(records[0].id).toBe(1);
+    expect(records[0].tags).toEqual(['高数']);
+  });
+
+  it('区间内无记录时返回空数组', async () => {
+    await recordsApi.create({ mode: 'study', subject: '数学', duration_ms: 1000 });
+
+    const { records } = await recordsApi.range('2020-01-01', '2020-01-07');
+    expect(records).toEqual([]);
+  });
+});
+
 describe('recordsApi.update', () => {
   it('修改备注（trim）/标签（整组替换）/页数', async () => {
     const created = await recordsApi.create({

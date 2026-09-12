@@ -1,6 +1,6 @@
 # FOCUS 客户端代码结构关系
 
-> 当前版本：v0.5.5（纯静态版 PWA 化见 [docs/adr/0015-static-pwa.md](../../../docs/adr/0015-static-pwa.md)，构建层变化、src 依赖结构不变；保存失败可重试见 [docs/adr/0014-save-retry.md](../../../docs/adr/0014-save-retry.md)；双版本导入校验统一见 [docs/adr/0013-import-validation-unified.md](../../../docs/adr/0013-import-validation-unified.md)；计时快照持久化见 [docs/adr/0012-timer-persistence.md](../../../docs/adr/0012-timer-persistence.md)；数据层双实现结构变动见 [docs/adr/0011-no-backend-local-first.md](../../../docs/adr/0011-no-backend-local-first.md)；v0.4.1 结构拆分见 [adr/0001-v0.4.1-code-structure-changes.md](adr/0001-v0.4.1-code-structure-changes.md)）
+> 当前版本：v0.5.6（学期配速视图/进度页见 [docs/adr/0016-progress-pacing-view.md](../../../docs/adr/0016-progress-pacing-view.md)；纯静态版 PWA 化见 [docs/adr/0015-static-pwa.md](../../../docs/adr/0015-static-pwa.md)，构建层变化、src 依赖结构不变；保存失败可重试见 [docs/adr/0014-save-retry.md](../../../docs/adr/0014-save-retry.md)；双版本导入校验统一见 [docs/adr/0013-import-validation-unified.md](../../../docs/adr/0013-import-validation-unified.md)；计时快照持久化见 [docs/adr/0012-timer-persistence.md](../../../docs/adr/0012-timer-persistence.md)；数据层双实现结构变动见 [docs/adr/0011-no-backend-local-first.md](../../../docs/adr/0011-no-backend-local-first.md)；v0.4.1 结构拆分见 [adr/0001-v0.4.1-code-structure-changes.md](adr/0001-v0.4.1-code-structure-changes.md)）
 
 ## 源码依赖图
 
@@ -16,7 +16,9 @@ graph TD
     SegmentStack[SegmentStack.jsx]
     SubjectSelector[SubjectSelector.jsx]
     TagPicker[TagPicker.jsx]
+    ReminderBar[ReminderBar.jsx]
     TodayOverview[TodayOverview.jsx]
+    ProgressPage[ProgressPage.jsx]
     ExamCountdown[ExamCountdown.jsx]
     TimerRestoreBar[TimerRestoreBar.jsx]
     %% hooks
@@ -34,9 +36,11 @@ graph TD
     pendingRecord[utils/pendingRecord.js]
 
     App -->|useTimer| useTimer
-    App -->|freeze/thaw 运行时传入| useFreeze
+    App -->|loadTimerSnapshot| timerStorage
+    App -.->|v0.4.3 起已停用：调用点注释，代码保留| useFreeze
     App --> TimerPage
     App --> HistoryPage
+    App --> ProgressPage
     App --> ExamCountdown
     App -->|timer.restored 时渲染| TimerRestoreBar
     App -->|exportApi| api
@@ -45,6 +49,7 @@ graph TD
     useTimer -->|save/load/clear| timerStorage
 
     TimerPage --> SubjectSelector
+    TimerPage --> ReminderBar
     TimerPage --> TagPicker
     TimerPage -->|recordsApi| api
     TimerPage -->|fmtClock, fmtTime| fmtTime
@@ -64,6 +69,11 @@ graph TD
     TodayOverview -->|recordsApi| api
     TodayOverview -->|fmtTime| fmtTime
 
+    ProgressPage -->|recordsApi, subjectsApi| api
+    ProgressPage -->|fmtTime| fmtTime
+
+    TimerRestoreBar -->|fmtClock, fmtTime| fmtTime
+
     SubjectSelector -->|subjectsApi| api
     TagPicker -->|tagsApi| api
     TagPicker --> Sortable
@@ -78,7 +88,7 @@ graph TD
     apiLocal -->|validatePayload/validateImportRows| importValidation
 ```
 
-> 说明：`useFreezeOnLeave` 不 import `useTimer`，通过 App 层把 timer 的 freeze/thaw 作为参数传入（运行时依赖）；`useTimer`/`useMultiTap`/`utils/*` 除 `useTimer → utils/timerStorage`（计时快照存取）与 `apiLocal → shared/importValidation`（导入校验）外不 import 任何项目内模块。
+> 说明：`useFreezeOnLeave` 不 import `useTimer`，v0.4.3 起 App 侧调用点已注释停用（代码保留），图上的虚线表示这条运行时依赖当前不成立；`useTimer`/`useMultiTap`/`utils/*` 除 `useTimer → utils/timerStorage`（计时快照存取）、`api.js → apiRest/apiLocal`（数据层分发）与 `apiLocal → shared/importValidation`（导入校验）外不 import 任何项目内模块。
 
 ## 文件职责与状态归属
 
@@ -90,8 +100,10 @@ graph TD
 | `components/RecordCard.jsx`      | 单条记录卡片渲染（查看态 + ✏️ 编辑态表单 + 删除按钮 + 千层饼 + 时间戳）            | 否（纯展示壳，所有状态与回调由 HistoryPage 通过 props 传入）                                                   |
 | `components/SegmentStack.jsx`    | 千层饼堆叠条（学习/暂停段按时间比例显示 + 总计/含暂停汇总）                        | 否                                                                                                             |
 | `components/TodayOverview.jsx`   | 今日概览（总时长 + 科目条形图 + 标签分组 + 页数）                                  | 否（records 由 props 传入，自取 /today 聚合）                                                                  |
+| `components/ProgressPage.jsx`    | 进度页（第三个 tab：页头一行标题「📈 学习进度」+ 科目覆盖格（近 7 天二元点亮 + 「上次」列）+ 各科配速条），纯只读、休息记录不参与；考研剩余天数不在此页重复（右上角常驻倒计时为唯一来源） | 是（subjects/records 自取 + loading；取数区间 = 今天往前 89 天 ~ 今天）                                        |
 | `components/SubjectSelector.jsx` | 科目选择（固定列表 + 自定义 + 休息）                                               | 是（自身 CRUD 表单态）                                                                                         |
 | `components/TagPicker.jsx`       | 标签选择器（点选/新增/删除/拖拽排序）                                              | 是（标签库 + 排序模式）                                                                                        |
+| `components/ReminderBar.jsx`     | 复习方法和提醒条（学习中/暂停中小字提醒 + 15 分钟顺序轮换 + ＋新增 + 管理模式弹窗管理） | 是（条目列表 + 轮换下标 + 弹窗态）                                                                             |
 | `components/ExamCountdown.jsx`   | 考研倒计时 + 全局管理模式隐藏入口（连点 5 下）                                     | 否（数据写死）                                                                                                 |
 | `components/TimerRestoreBar.jsx` | 计时快照恢复提示条（科目/已学/离开时长展示 + 计入/忽略切换 + 放弃按钮 + ✕ 关闭） | 否（timer 由 App 传入）                                                                                       |
 | `hooks/useTimer.js`              | 计时状态机 + 快照水合/持久化（utils/timerStorage）+ 忽略离开时间 + freeze/thaw 冻结机制 | 是（计时核心）                                                                                                 |
@@ -110,7 +122,7 @@ graph TD
 
 | 函数            | 格式                                | 使用方                                          |
 | --------------- | ----------------------------------- | ----------------------------------------------- |
-| `fmtTime`       | 中文「1小时30分」                   | TodayOverview（概览汇总）                       |
+| `fmtTime`       | 中文「1小时30分」                   | TodayOverview（概览汇总）、ProgressPage（配速时长） |
 | `fmtClock`      | HH:MM:SS / MM:SS（≥1 小时带小时位） | TimerPage（计时显示 + 休息 toast）              |
 | `fmtShortClock` | MM:SS（分钟不折叠，如 75:00）       | RecordCard（时长）、SegmentStack（段时长/汇总） |
 
@@ -124,8 +136,10 @@ graph TD
 | `components/RecordCard.test.jsx`      | RecordCard 查看态/编辑态渲染 + 回调转发 + 千层饼显示条件 + 管理模式按钮 | 组件（卡片直测 props） |
 | `components/SegmentStack.test.jsx`    | 千层饼段行渲染/顺序/汇总                                                | 组件                   |
 | `components/TodayOverview.test.jsx`   | 今日概览 + 条形图                                                       | 组件                   |
+| `components/ProgressPage.test.jsx`    | 进度页（取数区间/页面标题/覆盖格点亮/「上次」列/休息不参与/配速条比例/空状态） | 组件                   |
 | `components/SubjectSelector.test.jsx` | 科目 CRUD + confirm + 休息                                              | 组件                   |
 | `components/TagPicker.test.jsx`       | 标签选择器                                                              | 组件                   |
+| `components/ReminderBar.test.jsx`     | 提醒条展示/轮换/新增/管理模式门控 + 编辑/删除                          | 组件                   |
 | `components/ExamCountdown.test.jsx`   | 考研倒计时                                                              | 组件                   |
 | `components/TimerRestoreBar.test.jsx` | 恢复提示条（展示/计入忽略切换/放弃/✕ 关闭）                                     | 组件                   |
 | `hooks/useTimer.test.js`              | 计时状态机全路径 + 快照持久化/水合恢复/忽略离开/放弃/关闭                           | 单元                   |

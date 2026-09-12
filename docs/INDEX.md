@@ -23,7 +23,7 @@
 
 | 文件 | 位置 | 说明 |
 |------|------|------|
-| `docs/WORKFLOW.md` | `docs/` | 开发协作流程 — grill → 文档先行 → 代码 → 测试 → 发版，版本三轨与文档同步检查清单 |
+| `docs/WORKFLOW.md` | `docs/` | 开发协作流程 — grill → 文档先行 → 代码 → 测试 → **用户观察（发版闸口）** → 发版，版本三轨与文档同步检查清单 |
 
 ## 测试
 
@@ -36,7 +36,7 @@
 
 | 文件 | 位置 | 说明 |
 |------|------|------|
-| `code/LOCAL_DEPLOY.md` | `code/` | 本地 + Tailscale 部署方案（当前在用，0 元） |
+| `code/LOCAL_DEPLOY.md` | `code/` | 本地 + Tailscale 部署方案（0 元；日用主力已转向手机 PWA / GitHub Pages） |
 | `code/start-local.bat` | `code/` | 一键启动脚本（构建前端 + 启动服务） |
 | `code/build-client.ps1` | `code/` | 手动构建前端脚本（改完代码后运行，再执行 start-local.bat） |
 | `code/build-client-static.ps1` | `code/` | 手动构建纯静态版脚本（改完代码后运行，产物 `client/dist-static/`） |
@@ -63,6 +63,7 @@
 | `docs/adr/0013-import-validation-unified.md` | `docs/adr/` | 双版本导入校验统一 — 共用 `code/shared/importValidation.js` 显式行级校验（顶层结构 + 行级规则：重复科目/重复关联拒绝、duration_ms>0、名称非空、引用存在、默认值归一化）、SQLite 约束保留兜底、错误消息统一中文「导入数据不合法」 |
 | `docs/adr/0014-save-retry.md` | `docs/adr/` | 学习记录保存失败可重试 — 学习中/暂停中结束确认弹窗（结束学习/返回学习）、保存失败变「重试保存/放弃记录」、待重试记录存 localStorage（`focus:pending-record`）刷新不丢、仅学习记录 |
 | `docs/adr/0015-static-pwa.md` | `docs/adr/` | 纯静态版 PWA 化 — 仅 static 模式注入 vite-plugin-pwa（服务端版构建零变化）、图标全套资源文件（public/icon*.svg + 生成 PNG）、SW autoUpdate（public/registerSW.js 完整注册 + 计时快照兜底）、Rich Install UI screenshots（narrow/wide）、manifest 元数据软编码集中定义 |
+| `docs/adr/0016-progress-pacing-view.md` | `docs/adr/` | 学期配速视图（进度页）— 第三个底部 tab「进度」：滚动近 7 天 × 科目覆盖格（二元点亮、无阈值，含「上次」列）+ 各科配速占比条（页头只放一行标题，剩余天数不在此页重复）；数据来源为前端聚合 + 数据层新增 `recordsApi.range(from,to)`（一套逻辑双版本共用）；纯只读、不进管理模式、休息记录不参与 |
 | `code/client/docs/CODE_STRUCTURE.md` | `code/client/docs/` | 客户端代码结构关系 — 源码依赖图（mermaid）、文件职责与状态归属、格式化函数分工、测试文件对应关系 |
 | `code/client/docs/adr/0001-v0.4.1-code-structure-changes.md` | `code/client/docs/adr/` | v0.4.1 结构拆分改动说明 — HistoryPage 拆出 RecordCard/SegmentStack、格式化函数并入 utils/fmtTime.js，前后依赖图对比 + 文件直接映射 + 行为不变保证 |
 

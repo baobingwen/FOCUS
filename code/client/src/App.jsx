@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef } from 'react';
 import TimerPage from './components/TimerPage';
 import HistoryPage from './components/HistoryPage';
+import ProgressPage from './components/ProgressPage';
 import ExamCountdown from './components/ExamCountdown';
 import useTimer from './hooks/useTimer';
 import TimerRestoreBar from './components/TimerRestoreBar';
@@ -12,6 +13,7 @@ import { loadTimerSnapshot } from './utils/timerStorage';
 const TABS = [
   { key: 'timer', label: '计时', icon: '⏱️' },
   { key: 'history', label: '历史', icon: '📋' },
+  { key: 'progress', label: '进度', icon: '📈' },
 ];
 
 export default function App() {
@@ -248,6 +250,9 @@ export default function App() {
           )}
           {activeTab === 'history' && (
             <HistoryPage refreshKey={historyRefreshKey} adminMode={adminMode} onEnterAdminMode={enterAdminMode} />
+          )}
+          {activeTab === 'progress' && (
+            <ProgressPage refreshKey={historyRefreshKey} />
           )}
         </div>
       </div>

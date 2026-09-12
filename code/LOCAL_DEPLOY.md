@@ -107,9 +107,11 @@ tailscale ip -4
 
 数据存在 `code/server/data/focus.db`。
 
-- 这是 SQLite 单文件，直接拷贝就能备份
-- 想备份：复制 `focus.db` 到别处
-- 想重置：删掉这个文件，重启服务，自动重建空库
+> ⚠️ 服务端用的是 SQLite 的 **WAL 模式**（`server/database.js` 里设置 `journal_mode = WAL`），最近的写入可能还留在 `focus.db-wal` 里、尚未合并进 `focus.db`。**只拷 `focus.db` 一个文件会丢掉最近的记录**——而且拷出来的文件看起来完全正常，不会报错。
+
+- **想备份**：先停掉服务（关掉那个终端窗口），再把 `data/` 下的**三个文件一起**复制走：`focus.db`、`focus.db-wal`、`focus.db-shm`
+- **更稳妥的备份**：用 SQLite 自带的备份命令，产物是单个完整文件——`sqlite3 focus.db ".backup backup.db"`，或 `sqlite3 focus.db "VACUUM INTO 'backup.db'"`
+- **想重置**：停掉服务后，`focus.db`、`focus.db-wal`、`focus.db-shm` **三个都删掉**再重启服务，才会重建空库——只删 `focus.db` 会留下 WAL，SQLite 启动时会尝试恢复它
 
 ## 六、更新代码
 
